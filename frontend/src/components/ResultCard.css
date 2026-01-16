@@ -1,0 +1,49 @@
+.result-card {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(79, 195, 247, 0.15);
+}
+
+.result-card h3 {
+    color: #4fc3f7;
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.result-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+.result-label {
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+.result-value {
+    color: #81c784;
+    font-weight: 600;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 1rem;
+}
+
+.result-unit {
+    color: #666;
+    font-weight: 400;
+    margin-left: 6px;
+    font-size: 0.85rem;
+}
