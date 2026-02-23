@@ -24,7 +24,7 @@ app.post('/api/calculate', (req, res) => {
     const { parameters } = req.body;
 
     // Validate required parameters
-    const required = ['D', 's', 'cu', 'sigmaJet', 'Es', 'H', 'qtemel', 'FS'];
+    const required = ['D', 's', 'cu', 'sigmaJet', 'Es', 'Ejg', 'H', 'qtemel', 'FS'];
     const missing = required.filter(param =>
       parameters[param] === undefined || parameters[param] === null || parameters[param] === ''
     );
@@ -49,7 +49,7 @@ app.post('/api/calculate', (req, res) => {
     }
 
     // Perform calculations
-    const results = calculations.calculateAll(numericParams);
+    const results = calculations.calculateAll(numericParams, req.body.lang || 'en');
 
     res.json({
       success: true,
@@ -66,21 +66,101 @@ app.post('/api/calculate', (req, res) => {
   }
 });
 
+// Soil layer profile calculation endpoint
+app.post('/api/calculate-layers', (req, res) => {
+  try {
+    const { layers } = req.body;
+
+    // Validate layers array
+    if (!layers || !Array.isArray(layers) || layers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one soil layer is required'
+      });
+    }
+
+    // Validate each layer has required fields
+    const requiredFields = ['thickness', 'gamma', 'phi', 'cohesion', 'elasticity', 'poisson'];
+    for (let i = 0; i < layers.length; i++) {
+      const missing = requiredFields.filter(f =>
+        layers[i][f] === undefined || layers[i][f] === null || layers[i][f] === ''
+      );
+      if (missing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Layer ${i + 1}: Missing fields: ${missing.join(', ')}`
+        });
+      }
+    }
+
+    // Perform soil profile calculations
+    const results = calculations.calculateSoilProfile(layers);
+
+    res.json({
+      success: true,
+      message: 'Soil profile calculation completed',
+      results
+    });
+
+  } catch (error) {
+    console.error('Layer calculation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Layer calculation failed: ' + error.message
+    });
+  }
+});
+
 // Get default parameters
 app.get('/api/defaults', (req, res) => {
   res.json({
-    D: 0.8,           // Column diameter (m)
-    s: 1.5,           // Column spacing (m)
-    cu: 25,           // Undrained cohesion (kPa)
-    sigmaJet: 5000,   // Jet grout strength (kPa)
-    Es: 5000,         // Soil elastic modulus (kPa)
-    H: 10,            // Column height (m)
-    qtemel: 150,      // Foundation pressure (kPa)
-    FS: 2.5,          // Factor of safety
+    D: 0.6,           // Column diameter (m)
+    s: 1.6,           // Column spacing (m)
+    cu: 45,           // Undrained cohesion (kPa)
+    sigmaJet: 3000,   // Jet grout strength (kPa) = 3 MPa
+    Es: 10000,        // Soil elastic modulus (kPa) = 10 MPa
+    Ejg: 450000,      // Jet grout elastic modulus (kPa) = 450 MPa
+    H: 12,            // Column height (m)
+    qtemel: 120,      // Foundation pressure (kPa)
+    qnet: 60,         // Net pressure for settlement (kPa)
+    Fs: 2.0,          // Material safety factor
+    FS: 1.5,          // Bearing capacity factor of safety
     alpha: 0.5,       // Adhesion factor
-    Nc: 9,            // Bearing capacity factor
-    gammaRsb: 1.4,    // Partial factor for base resistance
-    gammaRu: 1.4      // Partial factor for shaft resistance
+    Nc: 5.14          // Bearing capacity factor (Skempton/Prandtl)
+  });
+});
+
+// Get soil type default parameters (Mohr-Coulomb)
+app.get('/api/soil-defaults', (req, res) => {
+  res.json({
+    kum: {
+      gamma: 17,      // kN/m³ - Unit Weight
+      phi: 35,        // ° - Friction Angle
+      cohesion: 5,    // kPa - Cohesion
+      elasticity: 30000,  // kN/m² - Elastic Modulus
+      poisson: 0.25   // - Poisson's Ratio
+    },
+    kil: {
+      gamma: 18,
+      phi: 15,
+      cohesion: 80,
+      elasticity: 25000,
+      poisson: 0.3
+    },
+    silt: {
+      gamma: 19,
+      phi: 28,
+      cohesion: 10,
+      elasticity: 35000,
+      poisson: 0.25
+    },
+    kaya: {
+      gamma: 22,
+      phi: 15,
+      cohesion: 3000,
+      elasticity: 300000,
+      poisson: 0.2
+    }
   });
 });
 

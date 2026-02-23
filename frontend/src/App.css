@@ -9,13 +9,55 @@ body {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   min-height: 100vh;
   color: #e0e0e0;
+  overflow-x: hidden;
 }
 
 .app-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 16px 24px;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Two Column Layout */
+.main-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+  flex: 1;
+  align-items: stretch;
+}
+
+/* Full Width Mode - Sadece Zemin Tabakaları */
+.main-layout.full-width-mode {
+  display: block;
+  width: 100%;
+}
+
+.full-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.soil-panel-full {
+  min-height: 600px;
+  width: 100%;
+}
+
+.soil-panel-full .soil-layer-editor-v2 {
+  width: 100%;
+}
+
+.left-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panel {
   display: flex;
   flex-direction: column;
 }
@@ -29,6 +71,42 @@ body {
   margin-bottom: 20px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.header-top {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.lang-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lang-btn:hover {
+  background: rgba(79, 195, 247, 0.2);
+  border-color: rgba(79, 195, 247, 0.5);
+  color: #4fc3f7;
+}
+
+.header h1 {
+  font-size: 2rem;
+  color: #4fc3f7;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(79, 195, 247, 0.3);
+}
+
+.header p {
+  font-size: 1rem;
+  color: #90caf9;
 }
 
 .header h1 {
@@ -82,13 +160,25 @@ body {
 /* Main Content */
 .main-content {
   flex: 1;
+  min-height: 0;
+}
+
+/* Right Panel Results - Always Visible */
+.right-panel .tab-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panel .results-grid {
+  flex: 1;
 }
 
 /* Tab Panel */
 .tab-panel {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
-  padding: 24px;
+  padding: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
 }
@@ -140,10 +230,19 @@ body {
 }
 
 /* Results Panel */
+.results-panel {
+  height: 100%;
+}
+
 .results-panel .results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+.results-panel .results-grid>* {
+  flex: 1 1 200px;
+  min-width: 180px;
 }
 
 .no-results {
@@ -176,7 +275,35 @@ body {
   font-size: 0.85rem;
 }
 
+/* Sync Info Banner */
+.sync-info {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #a5d6a7;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* Sync Button Variant */
+.sync-btn {
+  background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%) !important;
+  font-size: 0.95rem !important;
+  padding: 12px 32px !important;
+}
+
 /* Responsive */
+@media (max-width: 1024px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .right-panel {
+    order: 2;
+  }
+}
+
 @media (max-width: 600px) {
   .tab-nav {
     flex-wrap: nowrap;

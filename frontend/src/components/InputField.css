@@ -62,3 +62,34 @@
     white-space: nowrap;
     border-left: 1px solid rgba(79, 195, 247, 0.3);
 }
+
+/* Unit Toggle Styles */
+.unit-toggle {
+    display: flex;
+    border-left: 1px solid rgba(79, 195, 247, 0.3);
+}
+
+.unit-toggle .unit-btn {
+    padding: 8px 12px;
+    border: none;
+    background: rgba(0, 0, 0, 0.3);
+    color: #666;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.unit-toggle .unit-btn:not(:last-child) {
+    border-right: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.unit-toggle .unit-btn:hover {
+    background: rgba(79, 195, 247, 0.1);
+    color: #90caf9;
+}
+
+.unit-toggle .unit-btn.active {
+    background: rgba(79, 195, 247, 0.25);
+    color: #4fc3f7;
+}

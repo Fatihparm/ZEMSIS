@@ -6,6 +6,9 @@ function InputField({
     value,
     onChange,
     unit,
+    unitOptions,  // ['kPa', 'MPa'] for toggle
+    selectedUnit, // current selected unit
+    onUnitChange, // callback for unit change
     placeholder,
     min,
     max,
@@ -30,10 +33,26 @@ function InputField({
                     max={max}
                     step={step}
                 />
-                {unit && <span className="unit">{unit}</span>}
+                {unitOptions ? (
+                    <div className="unit-toggle">
+                        {unitOptions.map(u => (
+                            <button
+                                key={u}
+                                type="button"
+                                className={`unit-btn ${selectedUnit === u ? 'active' : ''}`}
+                                onClick={() => onUnitChange && onUnitChange(name, u)}
+                            >
+                                {u}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    unit && <span className="unit">{unit}</span>
+                )}
             </div>
         </div>
     );
 }
 
 export default InputField;
+

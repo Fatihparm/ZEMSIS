@@ -1,0 +1,393 @@
+/* Soil Layer Editor V2 Styles - Visual Projection Design */
+
+.soil-layer-editor-v2 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    width: 100%;
+}
+
+/* Üst bilgi çubuğu */
+.soil-header-v2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.depth-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.depth-label {
+    color: #90caf9;
+    font-size: 0.9rem;
+}
+
+.depth-value {
+    font-weight: 600;
+    color: #4fc3f7;
+    font-size: 1rem;
+}
+
+.depth-value.over-limit {
+    color: #ef5350;
+    animation: pulse-warning 1s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.add-layer-btn-v2 {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+    border: none;
+    border-radius: 8px;
+    color: #1a1a2e;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.add-layer-btn-v2:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4);
+}
+
+/* Derinlik uyarısı */
+.depth-warning {
+    background: rgba(239, 83, 80, 0.15);
+    border: 1px solid rgba(239, 83, 80, 0.5);
+    color: #ef9a9a;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Ana Layout - Sol: Parametreler, Sağ: Görsel */
+.soil-main-layout {
+    display: flex;
+    gap: 24px;
+    flex: 1;
+    width: 100%;
+    min-height: 450px;
+}
+
+/* Sol Panel - Parametre Düzenleme */
+.param-panel {
+    flex: 2;
+    min-width: 350px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    overflow-y: auto;
+    max-height: 550px;
+}
+
+.param-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 16px;
+}
+
+.param-header h3 {
+    margin: 0;
+    color: #4fc3f7;
+    font-size: 1.1rem;
+}
+
+.param-soil-type {
+    flex: 1;
+    color: #90caf9;
+    font-size: 0.9rem;
+    padding: 4px 10px;
+    background: rgba(79, 195, 247, 0.15);
+    border-radius: 20px;
+    text-align: center;
+}
+
+.remove-layer-btn-v2 {
+    background: rgba(239, 83, 80, 0.1);
+    border: 1px solid rgba(239, 83, 80, 0.3);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.remove-layer-btn-v2:hover {
+    background: rgba(239, 83, 80, 0.3);
+    border-color: rgba(239, 83, 80, 0.6);
+}
+
+.param-section {
+    margin-bottom: 20px;
+}
+
+.param-section h4 {
+    margin: 0 0 12px 0;
+    color: #888;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.param-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.param-row label {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #e0e0e0;
+}
+
+.param-row .param-desc {
+    color: #666;
+    font-size: 0.75rem;
+}
+
+.param-input-group {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+    min-width: 120px;
+}
+
+.param-input-group:focus-within {
+    border-color: rgba(79, 195, 247, 0.5);
+}
+
+.param-input-group input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px 12px;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    min-width: 60px;
+    text-align: right;
+}
+
+.param-input-group input:focus {
+    outline: none;
+}
+
+.param-input-group .unit {
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.param-row select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    cursor: pointer;
+    min-width: 120px;
+    transition: border-color 0.2s ease;
+}
+
+.param-row select:focus {
+    outline: none;
+    border-color: rgba(79, 195, 247, 0.5);
+}
+
+.param-row select option {
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+.no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    font-size: 1rem;
+}
+
+/* Sağ Panel - Görsel İzdüşüm */
+.visual-panel {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+.ground-surface {
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+    color: #a5d6a7;
+    font-size: 0.75rem;
+    text-align: center;
+    border-bottom: 3px solid #1b5e20;
+}
+
+.ground-surface span {
+    display: block;
+    font-weight: 600;
+    color: #fff;
+}
+
+.layers-visual-stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.layer-visual {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: grab;
+    /* Sürüklenebilir olduğunu belirt */
+    border-left: 4px solid;
+    border-right: 4px solid;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    min-height: 40px;
+    user-select: none;
+    /* Metin seçimini engelle */
+}
+
+.layer-visual:active {
+    cursor: grabbing;
+    /* Sürükleme efekti */
+}
+
+.layer-visual:hover {
+    filter: brightness(1.1);
+}
+
+.layer-visual.selected {
+    border-left-width: 6px;
+    border-right-width: 6px;
+    box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
+    z-index: 10;
+    /* Seçili olan üstte görünsün */
+}
+
+.layer-visual-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px;
+    text-align: center;
+    pointer-events: none;
+    /* Tıklamaların üstte kalmasını engelle */
+}
+
+.drag-handle {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.2rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.layer-visual:hover .drag-handle {
+    opacity: 1;
+}
+
+.layer-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.layer-thickness {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.layer-depth-marker {
+    position: absolute;
+    bottom: 2px;
+    right: 8px;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Responsive düzenlemeler */
+@media (max-width: 700px) {
+    .soil-main-layout {
+        flex-direction: column-reverse;
+    }
+
+    .visual-panel {
+        width: 100%;
+        max-height: 300px;
+    }
+
+    .param-panel {
+        max-height: none;
+    }
+
+    .layers-visual-stack {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .layer-visual {
+        min-width: 100px;
+        border-left: none;
+        border-right: none;
+        border-top: 4px solid;
+        border-bottom: 4px solid;
+    }
+
+    .layer-visual.selected {
+        border-top-width: 6px;
+        border-bottom-width: 6px;
+    }
+}

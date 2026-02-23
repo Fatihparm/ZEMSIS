@@ -228,36 +228,39 @@ function calculateFrictionResistance(Ac, Cu, gamma, Rh) {
  * @param {Object} input - Input parameters
  * @returns {Object} All calculation results
  */
-function calculateAll(input) {
+function calculateAll(input, lang = 'en') {
     const {
         D,           // Column diameter (m)
         s,           // Column spacing (m)
         cu,          // Undrained cohesion (kPa)
-        sigmaJet,    // Jet grout strength (kPa)
+        sigmaJet,    // Jet grout strength (kPa) - σjet
         Es,          // Soil elastic modulus (kPa)
+        Ejg,         // Jet grout elastic modulus (kPa) - direct input, not calculated
         H,           // Column height (m)
         qtemel,      // Foundation pressure (kPa)
-        FS,          // Factor of safety
+        qnet,        // Net pressure for settlement (kPa) - if not provided, calculated
+        Fs = 2.0,    // Material Safety Factor (for design strength)
+        FS = 1.5,    // Factor of Safety (for bearing capacity)
         alpha = 0.5, // Adhesion factor
-        Nc = 9,      // Bearing capacity factor
-        gammaRsb = 1.4,
-        gammaRu = 1.4
+        Nc = 5.14    // Bearing capacity factor (Skempton/Prandtl)
     } = input;
+
+    // Calculate qnet if not provided (default: qtemel * 0.5 as approximation)
+    const qnetValue = qnet || (qtemel * 0.5);
 
     // 1. Geometry
     const Ajet = calculateColumnArea(D);
     const a = calculateAreaRatio(Ajet, s);
 
-    // 2. Material Parameters
-    const sigmaJetDesign = calculateDesignStrength(sigmaJet, FS);
-    const Ejg = calculateJetGroutModulus(sigmaJetDesign);
+    // 2. Material Parameters (using Fs - Material Safety Factor)
+    const sigmaJetDesign = calculateDesignStrength(sigmaJet, Fs);
     const cjet = calculateJetGroutCohesion(sigmaJetDesign);
 
     // 3. Single Column Capacity
-    const Qs = calculateShaftCapacity(alpha, cu, D, H);
-    const Qu = calculateEndBearing(Nc, cu, Ajet);
-    const Qemn = calculateSafeCapacity(Qu, Qs, gammaRsb, gammaRu);
-    const Qbasınc = calculateCompressiveCapacity(sigmaJetDesign, Ajet);
+    const Qs_raw = calculateShaftCapacity(alpha, cu, D, H);
+    const Qs_safe = Qs_raw / FS;
+    const Qu_raw = calculateEndBearing(Nc, cu, Ajet);
+    const Qcrush = calculateCompressiveCapacity(sigmaJetDesign, Ajet);
 
     // 4. Column Load
     const Qkolon = calculateColumnLoad(qtemel, Ajet, a, Es, Ejg);
@@ -268,49 +271,156 @@ function calculateAll(input) {
     const Eimproved = calculateImprovedModulus(Ejg, a, Es);
 
     // 6. Settlement
-    const settlement = calculateSettlement(qtemel, H, Eimproved);
-    const settlementMm = settlement * 1000; // Convert to mm
+    const settlement = calculateSettlement(qnetValue, H, Eimproved);
+    const settlementMm = settlement * 1000;
+    const settlementCm = settlement * 100;
+
+    // Dil desteği
+    const tr = lang === 'tr';
 
     return {
-        // Input Echo
         input: {
-            D, s, cu, sigmaJet, Es, H, qtemel, FS, alpha, Nc
+            D, s, cu, sigmaJet, Es, Ejg, H, qtemel, qnet: qnetValue, Fs, FS, alpha, Nc
         },
 
-        // Geometry Results
         geometry: {
-            Ajet: { value: Ajet, unit: 'm²', description: 'Column Area' },
-            a: { value: a, unit: '-', description: 'Area Replacement Ratio' },
-            aPercent: { value: a * 100, unit: '%', description: 'Area Replacement Ratio' }
+            Ajet: { value: Ajet, unit: 'm²', description: tr ? 'Kolon Alanı' : 'Column Area' },
+            a: { value: a, unit: '-', description: tr ? 'Alan İyileştirme Oranı' : 'Area Replacement Ratio' },
+            aPercent: { value: a * 100, unit: '%', description: tr ? 'Alan İyileştirme Oranı' : 'Area Replacement Ratio' }
         },
 
-        // Material Parameters
         material: {
-            sigmaJetDesign: { value: sigmaJetDesign, unit: 'kPa', description: 'Design Compressive Strength' },
-            Ejg: { value: Ejg, unit: 'kPa', description: 'Jet Grout Elastic Modulus' },
-            cjet: { value: cjet, unit: 'kPa', description: 'Jet Grout Cohesion' }
+            sigmaJetDesign: { value: sigmaJetDesign, unit: 'kPa', description: tr ? 'Tasarım Basınç Dayanımı' : 'Design Compressive Strength' },
+            Ejg: { value: Ejg, unit: 'kPa', description: tr ? 'Jet Grout Elastisite Modülü' : 'Jet Grout Elastic Modulus' },
+            cjet: { value: cjet, unit: 'kPa', description: tr ? 'Jet Grout Kohezyonu' : 'Jet Grout Cohesion' }
         },
 
-        // Bearing Capacity
         capacity: {
-            Qs: { value: Qs, unit: 'kN', description: 'Shaft Friction Capacity' },
-            Qu: { value: Qu, unit: 'kN', description: 'End Bearing Capacity' },
-            Qemn: { value: Qemn, unit: 'kN', description: 'Safe Bearing Capacity' },
-            Qbasınc: { value: Qbasınc, unit: 'kN', description: 'Compressive Capacity' },
-            Qkolon: { value: Qkolon, unit: 'kN', description: 'Max Column Load' }
+            Qs_raw: { value: Qs_raw, unit: 'kN', description: tr ? 'Çevre Sürtünme Kapasitesi (Qs)' : 'Skin Friction Capacity (Qs)' },
+            Qs_safe: { value: Qs_safe, unit: 'kN', description: tr ? 'Güvenli Yük (Qs/FS)' : 'Safe Load (Qs/FS)' },
+            Qu_raw: { value: Qu_raw, unit: 'kN', description: tr ? 'Uç Taşıma Kapasitesi (Qu)' : 'End Bearing Capacity (Qu)' },
+            Qcrush: { value: Qcrush, unit: 'kN', description: tr ? 'Yapısal Kapasite (Qcrush)' : 'Structural Capacity (Qcrush)' },
+            Qkolon: { value: Qkolon, unit: 'kN', description: tr ? 'Maks. Kolon Yükü' : 'Max Column Load' }
         },
 
-        // Improved Soil
         improvedSoil: {
-            cuImproved: { value: cuImproved, unit: 'kPa', description: 'Improved Cohesion' },
-            qemnImproved: { value: qemnImproved, unit: 'kPa', description: 'Improved Bearing Capacity' },
-            Eimproved: { value: Eimproved, unit: 'kPa', description: 'Improved Elastic Modulus' }
+            cuImproved: { value: cuImproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Kohezyon' : 'Improved Cohesion' },
+            qemnImproved: { value: qemnImproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Taşıma Kapasitesi' : 'Improved Bearing Capacity' },
+            Eimproved: { value: Eimproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Elastisite Modülü' : 'Improved Elastic Modulus' }
         },
 
-        // Settlement
         settlement: {
-            delta: { value: settlement, unit: 'm', description: 'Settlement' },
-            deltaMm: { value: settlementMm, unit: 'mm', description: 'Settlement' }
+            deltaCm: { value: settlementCm, unit: 'cm', description: tr ? 'Oturma (cm)' : 'Settlement (cm)' },
+            deltaMm: { value: settlementMm, unit: 'mm', description: tr ? 'Oturma (mm)' : 'Settlement (mm)' }
+        }
+    };
+}
+
+// ============================================
+// 8. SOIL LAYER PROFILE CALCULATIONS
+// ============================================
+
+/**
+ * Calculate cumulative vertical stress for each layer
+ * σ_v = Σ(γᵢ × hᵢ) - cumulative from top
+ * @param {Array} layers - Array of soil layers with gamma and thickness
+ * @returns {Array} Layer results with depth ranges and stresses
+ */
+function calculateLayerStress(layers) {
+    let cumulativeDepth = 0;
+    let cumulativeStress = 0;
+
+    return layers.map((layer, index) => {
+        const thickness = parseFloat(layer.thickness) || 0;
+        const gamma = parseFloat(layer.gamma) || 0;
+
+        const startDepth = cumulativeDepth;
+        const stressAtTop = cumulativeStress;
+
+        // Stress contribution of this layer
+        const layerStress = gamma * thickness;
+
+        cumulativeDepth += thickness;
+        cumulativeStress += layerStress;
+
+        return {
+            index: index + 1,
+            soilType: layer.soilType,
+            thickness,
+            startDepth: parseFloat(startDepth.toFixed(2)),
+            endDepth: parseFloat(cumulativeDepth.toFixed(2)),
+            gamma,
+            phi: parseFloat(layer.phi) || 0,
+            cohesion: parseFloat(layer.cohesion) || 0,
+            elasticity: parseFloat(layer.elasticity) || 0,
+            poisson: parseFloat(layer.poisson) || 0,
+            stressAtTop: parseFloat(stressAtTop.toFixed(2)),
+            stressAtBottom: parseFloat(cumulativeStress.toFixed(2)),
+            layerStress: parseFloat(layerStress.toFixed(2))
+        };
+    });
+}
+
+/**
+ * Calculate thickness-weighted average parameters
+ * X_avg = Σ(Xᵢ · hᵢ) / Σhᵢ
+ * @param {Array} layers - Array of soil layers
+ * @returns {Object} Weighted average parameters
+ */
+function calculateWeightedAverages(layers) {
+    const totalThickness = layers.reduce((sum, l) => sum + (parseFloat(l.thickness) || 0), 0);
+
+    if (totalThickness === 0) {
+        return {
+            totalThickness: 0,
+            gammaAvg: 0,
+            phiAvg: 0,
+            cohesionAvg: 0,
+            elasticityAvg: 0,
+            poissonAvg: 0
+        };
+    }
+
+    const weighted = (field) => {
+        return layers.reduce((sum, l) => {
+            return sum + (parseFloat(l[field]) || 0) * (parseFloat(l.thickness) || 0);
+        }, 0) / totalThickness;
+    };
+
+    return {
+        totalThickness: parseFloat(totalThickness.toFixed(2)),
+        gammaAvg: parseFloat(weighted('gamma').toFixed(2)),
+        phiAvg: parseFloat(weighted('phi').toFixed(2)),
+        cohesionAvg: parseFloat(weighted('cohesion').toFixed(2)),
+        elasticityAvg: parseFloat(weighted('elasticity').toFixed(2)),
+        poissonAvg: parseFloat(weighted('poisson').toFixed(3))
+    };
+}
+
+/**
+ * Main soil profile analysis - combines layer stress and weighted averages
+ * @param {Array} layers - Array of soil layer objects
+ * @returns {Object} Complete soil profile analysis
+ */
+function calculateSoilProfile(layers) {
+    const layerResults = calculateLayerStress(layers);
+    const averages = calculateWeightedAverages(layers);
+
+    // Total vertical stress at bottom
+    const totalStress = layerResults.length > 0
+        ? layerResults[layerResults.length - 1].stressAtBottom
+        : 0;
+
+    return {
+        layers: layerResults,
+        summary: {
+            totalDepth: { value: averages.totalThickness, unit: 'm', description: 'Toplam Derinlik' },
+            totalStress: { value: totalStress, unit: 'kPa', description: 'Toplam Dikey Gerilme (σv)' },
+            gammaAvg: { value: averages.gammaAvg, unit: 'kN/m³', description: 'Ort. Birim Hacim Ağırlık (γ)' },
+            phiAvg: { value: averages.phiAvg, unit: '°', description: 'Ort. Sürtünme Açısı (φ)' },
+            cohesionAvg: { value: averages.cohesionAvg, unit: 'kPa', description: 'Ort. Kohezyon (c)' },
+            elasticityAvg: { value: averages.elasticityAvg, unit: 'kN/m²', description: 'Ort. Elastisite Modülü (E)' },
+            poissonAvg: { value: averages.poissonAvg, unit: '-', description: 'Ort. Poisson Oranı (ν)' }
         }
     };
 }
@@ -332,5 +442,8 @@ module.exports = {
     calculateSettlement,
     calculateSubgradeModulus,
     calculateFrictionResistance,
-    calculateAll
+    calculateAll,
+    calculateLayerStress,
+    calculateWeightedAverages,
+    calculateSoilProfile
 };

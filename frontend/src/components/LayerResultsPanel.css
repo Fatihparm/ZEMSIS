@@ -1,0 +1,121 @@
+/* Layer Results Panel Styles */
+
+.layer-results-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+/* Tablo Wrapper */
+.layer-results-table-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.layer-results-table-wrapper h3 {
+    color: #4fc3f7;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(79, 195, 247, 0.3);
+}
+
+/* Tablo scroll */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Tablo */
+.layer-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 700px;
+}
+
+.layer-results-table thead th {
+    background: rgba(79, 195, 247, 0.15);
+    color: #90caf9;
+    padding: 12px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(79, 195, 247, 0.2);
+    white-space: nowrap;
+}
+
+.layer-results-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s ease;
+}
+
+.layer-results-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.layer-results-table td {
+    padding: 10px 10px;
+    color: #e0e0e0;
+    font-size: 0.88rem;
+}
+
+.layer-results-table td.center {
+    text-align: center;
+}
+
+.layer-results-table td.right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.layer-results-table td.highlight {
+    color: #4fc3f7;
+    font-weight: 600;
+}
+
+/* Özet Bölümü */
+.layer-summary-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.layer-summary-section h3 {
+    color: #4fc3f7;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(79, 195, 247, 0.3);
+}
+
+.summary-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.summary-cards>* {
+    flex: 1;
+    min-width: 250px;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+    .layer-results-table {
+        font-size: 0.8rem;
+    }
+
+    .layer-results-table thead th,
+    .layer-results-table td {
+        padding: 8px 6px;
+    }
+}
