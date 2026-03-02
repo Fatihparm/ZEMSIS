@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/backend/test-all-excel-scenarios.js
+/backend/test-excel-verification.js

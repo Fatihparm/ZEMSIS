@@ -122,7 +122,8 @@ function calculateJetGroutCohesion(sigmaJetDesign) {
 
 /**
  * Calculate Maximum Load on Single Column
- * Qkolon = qtemel·Ajet / [a + (Es/Ejg)·(1-a)]
+ * Qkolon = qtemel·s² / [1 + (Es/Ejg)·(s²/Ajet - 1)]
+ * or equivalently: qtemel·Ajet / [a + (Es/Ejg)·(1-a)]
  * @param {number} qtemel - Foundation pressure (kPa)
  * @param {number} Ajet - Column area (m²)
  * @param {number} a - Area replacement ratio
@@ -133,6 +134,19 @@ function calculateJetGroutCohesion(sigmaJetDesign) {
 function calculateColumnLoad(qtemel, Ajet, a, Es, Ejg) {
     const denominator = a + (Es / Ejg) * (1 - a);
     return (qtemel * Ajet) / denominator;
+}
+
+/**
+ * Calculate soil stress share
+ * qzemin = qtemel·(1-a)·Es / (a·Ejg + (1-a)·Es)
+ * @param {number} qtemel - Foundation pressure (kPa)
+ * @param {number} a - Area replacement ratio
+ * @param {number} Es - Soil elastic modulus (kPa)
+ * @param {number} Ejg - Jet grout elastic modulus (kPa)
+ * @returns {number} Soil stress share (kPa)
+ */
+function calculateSoilStress(qtemel, a, Es, Ejg) {
+    return qtemel * (1 - a) * Es / (a * Ejg + (1 - a) * Es);
 }
 
 // ============================================
@@ -235,18 +249,28 @@ function calculateAll(input, lang = 'en') {
         cu,          // Undrained cohesion (kPa)
         sigmaJet,    // Jet grout strength (kPa) - σjet
         Es,          // Soil elastic modulus (kPa)
-        Ejg,         // Jet grout elastic modulus (kPa) - direct input, not calculated
         H,           // Column height (m)
         qtemel,      // Foundation pressure (kPa)
-        qnet,        // Net pressure for settlement (kPa) - if not provided, calculated
-        Fs = 2.0,    // Material Safety Factor (for design strength)
-        FS = 1.5,    // Factor of Safety (for bearing capacity)
+        Fs = 2.0,    // Material Safety Factor (for design strength: σjet/Fs)
+        FS_shaft = 1.5,     // Safety factor for shaft capacity (Qs/FS)
+        FS_endbearing = 2.0, // Safety factor for end bearing (Qu/FS)
+        FS_improved = 2.5,   // Safety factor for improved bearing capacity
         alpha = 0.5, // Adhesion factor
-        Nc = 5.14    // Bearing capacity factor (Skempton/Prandtl)
+        Nc = 5.14,   // Bearing capacity factor (Skempton/Prandtl)
+        EjgMultiplier = 300, // Ejg = EjgMultiplier × σjet_tasarım
+        Hkazi = 0,   // Pile embedment depth for settlement (m)
+        gamma = 18,  // Unit weight for settlement (kN/m³)
+        qtemelStatik, // Static foundation pressure for settlement (kPa)
+        // Legacy support
+        FS,          // Old single FS parameter
+        Ejg: EjgInput, // Direct Ejg input (legacy)
+        qnet: qnetInput // Direct qnet input (legacy)
     } = input;
 
-    // Calculate qnet if not provided (default: qtemel * 0.5 as approximation)
-    const qnetValue = qnet || (qtemel * 0.5);
+    // Legacy: if old single FS is provided, use it for all
+    const fsShaft = input.FS_shaft || FS || 1.5;
+    const fsEndbearing = input.FS_endbearing || FS || 2.0;
+    const fsImproved = input.FS_improved || FS || 2.5;
 
     // 1. Geometry
     const Ajet = calculateColumnArea(D);
@@ -256,21 +280,37 @@ function calculateAll(input, lang = 'en') {
     const sigmaJetDesign = calculateDesignStrength(sigmaJet, Fs);
     const cjet = calculateJetGroutCohesion(sigmaJetDesign);
 
+    // Ejg: use direct input if provided, otherwise calculate
+    const Ejg = EjgInput || (EjgMultiplier * sigmaJetDesign);
+
     // 3. Single Column Capacity
     const Qs_raw = calculateShaftCapacity(alpha, cu, D, H);
-    const Qs_safe = Qs_raw / FS;
+    const Qs_safe = Qs_raw / fsShaft;
     const Qu_raw = calculateEndBearing(Nc, cu, Ajet);
+    const Qu_safe = Qu_raw / fsEndbearing;
     const Qcrush = calculateCompressiveCapacity(sigmaJetDesign, Ajet);
+
+    // Qkolon limit = Qsemn + Quemn
+    const Qkolon_limit = Qs_safe + Qu_safe;
 
     // 4. Column Load
     const Qkolon = calculateColumnLoad(qtemel, Ajet, a, Es, Ejg);
+    const kolonSafe = Qkolon < Qkolon_limit;
 
-    // 5. Improved Soil Parameters
+    // 5. Soil stress share
+    const qzemin = calculateSoilStress(qtemel, a, Es, Ejg);
+
+    // 6. Improved Soil Parameters
     const cuImproved = calculateImprovedCohesion(a, cjet, cu);
-    const qemnImproved = calculateImprovedBearingCapacity(cuImproved, Nc, FS);
+    const qemnImproved = calculateImprovedBearingCapacity(cuImproved, Nc, fsImproved);
     const Eimproved = calculateImprovedModulus(Ejg, a, Es);
+    const improvedSafe = qemnImproved > qtemel;
 
-    // 6. Settlement
+    // 7. Settlement
+    // qnet = qtemel_statik - γ·Hkazı (or direct input)
+    const qtemelForSettlement = qtemelStatik || qtemel;
+    const qkazi = gamma * Hkazi;
+    const qnetValue = qnetInput || (qtemelForSettlement - qkazi);
     const settlement = calculateSettlement(qnetValue, H, Eimproved);
     const settlementMm = settlement * 1000;
     const settlementCm = settlement * 100;
@@ -280,7 +320,9 @@ function calculateAll(input, lang = 'en') {
 
     return {
         input: {
-            D, s, cu, sigmaJet, Es, Ejg, H, qtemel, qnet: qnetValue, Fs, FS, alpha, Nc
+            D, s, cu, sigmaJet, Es, Ejg, H, qtemel, qnet: qnetValue,
+            Fs, FS_shaft: fsShaft, FS_endbearing: fsEndbearing, FS_improved: fsImproved,
+            alpha, Nc, EjgMultiplier, Hkazi, gamma
         },
 
         geometry: {
@@ -297,19 +339,27 @@ function calculateAll(input, lang = 'en') {
 
         capacity: {
             Qs_raw: { value: Qs_raw, unit: 'kN', description: tr ? 'Çevre Sürtünme Kapasitesi (Qs)' : 'Skin Friction Capacity (Qs)' },
-            Qs_safe: { value: Qs_safe, unit: 'kN', description: tr ? 'Güvenli Yük (Qs/FS)' : 'Safe Load (Qs/FS)' },
+            Qs_safe: { value: Qs_safe, unit: 'kN', description: tr ? 'Emniyetli Sürtünme (Qs/FS)' : 'Safe Shaft (Qs/FS)' },
             Qu_raw: { value: Qu_raw, unit: 'kN', description: tr ? 'Uç Taşıma Kapasitesi (Qu)' : 'End Bearing Capacity (Qu)' },
+            Qu_safe: { value: Qu_safe, unit: 'kN', description: tr ? 'Emniyetli Uç Taşıma (Qu/FS)' : 'Safe End Bearing (Qu/FS)' },
             Qcrush: { value: Qcrush, unit: 'kN', description: tr ? 'Yapısal Kapasite (Qcrush)' : 'Structural Capacity (Qcrush)' },
-            Qkolon: { value: Qkolon, unit: 'kN', description: tr ? 'Maks. Kolon Yükü' : 'Max Column Load' }
+            Qkolon: { value: Qkolon, unit: 'kN', description: tr ? 'Maks. Kolon Yükü' : 'Max Column Load' },
+            Qkolon_limit: { value: Qkolon_limit, unit: 'kN', description: tr ? 'Kolon Yük Limiti (Qsemn+Quemn)' : 'Column Load Limit (Qsemn+Quemn)' },
+            kolonSafe: { value: kolonSafe, unit: '-', description: tr ? 'Kolon Güvenli mi? (Qkolon < Limit)' : 'Column Safe? (Qkolon < Limit)' }
         },
 
         improvedSoil: {
+            qzemin: { value: qzemin, unit: 'kPa', description: tr ? 'Zemin Gerilme Payı' : 'Soil Stress Share' },
             cuImproved: { value: cuImproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Kohezyon' : 'Improved Cohesion' },
             qemnImproved: { value: qemnImproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Taşıma Kapasitesi' : 'Improved Bearing Capacity' },
-            Eimproved: { value: Eimproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Elastisite Modülü' : 'Improved Elastic Modulus' }
+            Eimproved: { value: Eimproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Elastisite Modülü' : 'Improved Elastic Modulus' },
+            improvedSafe: { value: improvedSafe, unit: '-', description: tr ? 'İyileştirilmiş Güvenli mi? (qemn > qtemel)' : 'Improved Safe? (qemn > qtemel)' }
         },
 
         settlement: {
+            qkazi: { value: qkazi, unit: 'kPa', description: tr ? 'Kazık Gerilmesi (γ·Hkazı)' : 'Pile Stress (γ·Hkazı)' },
+            qnet: { value: qnetValue, unit: 'kPa', description: tr ? 'Net Basınç' : 'Net Pressure' },
+            Eimproved: { value: Eimproved, unit: 'kPa', description: tr ? 'İyileştirilmiş E Modülü' : 'Improved E Modulus' },
             deltaCm: { value: settlementCm, unit: 'cm', description: tr ? 'Oturma (cm)' : 'Settlement (cm)' },
             deltaMm: { value: settlementMm, unit: 'mm', description: tr ? 'Oturma (mm)' : 'Settlement (mm)' }
         }
@@ -436,6 +486,7 @@ module.exports = {
     calculateJetGroutModulus,
     calculateJetGroutCohesion,
     calculateColumnLoad,
+    calculateSoilStress,
     calculateImprovedCohesion,
     calculateImprovedBearingCapacity,
     calculateImprovedModulus,

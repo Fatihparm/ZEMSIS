@@ -1,0 +1,123 @@
+/* Plan View Styles - AutoCAD-like bird's eye view */
+
+.plan-view-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    margin-top: 20px;
+}
+
+.plan-view-wrapper h3 {
+    color: #4fc3f7;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(79, 195, 247, 0.3);
+}
+
+.plan-view-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.plan-control-group label {
+    font-size: 0.75rem;
+    color: #90caf9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.plan-control-group input {
+    width: 90px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.plan-control-group input:focus {
+    border-color: #42a5f5;
+    box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
+}
+
+.plan-control-group .unit-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 2px;
+}
+
+.plan-view-info {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+}
+
+.plan-info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-info-item .info-label {
+    color: #90caf9;
+    font-weight: 500;
+}
+
+.plan-info-item .info-value {
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+.plan-view-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.plan-view-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+@media (max-width: 700px) {
+    .plan-view-container {
+        height: 350px;
+    }
+
+    .plan-view-controls {
+        gap: 10px;
+    }
+
+    .plan-control-group input {
+        width: 70px;
+    }
+}

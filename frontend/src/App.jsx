@@ -4,6 +4,7 @@ import ResultCard from './components/ResultCard';
 import SoilLayerEditor from './components/SoilLayerEditor';
 import LayerResultsPanel from './components/LayerResultsPanel';
 import CrossSectionView from './components/CrossSectionView';
+import PlanView from './components/PlanView';
 import './App.css';
 
 const API_URL = 'http://localhost:3001/api';
@@ -478,6 +479,15 @@ function App() {
               parameters={parameters}
               soilLayers={soilLayers}
               lang={lang}
+            />
+          )}
+
+          {/* Yerleşim Planı (Kuş Bakışı) - Hesaplama sonrası */}
+          {results && (
+            <PlanView
+              parameters={parameters}
+              lang={lang}
+              onParameterChange={handleInputChange}
             />
           )}
         </div>
