@@ -180,22 +180,7 @@ function PlanView({ parameters, lang, onParameterChange }) {
             ctx.fillText(String.fromCharCode(65 + i), offsetX - 25, py + 1);
         });
 
-        // ── Title block ──
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        const titleW = 240;
-        const titleH = 28;
-        const titleX = offsetX + drawW / 2 - titleW / 2;
-        const titleY = offsetY + drawH + 42;
-        ctx.fillRect(titleX, titleY, titleW, titleH);
-        ctx.strokeStyle = '#ff9800';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(titleX, titleY, titleW, titleH);
-        ctx.fillStyle = '#ff9800';
-        ctx.font = 'bold 12px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const titleText = lang === 'tr' ? 'JET GROUT YERLEŞİM PLANI' : 'JET GROUT LAYOUT PLAN';
-        ctx.fillText(titleText, offsetX + drawW / 2, titleY + titleH / 2);
+
 
     }, [buildingWidth, buildingLength, D, s, lang]);
 
