@@ -82,13 +82,13 @@ const translations = {
       improvedSoil: '🌍 Improved Soil',
       settlement: '📉 Settlement',
       noResults: 'No results yet.',
-      enterParams: 'Enter parameters on the left and click "Calculate".'
+      enterParams: 'Enter parameters and click "Calculate".'
     },
     calculate: '🔬 Calculate',
     calculating: 'Calculating...',
     apiError: 'Cannot connect to API. Is the backend running?',
     calcFailed: 'Calculation failed',
-    footer: 'Jet-Grout-Calc v1.0 © 2026 | Based on Geotechnical Engineering Formulas'
+    footer: 'Jet-Grout-Calc v1.0 © 2026'
   },
   tr: {
     title: '🏗️ Jet-Grout-Calc',
@@ -161,19 +161,19 @@ const translations = {
       improvedSoil: '🌍 İyileştirilmiş Zemin',
       settlement: '📉 Oturma',
       noResults: 'Henüz sonuç yok.',
-      enterParams: 'Soldaki parametreleri girin ve "Hesapla" butonuna tıklayın.'
+      enterParams: 'Parametreleri girin ve "Hesapla" butonuna tıklayın.'
     },
     calculate: '🔬 Hesapla',
     calculating: 'Hesaplanıyor...',
     apiError: 'API\'ye bağlanılamıyor. Backend çalışıyor mu?',
     calcFailed: 'Hesaplama başarısız',
-    footer: 'Jet-Grout-Calc v1.0 © 2026 | Geoteknik Mühendisliği Formüllerine Dayalı'
+    footer: 'Jet-Grout-Calc v1.0 © 2026'
   }
 };
 
 function App() {
   const [lang, setLang] = useState('en');
-  const [activeTab, setActiveTab] = useState('parameters');
+  const [activePanel, setActivePanel] = useState(null); // null = panel kapalı
   const [parameters, setParameters] = useState({
     D: 0.6,
     s: 1.6,
@@ -189,7 +189,6 @@ function App() {
     alpha: 0.5,
     Nc: 5.14
   });
-  // Zemin tabakaları state
   const [soilLayers, setSoilLayers] = useState([
     {
       id: 'layer-1',
@@ -202,7 +201,6 @@ function App() {
       poisson: 0.3
     }
   ]);
-  // Unit selections: 'kPa' or 'MPa'
   const [units, setUnits] = useState({
     sigmaJet: 'MPa',
     Es: 'MPa',
@@ -216,14 +214,13 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Convert value to kPa based on selected unit
   const toKPa = (value, unit) => {
     return unit === 'MPa' ? value * 1000 : value;
   };
 
   const t = translations[lang];
+  const tr = lang === 'tr';
 
-  // Load defaults on mount
   useEffect(() => {
     fetch(`${API_URL}/defaults`)
       .then(res => res.json())
@@ -233,50 +230,34 @@ function App() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setParameters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setParameters(prev => ({ ...prev, [name]: value }));
   };
 
   const handleUnitChange = (fieldName, newUnit) => {
-    setUnits(prev => ({
-      ...prev,
-      [fieldName]: newUnit
-    }));
+    setUnits(prev => ({ ...prev, [fieldName]: newUnit }));
   };
 
   const handleCalculateLayers = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const response = await fetch(`${API_URL}/calculate-layers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ layers: soilLayers })
       });
-
       const data = await response.json();
-
       if (data.success) {
         setLayerResults(data.results);
-
-        // Auto-sync: zemin tabakaları ortalamasını parametrelere aktar
         const summary = data.results.summary;
         if (summary) {
           setParameters(prev => ({
             ...prev,
             cu: summary.cohesionAvg?.value || prev.cu,
-            Es: summary.elasticityAvg?.value ? summary.elasticityAvg.value / 1000 : prev.Es, // kN/m² → MPa
+            Es: summary.elasticityAvg?.value ? summary.elasticityAvg.value / 1000 : prev.Es,
             H: summary.totalDepth?.value || prev.H
           }));
-          // Es birimini MPa olarak ayarla
-          setUnits(prev => ({
-            ...prev,
-            Es: 'MPa',
-            cu: 'kPa'
-          }));
+          setUnits(prev => ({ ...prev, Es: 'MPa', cu: 'kPa' }));
         }
       } else {
         setError(data.error || t.calcFailed);
@@ -291,9 +272,7 @@ function App() {
   const handleCalculate = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      // Convert parameters to kPa before sending
       const convertedParams = {
         ...parameters,
         sigmaJet: toKPa(parseFloat(parameters.sigmaJet), units.sigmaJet),
@@ -303,17 +282,15 @@ function App() {
         qtemel: toKPa(parseFloat(parameters.qtemel), units.qtemel),
         qnet: toKPa(parseFloat(parameters.qnet), units.qnet)
       };
-
       const response = await fetch(`${API_URL}/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parameters: convertedParams, lang })
       });
-
       const data = await response.json();
-
       if (data.success) {
         setResults(data.results);
+        setActivePanel('results');
       } else {
         setError(data.error || t.calcFailed);
       }
@@ -328,119 +305,171 @@ function App() {
     setLang(prev => prev === 'en' ? 'tr' : 'en');
   };
 
+  const togglePanel = (panel) => {
+    setActivePanel(prev => prev === panel ? null : panel);
+  };
+
+  // Menu items
+  const menuItems = [
+    { key: 'parameters', icon: '⚙️', label: tr ? 'Parametreler' : 'Parameters' },
+    { key: 'soilLayers', icon: '🌍', label: tr ? 'Zemin' : 'Soil' },
+    { key: 'crossSection', icon: '📐', label: tr ? 'Kesit' : 'Section' },
+    { key: 'results', icon: '📊', label: tr ? 'Sonuçlar' : 'Results' },
+  ];
+
   return (
-    <div className="app-container">
-      <header className="header">
-        <div className="header-top">
-          <button className="lang-btn" onClick={toggleLanguage}>
-            {lang === 'en' ? '🇹🇷 Türkçe' : '🇬🇧 English'}
+    <div className="dashboard">
+      {/* ── Left Icon Sidebar ── */}
+      <nav className="dash-sidebar">
+        <div className="dash-logo" title="Jet-Grout-Calc">
+          🏗️
+        </div>
+
+        <div className="dash-menu">
+          {menuItems.map(item => (
+            <button
+              key={item.key}
+              className={`dash-menu-btn ${activePanel === item.key ? 'active' : ''}`}
+              onClick={() => togglePanel(item.key)}
+              title={item.label}
+            >
+              <span className="menu-icon">{item.icon}</span>
+              <span className="menu-label">{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="dash-sidebar-bottom">
+          <button className="dash-menu-btn" onClick={toggleLanguage} title={lang === 'en' ? 'Türkçe' : 'English'}>
+            <span className="menu-icon">{lang === 'en' ? '🇹🇷' : '🇬🇧'}</span>
+            <span className="menu-label">{lang === 'en' ? 'TR' : 'EN'}</span>
           </button>
         </div>
-        <h1>{t.title}</h1>
-        <p>{t.subtitle}</p>
-      </header>
+      </nav>
 
-      {error && <div className="error-message">{error}</div>}
+      {/* ── Slide-out Panel ── */}
+      {activePanel && (
+        <div className="dash-panel">
+          <div className="dash-panel-header">
+            <h2>{menuItems.find(m => m.key === activePanel)?.label || ''}</h2>
+            <button className="panel-close-btn" onClick={() => setActivePanel(null)}>✕</button>
+          </div>
 
-      {/* Parametreler (%40) + Zemin Tabakaları (%60) yan yana */}
-      <div className="params-soil-row">
-        {/* Sol Panel — Parametreler (Geometri hariç) */}
-        <div className="params-panel">
-          <section className="tab-panel">
-            <h2>{t.soil.title}</h2>
-            {layerResults && (
-              <div className="sync-info">
-                ✅ {lang === 'tr' ? 'Zemin tabakaları ortalaması aktarıldı' : 'Synced from soil layers'}
+          <div className="dash-panel-content">
+            {error && <div className="panel-error">⚠️ {error}</div>}
+
+            {/* ── Parameters ── */}
+            {activePanel === 'parameters' && (
+              <>
+                <div className="panel-section">
+                  <h3>{t.geometry.title}</h3>
+                  <div className="panel-form">
+                    <InputField label={t.geometry.diameter} name="D" value={parameters.D} onChange={handleInputChange} unit="m" placeholder="0.6" min={0.3} max={3.0} step={0.1} tooltip={t.geometry.diameterTip} />
+                    <InputField label={t.geometry.spacing} name="s" value={parameters.s} onChange={handleInputChange} unit="m" placeholder="1.6" min={0.5} max={10} step={0.1} tooltip={t.geometry.spacingTip} />
+                    <InputField label={t.geometry.height} name="H" value={parameters.H} onChange={handleInputChange} unit="m" placeholder="12" min={1} max={50} tooltip={t.geometry.heightTip} />
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h3>{t.soil.title}</h3>
+                  {layerResults && (
+                    <div className="sync-info">✅ {tr ? 'Zemin tabakalarından aktarıldı' : 'Synced from soil layers'}</div>
+                  )}
+                  <div className="panel-form">
+                    <InputField label={t.soil.cu} name="cu" value={parameters.cu} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.cu} onUnitChange={handleUnitChange} placeholder="25" min={5} max={200} tooltip={t.soil.cuTip} />
+                    <InputField label={t.soil.Es} name="Es" value={parameters.Es} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Es} onUnitChange={handleUnitChange} placeholder="10" min={1} max={1000} step={1} tooltip={t.soil.EsTip} />
+                    <InputField label={t.soil.alpha} name="alpha" value={parameters.alpha} onChange={handleInputChange} unit="-" placeholder="0.5" min={0.3} max={1.0} step={0.05} tooltip={t.soil.alphaTip} />
+                    <InputField label={t.soil.Nc} name="Nc" value={parameters.Nc} onChange={handleInputChange} unit="-" placeholder="9" min={5.14} max={9} step={0.1} tooltip={t.soil.NcTip} />
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h3>{t.jetgrout.title}</h3>
+                  <div className="panel-form">
+                    <InputField label={t.jetgrout.strength} name="sigmaJet" value={parameters.sigmaJet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.sigmaJet} onUnitChange={handleUnitChange} placeholder="3.0" min={0.5} max={20} step={0.1} tooltip={t.jetgrout.strengthTip} />
+                    <InputField label={t.jetgrout.modulus} name="Ejg" value={parameters.Ejg} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Ejg} onUnitChange={handleUnitChange} placeholder="450" min={50} max={2000} step={10} tooltip={t.jetgrout.modulusTip} />
+                    <InputField label={t.jetgrout.materialFs} name="Fs" value={parameters.Fs} onChange={handleInputChange} unit="-" placeholder="2.0" min={1.5} max={4.0} step={0.1} tooltip={t.jetgrout.materialFsTip} />
+                    <InputField label={t.jetgrout.bearingFS} name="FS" value={parameters.FS} onChange={handleInputChange} unit="-" placeholder="1.5" min={1.0} max={3.0} step={0.1} tooltip={t.jetgrout.bearingFSTip} />
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h3>{t.loading.title}</h3>
+                  <div className="panel-form">
+                    <InputField label={t.loading.pressure} name="qtemel" value={parameters.qtemel} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qtemel} onUnitChange={handleUnitChange} placeholder="150" min={50} max={1000} step={10} tooltip={t.loading.pressureTip} />
+                    <InputField label={t.loading.netPressure} name="qnet" value={parameters.qnet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qnet} onUnitChange={handleUnitChange} placeholder="" min={0} max={500} step={5} tooltip={t.loading.netPressureTip} />
+                  </div>
+                </div>
+
+                <button className="panel-calculate-btn" onClick={handleCalculate} disabled={loading}>
+                  {loading ? t.calculating : t.calculate}
+                </button>
+              </>
+            )}
+
+            {/* ── Soil Layers ── */}
+            {activePanel === 'soilLayers' && (
+              <div className="panel-soil-editor">
+                <SoilLayerEditor
+                  layers={soilLayers}
+                  onChange={setSoilLayers}
+                  translations={t.soilLayers}
+                  lang={lang}
+                />
+                {layerResults && (
+                  <LayerResultsPanel
+                    results={layerResults}
+                    translations={t.soilLayers}
+                    lang={lang}
+                  />
+                )}
               </div>
             )}
-            <div className="form-grid">
-              <InputField label={t.soil.cu} name="cu" value={parameters.cu} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.cu} onUnitChange={handleUnitChange} placeholder="25" min={5} max={200} tooltip={t.soil.cuTip} />
-              <InputField label={t.soil.Es} name="Es" value={parameters.Es} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Es} onUnitChange={handleUnitChange} placeholder="10" min={1} max={1000} step={1} tooltip={t.soil.EsTip} />
-              <InputField label={t.soil.alpha} name="alpha" value={parameters.alpha} onChange={handleInputChange} unit="-" placeholder="0.5" min={0.3} max={1.0} step={0.05} tooltip={t.soil.alphaTip} />
-              <InputField label={t.soil.Nc} name="Nc" value={parameters.Nc} onChange={handleInputChange} unit="-" placeholder="9" min={5.14} max={9} step={0.1} tooltip={t.soil.NcTip} />
-            </div>
 
-            <h2 style={{ marginTop: '20px' }}>{t.jetgrout.title}</h2>
-            <div className="form-grid">
-              <InputField label={t.jetgrout.strength} name="sigmaJet" value={parameters.sigmaJet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.sigmaJet} onUnitChange={handleUnitChange} placeholder="3.0" min={0.5} max={20} step={0.1} tooltip={t.jetgrout.strengthTip} />
-              <InputField label={t.jetgrout.modulus} name="Ejg" value={parameters.Ejg} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Ejg} onUnitChange={handleUnitChange} placeholder="450" min={50} max={2000} step={10} tooltip={t.jetgrout.modulusTip} />
-              <InputField label={t.jetgrout.materialFs} name="Fs" value={parameters.Fs} onChange={handleInputChange} unit="-" placeholder="2.0" min={1.5} max={4.0} step={0.1} tooltip={t.jetgrout.materialFsTip} />
-              <InputField label={t.jetgrout.bearingFS} name="FS" value={parameters.FS} onChange={handleInputChange} unit="-" placeholder="1.5" min={1.0} max={3.0} step={0.1} tooltip={t.jetgrout.bearingFSTip} />
-            </div>
-
-            <h2 style={{ marginTop: '20px' }}>{t.loading.title}</h2>
-            <div className="form-grid">
-              <InputField label={t.loading.pressure} name="qtemel" value={parameters.qtemel} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qtemel} onUnitChange={handleUnitChange} placeholder="150" min={50} max={1000} step={10} tooltip={t.loading.pressureTip} />
-              <InputField label={t.loading.netPressure} name="qnet" value={parameters.qnet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qnet} onUnitChange={handleUnitChange} placeholder="" min={0} max={500} step={5} tooltip={t.loading.netPressureTip} />
-            </div>
-
-            {/* Hesapla Butonu */}
-            <div className="action-bar" style={{ marginTop: '20px' }}>
-              <button className="calculate-btn" onClick={handleCalculate} disabled={loading}>
-                {loading ? t.calculating : t.calculate}
-              </button>
-            </div>
-          </section>
-        </div>
-
-        {/* Sağ Panel — Zemin Tabakaları */}
-        <div className="soil-panel">
-          <section className="tab-panel">
-            <h2>{t.soilLayers.title}</h2>
-            <SoilLayerEditor
-              layers={soilLayers}
-              onChange={setSoilLayers}
-              translations={t.soilLayers}
-              lang={lang}
-            />
-            <div className="action-bar" style={{ marginTop: '16px' }}>
-              {/* <button className="calculate-btn sync-btn" onClick={handleCalculateLayers} disabled={loading}>
-                {loading ? t.calculating : (lang === 'tr' ? '🔄 Analiz Et ve Parametrelere Aktar' : '🔄 Analyze & Sync to Parameters')}
-              </button> */}
-            </div>
-            {layerResults && (
-              <LayerResultsPanel
-                results={layerResults}
-                translations={t.soilLayers}
-                lang={lang}
-              />
+            {/* ── Cross Section ── */}
+            {activePanel === 'crossSection' && (
+              <div className="panel-crosssection">
+                <CrossSectionView
+                  parameters={parameters}
+                  soilLayers={soilLayers}
+                  lang={lang}
+                  onParameterChange={handleInputChange}
+                />
+              </div>
             )}
-          </section>
-        </div>
-      </div>
 
-      {/* Kesit ve Plan Görünümü - Her Zaman Görünür */}
-      <div className="views-row">
-        <CrossSectionView
-          parameters={parameters}
-          soilLayers={soilLayers}
-          lang={lang}
-          onParameterChange={handleInputChange}
-        />
+            {/* ── Results ── */}
+            {activePanel === 'results' && (
+              <>
+                {results ? (
+                  <div className="panel-results">
+                    <ResultCard title={t.results.geometry} results={results.geometry} />
+                    <ResultCard title={t.results.material} results={results.material} />
+                    <ResultCard title={t.results.capacity} results={results.capacity} />
+                    <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} />
+                    <ResultCard title={t.results.settlement} results={results.settlement} />
+                  </div>
+                ) : (
+                  <div className="no-results">
+                    <p>📊</p>
+                    <p>{t.results.noResults}</p>
+                    <p style={{ fontSize: '0.8rem', marginTop: 6 }}>{t.results.enterParams}</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Main: PlanView ── */}
+      <main className="dash-main">
         <PlanView
           parameters={parameters}
           lang={lang}
           onParameterChange={handleInputChange}
         />
-      </div>
-
-      {/* Sonuçlar - Görsellerin Altında */}
-      {results && (
-        <section className="tab-panel results-panel" style={{ marginTop: '20px' }}>
-          <h2>{t.results.title}</h2>
-          <div className="results-grid">
-            <ResultCard title={t.results.geometry} results={results.geometry} />
-            <ResultCard title={t.results.material} results={results.material} />
-            <ResultCard title={t.results.capacity} results={results.capacity} />
-            <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} />
-            <ResultCard title={t.results.settlement} results={results.settlement} />
-          </div>
-        </section>
-      )}
-
-      <footer className="footer">
-        <p>{t.footer}</p>
-      </footer>
+      </main>
     </div>
   );
 }

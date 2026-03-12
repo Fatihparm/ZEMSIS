@@ -1,123 +1,268 @@
-/* Plan View Styles - AutoCAD-like bird's eye view */
+/* ══════════════════════════════════════════════
+   PlanView — Interactive AutoCAD-style Drawing
+   ══════════════════════════════════════════════ */
 
-.plan-view-wrapper {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    margin-top: 0;
-}
-
-.plan-view-wrapper h3 {
-    color: #4fc3f7;
-    margin-bottom: 16px;
-    font-size: 1.1rem;
-    padding-bottom: 10px;
-    border-bottom: 2px solid rgba(79, 195, 247, 0.3);
-}
-
-.plan-view-controls {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    padding: 16px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.plan-control-group {
+.plan-view-fullscreen-wrapper {
+    background: rgba(255, 255, 255, 0.03);
+    border: none;
+    border-radius: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
 }
 
-.plan-control-group label {
-    font-size: 0.75rem;
-    color: #90caf9;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+/* ── Header ── */
+.plan-view-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-view-header h3 {
+    color: #4fc3f7;
+    margin: 0 0 12px 0;
+    font-size: 1.05rem;
     font-weight: 600;
 }
 
-.plan-control-group input {
-    width: 90px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.08);
-    color: #e0e0e0;
-    font-size: 0.95rem;
-    font-family: 'Inter', system-ui, sans-serif;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.plan-control-group input:focus {
-    border-color: #42a5f5;
-    box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.2);
-}
-
-.plan-control-group .unit-label {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.4);
-    margin-top: 2px;
-}
-
-.plan-view-info {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-    font-size: 0.85rem;
-}
-
-.plan-info-item {
+/* ── Toolbar ── */
+.plan-toolbar {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
 }
 
-.plan-info-item .info-label {
-    color: #90caf9;
-    font-weight: 500;
+.toolbar-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
 }
 
-.plan-info-item .info-value {
+.toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.12);
+    margin: 0 4px;
+}
+
+.toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #b0bec5;
+    font-size: 0.78rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
     color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.toolbar-btn.active {
+    background: rgba(79, 195, 247, 0.2);
+    color: #4fc3f7;
+    border-color: rgba(79, 195, 247, 0.4);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* ── Toolbar inline params ── */
+.toolbar-params {
+    gap: 8px;
+}
+
+.toolbar-param {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-param label {
+    font-size: 0.72rem;
+    color: #90caf9;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-.plan-view-container {
+.toolbar-param input {
+    width: 60px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e0e0e0;
+    font-size: 0.8rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.toolbar-param input:focus {
+    border-color: #42a5f5;
+    box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.15);
+}
+
+.toolbar-param span {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Canvas container ── */
+.plan-canvas-container {
     position: relative;
-    width: 100%;
-    height: 500px;
-    border-radius: 8px;
-    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    background: #0d1117;
 }
 
-.plan-view-canvas {
+.plan-canvas {
     width: 100%;
     height: 100%;
     display: block;
 }
 
-@media (max-width: 700px) {
-    .plan-view-container {
-        height: 350px;
+/* Cursors */
+.plan-canvas.cursor-crosshair {
+    cursor: crosshair;
+}
+
+.plan-canvas.cursor-pointer {
+    cursor: pointer;
+}
+
+.plan-canvas.cursor-grabbing {
+    cursor: grabbing;
+}
+
+/* ── Coordinate display ── */
+.plan-coord-display {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    gap: 12px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #90caf9;
+    user-select: none;
+    pointer-events: none;
+}
+
+.coord-zoom {
+    color: rgba(255, 255, 255, 0.4);
+    padding-left: 8px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ── Info overlay ── */
+.plan-info-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+}
+
+.plan-info-overlay .plan-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    min-width: 150px;
+}
+
+.plan-info-overlay .info-icon {
+    font-size: 0.85rem;
+}
+
+.plan-info-overlay .info-label {
+    font-size: 0.72rem;
+    color: #90caf9;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex: 1;
+}
+
+.plan-info-overlay .info-value {
+    font-size: 0.85rem;
+    color: #e0e0e0;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Help hint ── */
+.plan-help-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.9rem;
+    text-align: center;
+    max-width: 400px;
+    pointer-events: none;
+    line-height: 1.6;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .plan-toolbar {
+        gap: 4px;
     }
 
-    .plan-view-controls {
-        gap: 10px;
+    .toolbar-btn {
+        padding: 5px 7px;
+        font-size: 0.72rem;
     }
 
-    .plan-control-group input {
-        width: 70px;
+    .toolbar-params {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .plan-canvas-container {
+        min-height: 450px;
+    }
+}
+
+@media (max-width: 600px) {
+    .plan-canvas-container {
+        min-height: 350px;
+    }
+
+    .toolbar-divider {
+        display: none;
+    }
+
+    .plan-toolbar {
+        flex-wrap: wrap;
+        gap: 3px;
     }
 }
