@@ -468,6 +468,7 @@ function App() {
           parameters={parameters}
           lang={lang}
           onParameterChange={handleInputChange}
+          soilLayers={soilLayers}
         />
       </main>
     </div>

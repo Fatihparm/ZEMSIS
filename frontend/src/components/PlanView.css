@@ -124,12 +124,57 @@
     color: rgba(255, 255, 255, 0.35);
 }
 
+/* ── Toolbar section buttons ── */
+.toolbar-sections {
+    gap: 4px;
+}
+
+.toolbar-section-item {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.toolbar-section-btn {
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem !important;
+    padding: 5px 8px !important;
+    letter-spacing: 0.5px;
+}
+
+.toolbar-section-delete {
+    padding: 5px 5px !important;
+    font-size: 0.85rem !important;
+    color: #78909c !important;
+    border-radius: 0 6px 6px 0 !important;
+    min-width: 22px;
+    justify-content: center;
+}
+
+.toolbar-section-delete:hover:not(:disabled) {
+    color: #ef5350 !important;
+    background: rgba(244, 67, 54, 0.15) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Split Container (Plan + Section)
+   ══════════════════════════════════════════════ */
+
+.plan-split-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 /* ── Canvas container ── */
 .plan-canvas-container {
     position: relative;
-    flex: 1;
-    min-height: 0;
+    min-height: 120px;
     background: #0d1117;
+    overflow: hidden;
 }
 
 .plan-canvas {
@@ -149,6 +194,41 @@
 
 .plan-canvas.cursor-grabbing {
     cursor: grabbing;
+}
+
+/* ── Resize handle ── */
+.plan-split-handle {
+    flex-shrink: 0;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: ns-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-split-handle:hover {
+    background: rgba(79, 195, 247, 0.12);
+}
+
+.plan-split-handle-bar {
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.plan-split-handle:hover .plan-split-handle-bar {
+    background: rgba(79, 195, 247, 0.5);
+}
+
+/* ── Section panel ── */
+.plan-section-panel {
+    min-height: 100px;
+    overflow: hidden;
 }
 
 /* ── Coordinate display ── */
@@ -217,6 +297,28 @@
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
+/* ── Section mode hint ── */
+.plan-section-hint {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(79, 195, 247, 0.3);
+    border-radius: 8px;
+    color: #4fc3f7;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: sectionHintPulse 2s ease-in-out infinite;
+}
+
+@keyframes sectionHintPulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
 /* ── Help hint ── */
 .plan-help-hint {
     position: absolute;
@@ -248,13 +350,13 @@
     }
 
     .plan-canvas-container {
-        min-height: 450px;
+        min-height: 250px;
     }
 }
 
 @media (max-width: 600px) {
     .plan-canvas-container {
-        min-height: 350px;
+        min-height: 200px;
     }
 
     .toolbar-divider {

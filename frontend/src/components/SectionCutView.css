@@ -1,0 +1,102 @@
+/* ══════════════════════════════════════════════
+   SectionCutView — Cross-section from cut line
+   ══════════════════════════════════════════════ */
+
+.section-cut-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #0d1117;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ── Header ── */
+.section-cut-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+    min-height: 34px;
+}
+
+.section-cut-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-cut-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #4fc3f7;
+    letter-spacing: 0.3px;
+}
+
+.section-cut-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.section-cut-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.72rem;
+    color: #78909c;
+}
+
+.section-cut-info span {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.section-cut-close-btn {
+    background: transparent;
+    border: none;
+    color: #607d8b;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.section-cut-close-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e0e0e0;
+}
+
+/* ── Canvas ── */
+.section-cut-canvas-container {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+.section-cut-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* ── No section placeholder ── */
+.section-cut-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px;
+}

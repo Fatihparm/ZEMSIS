@@ -379,7 +379,7 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
                 <div className="cs-control-group">
                     <label>
                         <span className="cs-water-icon">▼</span>
-                        {tr ? 'Yeraltı Suyu Seviyesi (YASS)' : 'Groundwater Table (GW)'}
+                        {tr ? 'Yeraltı Suyu Seviyesi' : 'Groundwater Table'}
                     </label>
                     <div className="cs-input-row">
                         <input

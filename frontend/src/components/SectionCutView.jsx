@@ -1,0 +1,485 @@
+import { useRef, useEffect } from 'react';
+import './SectionCutView.css';
+
+// Zemin tipi renkleri (CrossSectionView ile aynı)
+const soilColors = {
+    kum: { fill: '#d4b87a', pattern: 'dots' },
+    kil: { fill: '#a98467', pattern: 'lines' },
+    silt: { fill: '#b8b89a', pattern: 'dashes' },
+    kaya: { fill: '#8a8a8a', pattern: 'cross' },
+    cakil: { fill: '#c4a96a', pattern: 'circles' }
+};
+
+const soilNames = {
+    en: { kum: 'Sand', kil: 'Clay', silt: 'Silt', kaya: 'Rock', cakil: 'Gravel' },
+    tr: { kum: 'Kum', kil: 'Kil', silt: 'Silt', kaya: 'Kaya', cakil: 'Çakıl' }
+};
+
+/**
+ * Compute which columns are intersected by the section line.
+ * Returns columns sorted by their projection distance along the line.
+ * Each result contains { x, y, t, perpDist } where:
+ *   t = projection distance from P1 (metres)
+ *   perpDist = perpendicular offset from line (metres, signed)
+ */
+function computeSectionColumns(sectionLine, allColumns, D) {
+    const { start, end } = sectionLine;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 0.01) return [];
+
+    const ux = dx / len;
+    const uy = dy / len;
+    const nx = -uy;
+    const ny = ux;
+    const halfD = D / 2;
+
+    const result = [];
+    allColumns.forEach(col => {
+        const cx = col.x - start.x;
+        const cy = col.y - start.y;
+        const t = cx * ux + cy * uy;           // projection along line
+        const perpDist = cx * nx + cy * ny;     // perpendicular distance
+        if (Math.abs(perpDist) <= halfD + 0.01) {
+            result.push({ x: col.x, y: col.y, t, perpDist });
+        }
+    });
+
+    result.sort((a, b) => a.t - b.t);
+    return result;
+}
+
+// ── Pattern drawing (same as CrossSectionView) ──
+function drawPattern(ctx, soilType, x, y, w, h, color) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = 0.5;
+
+    switch (soilType) {
+        case 'kum':
+            for (let px = x; px < x + w; px += 10)
+                for (let py = y; py < y + h; py += 10) {
+                    const ox = Math.sin(px * 13.7 + py * 7.3) * 3;
+                    const oy = Math.cos(px * 11.3 + py * 5.7) * 3;
+                    ctx.beginPath();
+                    ctx.arc(px + ox, py + oy, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            break;
+        case 'kil':
+            for (let py = y; py < y + h; py += 8) {
+                ctx.beginPath(); ctx.moveTo(x, py); ctx.lineTo(x + w, py); ctx.stroke();
+            }
+            break;
+        case 'silt':
+            for (let px = x; px < x + w; px += 14)
+                for (let py = y; py < y + h; py += 10) {
+                    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + 6, py); ctx.stroke();
+                }
+            break;
+        case 'kaya':
+            for (let px = x - h; px < x + w; px += 12) {
+                ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px + h, y + h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(px + h, y); ctx.lineTo(px, y + h); ctx.stroke();
+            }
+            break;
+        case 'cakil':
+            for (let px = x + 8; px < x + w; px += 16)
+                for (let py = y + 6; py < y + h; py += 14) {
+                    ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.stroke();
+                }
+            break;
+    }
+    ctx.restore();
+}
+
+function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
+    const arrowSize = 5;
+    ctx.strokeStyle = '#ffab40';
+    ctx.fillStyle = '#ffab40';
+    ctx.lineWidth = 1;
+    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+
+    if (side === 'top') {
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        // Left arrow
+        ctx.beginPath();
+        ctx.moveTo(x1, y1); ctx.lineTo(x1 + arrowSize, y1 - arrowSize); ctx.lineTo(x1 + arrowSize, y1 + arrowSize);
+        ctx.closePath(); ctx.fill();
+        // Right arrow
+        ctx.beginPath();
+        ctx.moveTo(x2, y2); ctx.lineTo(x2 - arrowSize, y2 - arrowSize); ctx.lineTo(x2 - arrowSize, y2 + arrowSize);
+        ctx.closePath(); ctx.fill();
+        // Label
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(label, (x1 + x2) / 2, y1 - 3);
+    } else if (side === 'left') {
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        // Top arrow
+        ctx.beginPath();
+        ctx.moveTo(x1, y1); ctx.lineTo(x1 - arrowSize, y1 + arrowSize); ctx.lineTo(x1 + arrowSize, y1 + arrowSize);
+        ctx.closePath(); ctx.fill();
+        // Bottom arrow
+        ctx.beginPath();
+        ctx.moveTo(x2, y2); ctx.lineTo(x2 - arrowSize, y2 - arrowSize); ctx.lineTo(x2 + arrowSize, y2 - arrowSize);
+        ctx.closePath(); ctx.fill();
+        // Label
+        ctx.save();
+        ctx.translate(x1 - 8, (y1 + y2) / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+    }
+}
+
+function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, sectionColor, onClose }) {
+    const canvasRef = useRef(null);
+    const containerRef = useRef(null);
+
+    const D = parseFloat(parameters.D) || 0.6;
+    const H = parseFloat(parameters.H) || 12;
+    const tr = lang === 'tr';
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !sectionLine) return;
+
+        // Compute section columns
+        const sectionCols = computeSectionColumns(sectionLine, columns, D);
+
+        // Total section length
+        const lineLen = Math.sqrt(
+            (sectionLine.end.x - sectionLine.start.x) ** 2 +
+            (sectionLine.end.y - sectionLine.start.y) ** 2
+        );
+
+        // Total soil depth
+        const totalSoilDepth = soilLayers.reduce((sum, l) => sum + (parseFloat(l.thickness) || 0), 0);
+        const totalDepth = Math.max(totalSoilDepth, H) * 1.08;
+
+        // Canvas setup (high-DPI)
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const W = rect.width;
+        const HH = rect.height;
+
+        // Padding
+        const pad = { top: 40, right: 80, bottom: 35, left: 60 };
+        const availW = W - pad.left - pad.right;
+        const availH = HH - pad.top - pad.bottom;
+
+        // Scale (independent axes for section view)
+        const ppmX = availW / lineLen;
+        const ppmY = availH / totalDepth;
+
+        // Chart dims
+        const chartW = availW;
+        const chartH = ppmY * totalDepth;
+
+        const offsetX = pad.left;
+        const offsetY = pad.top + (availH - chartH) / 2;
+
+        // Scalers
+        const xScale = (t) => offsetX + t * ppmX;     // t = dist along section line (m)
+        const yScale = (d) => offsetY + d * ppmY;     // d = depth from surface (m)
+        const wScale = (m) => m * ppmX;
+        const hScale = (m) => m * ppmY;
+
+        // Clear
+        ctx.clearRect(0, 0, W, HH);
+
+        // ── Surface line ──
+        const surfaceY = yScale(0);
+        ctx.strokeStyle = '#66bb6a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(offsetX - 10, surfaceY);
+        ctx.lineTo(offsetX + chartW + 10, surfaceY);
+        ctx.stroke();
+
+        // Grass pattern
+        ctx.fillStyle = '#66bb6a';
+        ctx.font = '10px sans-serif';
+        for (let x = offsetX; x < offsetX + chartW; x += 12) {
+            ctx.fillText('⌃', x, surfaceY - 2);
+        }
+
+        // ── Soil layers ──
+        let cumulativeDepth = 0;
+        soilLayers.forEach((layer) => {
+            const thickness = parseFloat(layer.thickness) || 0;
+            const y1 = yScale(cumulativeDepth);
+            const y2 = yScale(cumulativeDepth + thickness);
+            const layerH = y2 - y1;
+            const colors = soilColors[layer.soilType] || soilColors.kil;
+
+            // Fill
+            ctx.fillStyle = colors.fill;
+            ctx.globalAlpha = 0.35;
+            ctx.fillRect(offsetX, y1, chartW, layerH);
+            ctx.globalAlpha = 1.0;
+
+            // Pattern
+            drawPattern(ctx, layer.soilType, offsetX, y1, chartW, layerH, colors.fill);
+
+            // Layer boundary
+            if (cumulativeDepth > 0) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+                ctx.moveTo(offsetX, y1);
+                ctx.lineTo(offsetX + chartW, y1);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Layer label (right side)
+            const midY = (y1 + y2) / 2;
+            const name = soilNames[lang]?.[layer.soilType] || layer.soilType;
+            if (layerH > 18) {
+                ctx.fillStyle = '#e0e0e0';
+                ctx.font = '11px Inter, system-ui, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${name} (${thickness}m)`, offsetX + chartW + 8, midY);
+            }
+
+            cumulativeDepth += thickness;
+        });
+
+        // Bottom boundary
+        const bottomY = yScale(totalSoilDepth);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(offsetX, bottomY);
+        ctx.lineTo(offsetX + chartW, bottomY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ── Jet Grout Columns along section ──
+        const colTopY = yScale(0);
+        const colHeight = hScale(H);
+
+        sectionCols.forEach((col) => {
+            const colCenterX = xScale(col.t);
+            const colHalfW = wScale(D) / 2;
+            const colLeft = colCenterX - colHalfW;
+            const colW = colHalfW * 2;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(colLeft + 2, colTopY + 2, colW, colHeight);
+
+            // Column gradient
+            const grad = ctx.createLinearGradient(colLeft, colTopY, colLeft + colW, colTopY);
+            grad.addColorStop(0, 'rgba(100, 181, 246, 0.7)');
+            grad.addColorStop(0.3, 'rgba(144, 202, 249, 0.85)');
+            grad.addColorStop(0.7, 'rgba(144, 202, 249, 0.85)');
+            grad.addColorStop(1, 'rgba(100, 181, 246, 0.7)');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(colLeft, colTopY, colW, colHeight);
+
+            // Column border
+            ctx.strokeStyle = '#42a5f5';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(colLeft, colTopY, colW, colHeight);
+
+            // Column bottom line
+            ctx.strokeStyle = '#1e88e5';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(colLeft, colTopY + colHeight);
+            ctx.lineTo(colLeft + colW, colTopY + colHeight);
+            ctx.stroke();
+
+            // Cross-hatch pattern (concrete)
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 0.5;
+            const step = 8;
+            for (let py = colTopY; py < colTopY + colHeight; py += step) {
+                ctx.beginPath();
+                ctx.moveTo(colLeft, py);
+                ctx.lineTo(colLeft + colW, py + step);
+                ctx.stroke();
+            }
+        });
+
+        // ── Dimension line: D on first column ──
+        if (sectionCols.length > 0) {
+            const firstCol = sectionCols[0];
+            const fc = xScale(firstCol.t);
+            const fcL = fc - wScale(D) / 2;
+            const fcR = fc + wScale(D) / 2;
+            const dimYD = colTopY - 12;
+            drawDimensionLine(ctx, fcL, dimYD, fcR, dimYD, `D = ${D}m`, 'top');
+
+            // Extension lines
+            ctx.strokeStyle = 'rgba(255, 171, 64, 0.4)';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(fcL, colTopY); ctx.lineTo(fcL, dimYD - 5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(fcR, colTopY); ctx.lineTo(fcR, dimYD - 5); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // ── H dimension line (left side) ──
+        const hDimX = offsetX - 15;
+        drawDimensionLine(ctx, hDimX, colTopY, hDimX, colTopY + colHeight, `H = ${H}m`, 'left');
+
+        // Extension lines for H
+        ctx.strokeStyle = 'rgba(255, 171, 64, 0.4)';
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(offsetX, colTopY); ctx.lineTo(hDimX - 5, colTopY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(offsetX, colTopY + colHeight); ctx.lineTo(hDimX - 5, colTopY + colHeight); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ── Depth scale (Y axis) ──
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = '10px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        // 0m
+        ctx.fillText('0', offsetX - 30, offsetY);
+
+        // Layer boundaries
+        let cumD = 0;
+        soilLayers.forEach((layer) => {
+            cumD += parseFloat(layer.thickness) || 0;
+            const y = yScale(cumD);
+            ctx.fillText(cumD.toFixed(1) + 'm', offsetX - 30, y);
+            // Tick
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(offsetX - 4, y); ctx.lineTo(offsetX, y); ctx.stroke();
+        });
+
+        // H depth if doesn't match a layer boundary
+        const hY = yScale(H);
+        let hMatchesLayer = false;
+        let checkD = 0;
+        for (const l of soilLayers) {
+            checkD += parseFloat(l.thickness) || 0;
+            if (Math.abs(checkD - H) < 0.1) { hMatchesLayer = true; break; }
+        }
+        if (!hMatchesLayer) {
+            ctx.fillStyle = '#42a5f5';
+            ctx.fillText(H.toFixed(1) + 'm', offsetX - 30, hY);
+        }
+
+        // ── Section length scale (X axis, bottom) ──
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '10px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const xLabelStep = lineLen > 20 ? 5 : (lineLen > 10 ? 2 : 1);
+        for (let t = 0; t <= lineLen; t += xLabelStep) {
+            const x = xScale(t);
+            ctx.fillText(t.toFixed(0) + 'm', x, offsetY + chartH + 6);
+            // Tick
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x, offsetY + chartH); ctx.lineTo(x, offsetY + chartH + 4); ctx.stroke();
+        }
+
+        // ── Legend ──
+        const legendY = offsetY + chartH + 20;
+        if (legendY + 12 < HH) {
+            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+
+            // Jet Grout legend
+            ctx.fillStyle = 'rgba(144, 202, 249, 0.7)';
+            ctx.fillRect(offsetX, legendY, 14, 10);
+            ctx.strokeStyle = '#42a5f5';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(offsetX, legendY, 14, 10);
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillText('Jet Grout', offsetX + 20, legendY + 5);
+
+            // Column count
+            const colText = tr
+                ? `${sectionCols.length} kolon kesiliyor`
+                : `${sectionCols.length} columns intersected`;
+            ctx.fillStyle = '#90caf9';
+            ctx.fillText(colText, offsetX + 100, legendY + 5);
+        }
+
+    }, [sectionLine, columns, parameters, soilLayers, lang, D, H, tr]);
+
+    // Resize observer
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        const ro = new ResizeObserver(() => {
+            // Trigger re-render by updating canvas
+            const canvas = canvasRef.current;
+            if (canvas) canvas.dispatchEvent(new Event('resize'));
+        });
+        ro.observe(container);
+        return () => ro.disconnect();
+    }, []);
+
+    if (!sectionLine) {
+        return (
+            <div className="section-cut-wrapper">
+                <div className="section-cut-empty">
+                    {tr ? '✂️ Bir kesit çizgisi seçin' : '✂️ Select a section line'}
+                </div>
+            </div>
+        );
+    }
+
+    const sectionCols = computeSectionColumns(sectionLine, columns, D);
+    const lineLen = Math.sqrt(
+        (sectionLine.end.x - sectionLine.start.x) ** 2 +
+        (sectionLine.end.y - sectionLine.start.y) ** 2
+    );
+
+    return (
+        <div className="section-cut-wrapper">
+            <div className="section-cut-header">
+                <div className="section-cut-header-left">
+                    <span className="section-cut-label">
+                        {tr ? 'Kesit Görünümü' : 'Section View'}
+                    </span>
+                    <span className="section-cut-badge"
+                        style={{ background: sectionColor + '22', color: sectionColor, border: `1px solid ${sectionColor}55` }}>
+                        {sectionLine.label}
+                    </span>
+                </div>
+                <div className="section-cut-info">
+                    <span>📏 {lineLen.toFixed(1)}m</span>
+                    <span>🔵 {sectionCols.length} {tr ? 'kolon' : 'col'}</span>
+                </div>
+                {onClose && (
+                    <button className="section-cut-close-btn" onClick={onClose} title={tr ? 'Kapat' : 'Close'}>✕</button>
+                )}
+            </div>
+            <div className="section-cut-canvas-container" ref={containerRef}>
+                <canvas ref={canvasRef} className="section-cut-canvas" />
+            </div>
+        </div>
+    );
+}
+
+export { computeSectionColumns };
+export default SectionCutView;
