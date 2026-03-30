@@ -71,6 +71,10 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
     const [hoveredVertex, setHoveredVertex] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
 
+    // Undo / Redo stacks
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+
     // Rectangle mode helpers
     const [rectStart, setRectStart] = useState(null);
 
@@ -101,6 +105,58 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
     const s = parseFloat(parameters.s) || 1.6;
 
     const tr = lang === 'tr';
+
+    // ── Undo/Redo helpers ──
+    const pushUndo = useCallback(() => {
+        setUndoStack(prev => [...prev, {
+            vertices: vertices.map(v => ({ ...v })),
+            isClosed,
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } }))
+        }]);
+        setRedoStack([]);
+    }, [vertices, isClosed, sectionLines]);
+
+    const handleUndo = useCallback(() => {
+        setUndoStack(prev => {
+            if (prev.length === 0) return prev;
+            const newStack = [...prev];
+            const snapshot = newStack.pop();
+            // Push current state to redo
+            setRedoStack(r => [...r, {
+                vertices: vertices.map(v => ({ ...v })),
+                isClosed,
+                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } }))
+            }]);
+            // Restore snapshot
+            setVertices(snapshot.vertices);
+            setIsClosed(snapshot.isClosed);
+            setSectionLines(snapshot.sectionLines);
+            setSelectedVertex(null);
+            setHoveredVertex(null);
+            return newStack;
+        });
+    }, [vertices, isClosed, sectionLines]);
+
+    const handleRedo = useCallback(() => {
+        setRedoStack(prev => {
+            if (prev.length === 0) return prev;
+            const newStack = [...prev];
+            const snapshot = newStack.pop();
+            // Push current state to undo
+            setUndoStack(u => [...u, {
+                vertices: vertices.map(v => ({ ...v })),
+                isClosed,
+                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } }))
+            }]);
+            // Restore snapshot
+            setVertices(snapshot.vertices);
+            setIsClosed(snapshot.isClosed);
+            setSectionLines(snapshot.sectionLines);
+            setSelectedVertex(null);
+            setHoveredVertex(null);
+            return newStack;
+        });
+    }, [vertices, isClosed, sectionLines]);
 
     // ── Active section ──
     const activeSection = sectionLines.find(sl => sl.id === activeSectionId) || null;
@@ -562,12 +618,13 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
             return;
         }
 
-        // Right click -> undo
+        // Right click -> undo last point (draw/section mode only)
         if (e.button === 2) {
             e.preventDefault();
             if (drawingMode === 'section' && sectionStart) {
                 setSectionStart(null);
             } else if (!isClosed && vertices.length > 0 && drawingMode === 'draw') {
+                pushUndo();
                 setVertices(v => v.slice(0, -1));
             }
             return;
@@ -578,6 +635,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
             if (drawingMode === 'select') {
                 const vi = findVertex(sx, sy);
                 if (vi >= 0) {
+                    pushUndo(); // snapshot before drag starts
                     setSelectedVertex(vi);
                     setIsDragging(true);
                 } else {
@@ -598,10 +656,12 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                 if (vertices.length >= 3) {
                     const p0 = worldToScreen(vertices[0].x, vertices[0].y, metrics);
                     if (Math.hypot(sx - p0.x, sy - p0.y) < 15) {
+                        pushUndo();
                         setIsClosed(true);
                         return;
                     }
                 }
+                pushUndo();
                 setVertices(v => [...v, { x: wx, y: wy }]);
             } else if (drawingMode === 'rectangle') {
                 if (isClosed) return;
@@ -616,6 +676,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                     const x2 = Math.max(rectStart.x, wx);
                     const y2 = Math.max(rectStart.y, wy);
                     if (Math.abs(x2 - x1) > 0.1 && Math.abs(y2 - y1) > 0.1) {
+                        pushUndo();
                         setVertices([
                             { x: x1, y: y1 }, { x: x2, y: y1 },
                             { x: x2, y: y2 }, { x: x1, y: y2 }
@@ -634,6 +695,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                     // Complete the section line
                     const dist = Math.hypot(wx - sectionStart.x, wy - sectionStart.y);
                     if (dist > 0.1) {
+                        pushUndo();
                         const newSection = {
                             id: `section-${Date.now()}`,
                             start: sectionStart,
@@ -647,7 +709,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                 }
             }
         }
-    }, [drawingMode, isClosed, vertices, pan, rectStart, sectionStart, sectionLines, findVertex, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen]);
+    }, [drawingMode, isClosed, vertices, pan, rectStart, sectionStart, sectionLines, findVertex, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
 
     const handleMouseMove = useCallback((e) => {
         const canvas = canvasRef.current;
@@ -737,6 +799,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
 
     // ── Toolbar actions ──
     const handleClear = () => {
+        pushUndo();
         setVertices([]);
         setIsClosed(false);
         setSelectedVertex(null);
@@ -744,22 +807,16 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
         setRectStart(null);
     };
 
-    const handleUndoLast = () => {
-        if (isClosed) {
-            setIsClosed(false);
-        } else if (vertices.length > 0) {
-            setVertices(v => v.slice(0, -1));
-        }
-    };
-
     const handleClose = () => {
         if (vertices.length >= 3 && !isClosed) {
+            pushUndo();
             setIsClosed(true);
         }
     };
 
     const handleDeleteVertex = () => {
         if (selectedVertex !== null && vertices.length > 0) {
+            pushUndo();
             const newVerts = vertices.filter((_, i) => i !== selectedVertex);
             setVertices(newVerts);
             setSelectedVertex(null);
@@ -768,6 +825,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
     };
 
     const handleDeleteSection = (id) => {
+        pushUndo();
         setSectionLines(prev => prev.filter(sl => sl.id !== id));
         if (activeSectionId === id) {
             setActiveSectionId(null);
@@ -795,6 +853,28 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
         setPan({ x: -centerX * 20 * newZoom, y: centerY * 20 * newZoom });
         setZoom(newZoom);
     };
+
+    // ── Ctrl+Z / Ctrl+Y keyboard shortcuts ──
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Skip if user is typing in an input/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                handleUndo();
+            } else if (
+                ((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') ||
+                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z')
+            ) {
+                e.preventDefault();
+                handleRedo();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleUndo, handleRedo]);
 
     // ── Computed info ──
     const area = isClosed && vertices.length >= 3 ? polygonArea(vertices) : 0;
@@ -852,9 +932,13 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                             title={tr ? 'Poligonu kapat' : 'Close polygon'}>
                             🔒 {tr ? 'Kapat' : 'Close'}
                         </button>
-                        <button className="toolbar-btn" onClick={handleUndoLast} disabled={vertices.length === 0}
-                            title={tr ? 'Son noktayı sil' : 'Undo last vertex'}>
+                        <button className="toolbar-btn" onClick={handleUndo} disabled={undoStack.length === 0}
+                            title={tr ? 'Geri al (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
                             ↩️ {tr ? 'Geri' : 'Undo'}
+                        </button>
+                        <button className="toolbar-btn" onClick={handleRedo} disabled={redoStack.length === 0}
+                            title={tr ? 'İleri al (Ctrl+Y)' : 'Redo (Ctrl+Y)'}>
+                            ↪️ {tr ? 'İleri' : 'Redo'}
                         </button>
                         <button className="toolbar-btn" onClick={handleDeleteVertex} disabled={selectedVertex === null}
                             title={tr ? 'Seçili noktayı sil' : 'Delete selected vertex'}>
