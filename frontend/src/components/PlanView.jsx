@@ -59,13 +59,18 @@ function sectionLabel(index) {
 }
 
 // ── PlanView Component ──
-function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
+function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDrawingData, onDrawingDataChange }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
+    const initializedRef = useRef(false);
 
     // Drawing state
-    const [vertices, setVertices] = useState([]);
-    const [isClosed, setIsClosed] = useState(false);
+    const [vertices, setVertices] = useState(() =>
+        initialDrawingData?.vertices || []
+    );
+    const [isClosed, setIsClosed] = useState(() =>
+        initialDrawingData?.isClosed || false
+    );
     const [drawingMode, setDrawingMode] = useState('draw'); // draw | rectangle | select | section
     const [selectedVertex, setSelectedVertex] = useState(null);
     const [hoveredVertex, setHoveredVertex] = useState(null);
@@ -79,9 +84,31 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
     const [rectStart, setRectStart] = useState(null);
 
     // Section lines state
-    const [sectionLines, setSectionLines] = useState([]);
+    const [sectionLines, setSectionLines] = useState(() =>
+        initialDrawingData?.sectionLines || []
+    );
     const [sectionStart, setSectionStart] = useState(null); // temp start point while drawing
     const [activeSectionId, setActiveSectionId] = useState(null);
+
+    // Notify parent of drawing data changes (skip initial render)
+    useEffect(() => {
+        if (!initializedRef.current) {
+            initializedRef.current = true;
+            return;
+        }
+        if (onDrawingDataChange) {
+            onDrawingDataChange({
+                vertices: vertices.map(v => ({ x: v.x, y: v.y })),
+                isClosed,
+                sectionLines: sectionLines.map(sl => ({
+                    id: sl.id,
+                    start: { x: sl.start.x, y: sl.start.y },
+                    end: { x: sl.end.x, y: sl.end.y },
+                    label: sl.label
+                }))
+            });
+        }
+    }, [vertices, isClosed, sectionLines]);
 
     // Split view
     const [splitRatio, setSplitRatio] = useState(0.6); // 60% plan, 40% section
@@ -753,10 +780,17 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
         setIsDragging(false);
     }, []);
 
-    const handleWheel = useCallback((e) => {
-        e.preventDefault();
-        const factor = e.deltaY < 0 ? 1.12 : 0.89;
-        setZoom(z => Math.max(0.1, Math.min(50, z * factor)));
+    // Wheel zoom — must be non-passive to preventDefault
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const onWheel = (e) => {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.12 : 0.89;
+            setZoom(z => Math.max(0.1, Math.min(50, z * factor)));
+        };
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+        return () => canvas.removeEventListener('wheel', onWheel);
     }, []);
 
     const handleContextMenu = useCallback((e) => {
@@ -854,8 +888,9 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
         setZoom(newZoom);
     };
 
-    // ── Ctrl+Z / Ctrl+Y keyboard shortcuts ──
+    // ── Keyboard shortcuts (Ctrl+Z/Y, WASD pan) ──
     useEffect(() => {
+        const PAN_STEP = 40;
         const handleKeyDown = (e) => {
             // Skip if user is typing in an input/textarea
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -870,6 +905,28 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
             ) {
                 e.preventDefault();
                 handleRedo();
+            } else if (!e.ctrlKey && !e.metaKey) {
+                // WASD panning
+                switch (e.key.toLowerCase()) {
+                    case 'w':
+                        e.preventDefault();
+                        setPan(p => ({ ...p, y: p.y + PAN_STEP }));
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        setPan(p => ({ ...p, y: p.y - PAN_STEP }));
+                        break;
+                    case 'a':
+                        e.preventDefault();
+                        setPan(p => ({ ...p, x: p.x + PAN_STEP }));
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        setPan(p => ({ ...p, x: p.x - PAN_STEP }));
+                        break;
+                    default:
+                        break;
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -889,77 +946,69 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
     return (
         <div className="plan-view-fullscreen-wrapper">
             <div className="plan-view-header">
-                <h3>{tr ? '✏️ Jet Grout Yerleşim Planı (İnteraktif Çizim)' : '✏️ Jet Grout Layout Plan (Interactive Drawing)'}</h3>
+                <h3>{tr ? 'Jet Grout Yerleşim Planı (İnteraktif Çizim)' : 'Jet Grout Layout Plan (Interactive Drawing)'}</h3>
 
                 {/* Toolbar */}
                 <div className="plan-toolbar">
                     <div className="toolbar-group">
                         <button
-                            className={`toolbar-btn ${drawingMode === 'draw' ? 'active' : ''}`}
+                            className={`toolbar-btn icon-btn ${drawingMode === 'draw' ? 'active' : ''}`}
                             onClick={() => { setDrawingMode('draw'); setRectStart(null); setSectionStart(null); }}
-                            title={tr ? 'Çiz — Tıklayarak köşe ekle' : 'Draw — Click to add vertices'}
+                            data-tooltip={tr ? 'Çiz — Tıklayarak köşe ekle' : 'Draw — Click to add vertices'}
                         >
-                            ✏️ {tr ? 'Çiz' : 'Draw'}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                         </button>
                         <button
-                            className={`toolbar-btn ${drawingMode === 'rectangle' ? 'active' : ''}`}
+                            className={`toolbar-btn icon-btn ${drawingMode === 'rectangle' ? 'active' : ''}`}
                             onClick={() => { setDrawingMode('rectangle'); setRectStart(null); setSectionStart(null); }}
-                            title={tr ? 'Dikdörtgen — 2 tıkla dikdörtgen oluştur' : 'Rectangle — 2 clicks to create'}
+                            data-tooltip={tr ? 'Dikdörtgen — 2 tıklayın' : 'Rectangle — 2 clicks to create'}
                         >
-                            🔲 {tr ? 'Dikdörtgen' : 'Rect'}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /></svg>
                         </button>
                         <button
-                            className={`toolbar-btn ${drawingMode === 'select' ? 'active' : ''}`}
+                            className={`toolbar-btn icon-btn ${drawingMode === 'select' ? 'active' : ''}`}
                             onClick={() => { setDrawingMode('select'); setRectStart(null); setSectionStart(null); }}
-                            title={tr ? 'Seç — Köşeleri sürükle' : 'Select — Drag vertices'}
+                            data-tooltip={tr ? 'Seç — Köşeleri sürükle' : 'Select — Drag vertices'}
                         >
-                            ↕️ {tr ? 'Seç' : 'Select'}
-                        </button>
-                        <button
-                            className={`toolbar-btn ${drawingMode === 'section' ? 'active' : ''}`}
-                            onClick={() => { setDrawingMode('section'); setRectStart(null); setSectionStart(null); }}
-                            title={tr ? 'Kesit — 2 tıkla kesit çizgisi tanımla' : 'Section — 2 clicks to define section line'}
-                            disabled={!isClosed}
-                        >
-                            ✂️ {tr ? 'Kesit' : 'Section'}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" /><path d="M13 13l6 6" /></svg>
                         </button>
                     </div>
 
                     <div className="toolbar-divider" />
 
                     <div className="toolbar-group">
-                        <button className="toolbar-btn" onClick={handleClose} disabled={isClosed || vertices.length < 3}
-                            title={tr ? 'Poligonu kapat' : 'Close polygon'}>
-                            🔒 {tr ? 'Kapat' : 'Close'}
+                        <button className="toolbar-btn icon-btn" onClick={handleClose} disabled={isClosed || vertices.length < 3}
+                            data-tooltip={tr ? 'Poligonu kapat' : 'Close polygon'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2" /></svg>
                         </button>
-                        <button className="toolbar-btn" onClick={handleUndo} disabled={undoStack.length === 0}
-                            title={tr ? 'Geri al (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
-                            ↩️ {tr ? 'Geri' : 'Undo'}
+                        <button className="toolbar-btn icon-btn" onClick={handleUndo} disabled={undoStack.length === 0}
+                            data-tooltip={tr ? 'Geri al (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                         </button>
-                        <button className="toolbar-btn" onClick={handleRedo} disabled={redoStack.length === 0}
-                            title={tr ? 'İleri al (Ctrl+Y)' : 'Redo (Ctrl+Y)'}>
-                            ↪️ {tr ? 'İleri' : 'Redo'}
+                        <button className="toolbar-btn icon-btn" onClick={handleRedo} disabled={redoStack.length === 0}
+                            data-tooltip={tr ? 'İleri al (Ctrl+Y)' : 'Redo (Ctrl+Y)'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" /></svg>
                         </button>
-                        <button className="toolbar-btn" onClick={handleDeleteVertex} disabled={selectedVertex === null}
-                            title={tr ? 'Seçili noktayı sil' : 'Delete selected vertex'}>
-                            ❌ {tr ? 'Sil' : 'Del'}
+                        <button className="toolbar-btn icon-btn" onClick={handleDeleteVertex} disabled={selectedVertex === null}
+                            data-tooltip={tr ? 'Seçili noktayı sil' : 'Delete selected vertex'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                         </button>
-                        <button className="toolbar-btn" onClick={handleClear}
-                            title={tr ? 'Tümünü temizle' : 'Clear all'}>
-                            🗑️ {tr ? 'Temizle' : 'Clear'}
+                        <button className="toolbar-btn icon-btn" onClick={handleClear}
+                            data-tooltip={tr ? 'Tümünü temizle' : 'Clear all'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                         </button>
                     </div>
 
                     <div className="toolbar-divider" />
 
                     <div className="toolbar-group">
-                        <button className={`toolbar-btn ${gridSnap ? 'active' : ''}`} onClick={() => setGridSnap(g => !g)}
-                            title={tr ? 'Izgaraya yapış' : 'Snap to grid'}>
-                            🧲 Snap
+                        <button className={`toolbar-btn icon-btn ${gridSnap ? 'active' : ''}`} onClick={() => setGridSnap(g => !g)}
+                            data-tooltip={tr ? 'Köşelere yapış' : 'Snap to grid'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" /><circle cx="7.5" cy="10" r="1.5" /><circle cx="12" cy="7" r="1.5" /><circle cx="16.5" cy="10" r="1.5" /></svg>
                         </button>
-                        <button className="toolbar-btn" onClick={handleZoomFit}
-                            title={tr ? 'Sığdır' : 'Zoom to fit'}>
-                            🔍 {tr ? 'Sığdır' : 'Fit'}
+                        <button className="toolbar-btn icon-btn" onClick={handleZoomFit}
+                            data-tooltip={tr ? 'Sığdır' : 'Zoom to fit'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
                         </button>
                     </div>
 
@@ -968,47 +1017,56 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                     {/* Inline D and s controls */}
                     <div className="toolbar-group toolbar-params">
                         <div className="toolbar-param">
-                            <label>{tr ? 'Çap' : 'D'}</label>
+                            <label>{tr ? 'Çap (D)' : 'Diameter (D)'}</label>
                             <input type="number" value={D} min={0.3} max={3.0} step={0.1}
                                 onChange={(e) => onParameterChange && onParameterChange({ target: { name: 'D', value: e.target.value } })} />
                             <span>m</span>
                         </div>
                         <div className="toolbar-param">
-                            <label>{tr ? 'Aralık' : 's'}</label>
+                            <label>{tr ? 'Aralık (s)' : 'Spacing (s)'}</label>
                             <input type="number" value={s} min={0.5} max={10.0} step={0.1}
                                 onChange={(e) => onParameterChange && onParameterChange({ target: { name: 's', value: e.target.value } })} />
                             <span>m</span>
                         </div>
                     </div>
 
+                    <div className="toolbar-divider" />
+
+                    {/* Section cut button */}
+                    <button
+                        className={`toolbar-btn section-cut-action-btn ${drawingMode === 'section' ? 'active' : ''}`}
+                        onClick={() => { setDrawingMode('section'); setRectStart(null); setSectionStart(null); }}
+                        data-tooltip={tr ? 'Kesit Al — 2 tıkla kesit çizgisi tanımla' : 'Section Cut — 2 clicks to define section line'}
+                        disabled={!isClosed}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg>
+                    </button>
+
                     {/* Section line buttons */}
                     {sectionLines.length > 0 && (
-                        <>
-                            <div className="toolbar-divider" />
-                            <div className="toolbar-group toolbar-sections">
-                                {sectionLines.map((sl, idx) => (
-                                    <div key={sl.id} className="toolbar-section-item">
-                                        <button
-                                            className={`toolbar-btn toolbar-section-btn ${activeSectionId === sl.id ? 'active' : ''}`}
-                                            onClick={() => setActiveSectionId(activeSectionId === sl.id ? null : sl.id)}
-                                            style={{
-                                                borderColor: activeSectionId === sl.id ? SECTION_COLORS[idx % SECTION_COLORS.length] : undefined,
-                                                color: SECTION_COLORS[idx % SECTION_COLORS.length]
-                                            }}
-                                        >
-                                            {sl.label}
-                                        </button>
-                                        <button
-                                            className="toolbar-btn toolbar-section-delete"
-                                            onClick={() => handleDeleteSection(sl.id)}
-                                            title={tr ? 'Kesiti sil' : 'Delete section'}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
+                        <div className="toolbar-group toolbar-sections">
+                            {sectionLines.map((sl, idx) => (
+                                <div key={sl.id} className="toolbar-section-item">
+                                    <button
+                                        className={`toolbar-btn toolbar-section-btn ${activeSectionId === sl.id ? 'active' : ''}`}
+                                        onClick={() => setActiveSectionId(activeSectionId === sl.id ? null : sl.id)}
+                                        style={{
+                                            borderColor: activeSectionId === sl.id ? SECTION_COLORS[idx % SECTION_COLORS.length] : undefined,
+                                            color: SECTION_COLORS[idx % SECTION_COLORS.length]
+                                        }}
+                                    >
+                                        {sl.label}
+                                    </button>
+                                    <button
+                                        className="toolbar-btn toolbar-section-delete"
+                                        onClick={() => handleDeleteSection(sl.id)}
+                                        data-tooltip={tr ? 'Kesiti sil' : 'Delete section'}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
@@ -1025,7 +1083,6 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseUp}
-                        onWheel={handleWheel}
                         onContextMenu={handleContextMenu}
                     />
 
@@ -1066,24 +1123,15 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers }) {
                     {drawingMode === 'section' && !sectionStart && (
                         <div className="plan-section-hint">
                             {tr
-                                ? '✂️ Kesit başlangıç noktasını tıklayın'
-                                : '✂️ Click to set section start point'}
+                                ? 'Kesit başlangıç noktasını tıklayın'
+                                : 'Click to set section start point'}
                         </div>
                     )}
                     {drawingMode === 'section' && sectionStart && (
                         <div className="plan-section-hint">
                             {tr
-                                ? '✂️ Kesit bitiş noktasını tıklayın (sağ tık: iptal)'
-                                : '✂️ Click to set section end point (right-click: cancel)'}
-                        </div>
-                    )}
-
-                    {/* Help hint */}
-                    {vertices.length === 0 && !isClosed && (
-                        <div className="plan-help-hint">
-                            {tr
-                                ? '✏️ "Çiz" modunda canvas\'a tıklayarak poligon köşelerini yerleştirin. "Dikdörtgen" moduyla hızlı dikdörtgen çizin.'
-                                : '✏️ Click on canvas in "Draw" mode to place polygon vertices. Use "Rect" mode for quick rectangles.'}
+                                ? 'Kesit bitiş noktasını tıklayın (sağ tık: iptal)'
+                                : 'Click to set section end point (right-click: cancel)'}
                         </div>
                     )}
                 </div>

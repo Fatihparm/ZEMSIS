@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import InputField from './components/InputField';
 import ResultCard from './components/ResultCard';
 import SoilLayerEditor from './components/SoilLayerEditor';
 import LayerResultsPanel from './components/LayerResultsPanel';
 import CrossSectionView from './components/CrossSectionView';
 import PlanView from './components/PlanView';
+import Dashboard from './components/Dashboard';
+import AuthPage from './components/AuthPage';
+import ProjectsPage from './components/ProjectsPage';
+import SaveProjectModal from './components/SaveProjectModal';
 import './App.css';
 
 const API_URL = 'http://localhost:3001/api';
@@ -14,10 +18,6 @@ const translations = {
   en: {
     title: '🏗️ Jet-Grout-Calc',
     subtitle: 'Jet Grouting Design & Analysis Tool',
-    tabs: {
-      parameters: 'Parameters',
-      soilLayers: 'Soil Layers'
-    },
     geometry: {
       title: 'Column Geometry',
       diameter: 'Column Diameter',
@@ -93,10 +93,6 @@ const translations = {
   tr: {
     title: '🏗️ Jet-Grout-Calc',
     subtitle: 'Jet Grout Tasarım ve Analiz Aracı',
-    tabs: {
-      parameters: 'Parametreler',
-      soilLayers: 'Zemin Tabakaları'
-    },
     geometry: {
       title: 'Kolon Geometrisi',
       diameter: 'Kolon Çapı',
@@ -171,62 +167,96 @@ const translations = {
   }
 };
 
+const defaultParameters = {
+  D: 0.6, s: 1.6, cu: 45, sigmaJet: 3.0, Es: 10, Ejg: 450,
+  H: 12, qtemel: 120, qnet: 60, Fs: 2.0, FS: 1.5, alpha: 0.5, Nc: 5.14
+};
+
+const defaultUnits = {
+  sigmaJet: 'MPa', Es: 'MPa', Ejg: 'MPa', cu: 'kPa', qtemel: 'kPa', qnet: 'kPa'
+};
+
+const defaultSoilLayers = [
+  { id: 'layer-1', thickness: 5, soilType: 'kil', gamma: 18, phi: 15, cohesion: 80, elasticity: 25000, poisson: 0.3 }
+];
+
 function App() {
   const [lang, setLang] = useState('en');
-  const [activePanel, setActivePanel] = useState(null); // null = panel kapalı
-  const [parameters, setParameters] = useState({
-    D: 0.6,
-    s: 1.6,
-    cu: 45,
-    sigmaJet: 3.0,
-    Es: 10,
-    Ejg: 450,
-    H: 12,
-    qtemel: 120,
-    qnet: 60,
-    Fs: 2.0,
-    FS: 1.5,
-    alpha: 0.5,
-    Nc: 5.14
+
+  // ── Navigation: 'home' | 'projects' | 'workspace' ──
+  const [activePage, setActivePage] = useState('home');
+  // Active tab within workspace
+  const [activeTab, setActiveTab] = useState('parameters');
+
+  // ── Auth state ──
+  const [token, setToken] = useState(() => localStorage.getItem('jg_token'));
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem('jg_user');
+    return stored ? JSON.parse(stored) : null;
   });
-  const [soilLayers, setSoilLayers] = useState([
-    {
-      id: 'layer-1',
-      thickness: 5,
-      soilType: 'kil',
-      gamma: 18,
-      phi: 15,
-      cohesion: 80,
-      elasticity: 25000,
-      poisson: 0.3
-    }
-  ]);
-  const [units, setUnits] = useState({
-    sigmaJet: 'MPa',
-    Es: 'MPa',
-    Ejg: 'MPa',
-    cu: 'kPa',
-    qtemel: 'kPa',
-    qnet: 'kPa'
-  });
+
+  // ── Project state ──
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [currentProjectName, setCurrentProjectName] = useState('');
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  // Drawing data stored in ref (updated by PlanView callback)
+  const drawingDataRef = useRef(null);
+
+  // ── App data state ──
+  const [parameters, setParameters] = useState({ ...defaultParameters });
+  const [soilLayers, setSoilLayers] = useState([...defaultSoilLayers]);
+  const [units, setUnits] = useState({ ...defaultUnits });
   const [results, setResults] = useState(null);
   const [layerResults, setLayerResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const toKPa = (value, unit) => {
-    return unit === 'MPa' ? value * 1000 : value;
-  };
+  const toKPa = (value, unit) => unit === 'MPa' ? value * 1000 : value;
 
   const t = translations[lang];
   const tr = lang === 'tr';
 
+  // ── Verify token on mount ──
   useEffect(() => {
-    fetch(`${API_URL}/defaults`)
-      .then(res => res.json())
-      .then(data => setParameters(prev => ({ ...prev, ...data })))
-      .catch(err => console.log('Using local defaults'));
+    if (token) {
+      fetch(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) handleLogout();
+          else setUser(data.user);
+        })
+        .catch(() => handleLogout());
+    }
   }, []);
+
+  const handleLogin = (newToken, newUser) => {
+    setToken(newToken);
+    setUser(newUser);
+    setActivePage('home');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('jg_token');
+    localStorage.removeItem('jg_user');
+    setToken(null);
+    setUser(null);
+    resetWorkspace();
+  };
+
+  const resetWorkspace = () => {
+    setCurrentProjectId(null);
+    setCurrentProjectName('');
+    setParameters({ ...defaultParameters });
+    setSoilLayers([...defaultSoilLayers]);
+    setUnits({ ...defaultUnits });
+    setResults(null);
+    setLayerResults(null);
+    setActivePage('home');
+    setActiveTab('parameters');
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -262,7 +292,7 @@ function App() {
       } else {
         setError(data.error || t.calcFailed);
       }
-    } catch (err) {
+    } catch {
       setError(t.apiError);
     } finally {
       setLoading(false);
@@ -290,187 +320,316 @@ function App() {
       const data = await response.json();
       if (data.success) {
         setResults(data.results);
-        setActivePanel('results');
+        setActiveTab('results');
       } else {
         setError(data.error || t.calcFailed);
       }
-    } catch (err) {
+    } catch {
       setError(t.apiError);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleLanguage = () => {
-    setLang(prev => prev === 'en' ? 'tr' : 'en');
+  const toggleLanguage = () => setLang(prev => prev === 'en' ? 'tr' : 'en');
+
+  // ── Project load ──
+  const handleLoadProject = (project) => {
+    setCurrentProjectId(project.id);
+    setCurrentProjectName(project.name);
+    if (project.parameters) setParameters(project.parameters);
+    if (project.soilLayers && project.soilLayers.length > 0) setSoilLayers(project.soilLayers);
+    if (project.units) setUnits(project.units);
+    if (project.results) setResults(project.results);
+    drawingDataRef.current = project.drawingData || null;
+    setActivePage('workspace');
+    setActiveTab('parameters');
   };
 
-  const togglePanel = (panel) => {
-    setActivePanel(prev => prev === panel ? null : panel);
+  // ── New project ──
+  const handleNewProject = () => {
+    setCurrentProjectId(null);
+    setCurrentProjectName('');
+    setParameters({ ...defaultParameters });
+    setSoilLayers([...defaultSoilLayers]);
+    setUnits({ ...defaultUnits });
+    setResults(null);
+    setLayerResults(null);
+    drawingDataRef.current = null;
+    setActivePage('workspace');
+    setActiveTab('parameters');
   };
 
-  // Menu items
+  // ── Save complete ──
+  const handleSaveComplete = (savedProject) => {
+    setCurrentProjectId(savedProject.id);
+    setCurrentProjectName(savedProject.name);
+    setShowSaveModal(false);
+  };
+
+  const getProjectData = () => ({
+    name: currentProjectName,
+    description: '',
+    parameters,
+    soilLayers,
+    results,
+    drawingData: drawingDataRef.current,
+    units,
+  });
+
+  const handleDrawingDataChange = (data) => {
+    drawingDataRef.current = data;
+  };
+
+  // ── Not logged in → Auth ──
+  if (!token) {
+    return <AuthPage onLogin={handleLogin} lang={lang} />;
+  }
+
+  // Sidebar menu — top-level only
   const menuItems = [
+    { key: 'home', icon: '🏠', label: tr ? 'Ana Sayfa' : 'Home' },
+    { key: 'projects', icon: '📁', label: tr ? 'Projeler' : 'Projects' },
+  ];
+
+  // Workspace tabs — shown only when activePage === 'workspace'
+  const workspaceTabs = [
     { key: 'parameters', icon: '⚙️', label: tr ? 'Parametreler' : 'Parameters' },
     { key: 'soilLayers', icon: '🌍', label: tr ? 'Zemin' : 'Soil' },
     { key: 'crossSection', icon: '📐', label: tr ? 'Kesit' : 'Section' },
+    { key: 'planView', icon: '✏️', label: tr ? 'Çizim' : 'Drawing' },
     { key: 'results', icon: '📊', label: tr ? 'Sonuçlar' : 'Results' },
   ];
 
   return (
     <div className="dashboard">
-      {/* ── Left Icon Sidebar ── */}
+      {/* ── Left Sidebar ── */}
       <nav className="dash-sidebar">
-        <div className="dash-logo" title="Jet-Grout-Calc">
-          🏗️
-        </div>
+        <div className="dash-logo" title="Jet-Grout-Calc">🏗️</div>
 
         <div className="dash-menu">
           {menuItems.map(item => (
             <button
               key={item.key}
-              className={`dash-menu-btn ${activePanel === item.key ? 'active' : ''}`}
-              onClick={() => togglePanel(item.key)}
+              className={`dash-menu-btn ${activePage === item.key ? 'active' : ''}`}
+              onClick={() => setActivePage(item.key)}
               title={item.label}
             >
               <span className="menu-icon">{item.icon}</span>
               <span className="menu-label">{item.label}</span>
             </button>
           ))}
+
+          {/* Workspace sub-tabs in sidebar */}
+          {activePage === 'workspace' && (
+            <>
+              <div className="sidebar-project-divider">
+                <span>{currentProjectName || (tr ? 'Yeni Proje' : 'New Project')}</span>
+              </div>
+              {workspaceTabs.map(tab => (
+                <button
+                  key={tab.key}
+                  className={`dash-menu-btn sub-tab ${activeTab === tab.key ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.key)}
+                  title={tab.label}
+                >
+                  <span className="menu-icon">{tab.icon}</span>
+                  <span className="menu-label">{tab.label}</span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
         <div className="dash-sidebar-bottom">
+          {/* New Project */}
+          <button
+            className="dash-menu-btn"
+            onClick={handleNewProject}
+            title={tr ? 'Yeni Proje' : 'New Project'}
+          >
+            <span className="menu-icon">➕</span>
+            <span className="menu-label">{tr ? 'Yeni' : 'New'}</span>
+          </button>
+
+          {/* Save — only when in workspace */}
+          {activePage === 'workspace' && (
+            <button
+              className="dash-menu-btn"
+              onClick={() => setShowSaveModal(true)}
+              title={tr ? 'Kaydet' : 'Save'}
+            >
+              <span className="menu-icon">💾</span>
+              <span className="menu-label">{tr ? 'Kaydet' : 'Save'}</span>
+            </button>
+          )}
+
+          {/* Language */}
           <button className="dash-menu-btn" onClick={toggleLanguage} title={lang === 'en' ? 'Türkçe' : 'English'}>
             <span className="menu-icon">{lang === 'en' ? '🇹🇷' : '🇬🇧'}</span>
             <span className="menu-label">{lang === 'en' ? 'TR' : 'EN'}</span>
           </button>
+
+          {/* Logout */}
+          <button className="dash-menu-btn logout-btn" onClick={handleLogout} title={tr ? 'Çıkış' : 'Logout'}>
+            <span className="menu-icon">🚪</span>
+            <span className="menu-label">{tr ? 'Çıkış' : 'Logout'}</span>
+          </button>
         </div>
       </nav>
 
-      {/* ── Slide-out Panel ── */}
-      {activePanel && (
-        <div className="dash-panel">
-          <div className="dash-panel-header">
-            <h2>{menuItems.find(m => m.key === activePanel)?.label || ''}</h2>
-            <button className="panel-close-btn" onClick={() => setActivePanel(null)}>✕</button>
-          </div>
-
-          <div className="dash-panel-content">
-            {error && <div className="panel-error">⚠️ {error}</div>}
-
-            {/* ── Parameters ── */}
-            {activePanel === 'parameters' && (
-              <>
-                <div className="panel-section">
-                  <h3>{t.geometry.title}</h3>
-                  <div className="panel-form">
-                    <InputField label={t.geometry.diameter} name="D" value={parameters.D} onChange={handleInputChange} unit="m" placeholder="0.6" min={0.3} max={3.0} step={0.1} tooltip={t.geometry.diameterTip} />
-                    <InputField label={t.geometry.spacing} name="s" value={parameters.s} onChange={handleInputChange} unit="m" placeholder="1.6" min={0.5} max={10} step={0.1} tooltip={t.geometry.spacingTip} />
-                    <InputField label={t.geometry.height} name="H" value={parameters.H} onChange={handleInputChange} unit="m" placeholder="12" min={1} max={50} tooltip={t.geometry.heightTip} />
-                  </div>
-                </div>
-
-                <div className="panel-section">
-                  <h3>{t.soil.title}</h3>
-                  {layerResults && (
-                    <div className="sync-info">✅ {tr ? 'Zemin tabakalarından aktarıldı' : 'Synced from soil layers'}</div>
-                  )}
-                  <div className="panel-form">
-                    <InputField label={t.soil.cu} name="cu" value={parameters.cu} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.cu} onUnitChange={handleUnitChange} placeholder="25" min={5} max={200} tooltip={t.soil.cuTip} />
-                    <InputField label={t.soil.Es} name="Es" value={parameters.Es} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Es} onUnitChange={handleUnitChange} placeholder="10" min={1} max={1000} step={1} tooltip={t.soil.EsTip} />
-                    <InputField label={t.soil.alpha} name="alpha" value={parameters.alpha} onChange={handleInputChange} unit="-" placeholder="0.5" min={0.3} max={1.0} step={0.05} tooltip={t.soil.alphaTip} />
-                    <InputField label={t.soil.Nc} name="Nc" value={parameters.Nc} onChange={handleInputChange} unit="-" placeholder="9" min={5.14} max={9} step={0.1} tooltip={t.soil.NcTip} />
-                  </div>
-                </div>
-
-                <div className="panel-section">
-                  <h3>{t.jetgrout.title}</h3>
-                  <div className="panel-form">
-                    <InputField label={t.jetgrout.strength} name="sigmaJet" value={parameters.sigmaJet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.sigmaJet} onUnitChange={handleUnitChange} placeholder="3.0" min={0.5} max={20} step={0.1} tooltip={t.jetgrout.strengthTip} />
-                    <InputField label={t.jetgrout.modulus} name="Ejg" value={parameters.Ejg} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Ejg} onUnitChange={handleUnitChange} placeholder="450" min={50} max={2000} step={10} tooltip={t.jetgrout.modulusTip} />
-                    <InputField label={t.jetgrout.materialFs} name="Fs" value={parameters.Fs} onChange={handleInputChange} unit="-" placeholder="2.0" min={1.5} max={4.0} step={0.1} tooltip={t.jetgrout.materialFsTip} />
-                    <InputField label={t.jetgrout.bearingFS} name="FS" value={parameters.FS} onChange={handleInputChange} unit="-" placeholder="1.5" min={1.0} max={3.0} step={0.1} tooltip={t.jetgrout.bearingFSTip} />
-                  </div>
-                </div>
-
-                <div className="panel-section">
-                  <h3>{t.loading.title}</h3>
-                  <div className="panel-form">
-                    <InputField label={t.loading.pressure} name="qtemel" value={parameters.qtemel} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qtemel} onUnitChange={handleUnitChange} placeholder="150" min={50} max={1000} step={10} tooltip={t.loading.pressureTip} />
-                    <InputField label={t.loading.netPressure} name="qnet" value={parameters.qnet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qnet} onUnitChange={handleUnitChange} placeholder="" min={0} max={500} step={5} tooltip={t.loading.netPressureTip} />
-                  </div>
-                </div>
-
-                <button className="panel-calculate-btn" onClick={handleCalculate} disabled={loading}>
-                  {loading ? t.calculating : t.calculate}
-                </button>
-              </>
-            )}
-
-            {/* ── Soil Layers ── */}
-            {activePanel === 'soilLayers' && (
-              <div className="panel-soil-editor">
-                <SoilLayerEditor
-                  layers={soilLayers}
-                  onChange={setSoilLayers}
-                  translations={t.soilLayers}
-                  lang={lang}
-                />
-                {layerResults && (
-                  <LayerResultsPanel
-                    results={layerResults}
-                    translations={t.soilLayers}
-                    lang={lang}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* ── Cross Section ── */}
-            {activePanel === 'crossSection' && (
-              <div className="panel-crosssection">
-                <CrossSectionView
-                  parameters={parameters}
-                  soilLayers={soilLayers}
-                  lang={lang}
-                  onParameterChange={handleInputChange}
-                />
-              </div>
-            )}
-
-            {/* ── Results ── */}
-            {activePanel === 'results' && (
-              <>
-                {results ? (
-                  <div className="panel-results">
-                    <ResultCard title={t.results.geometry} results={results.geometry} />
-                    <ResultCard title={t.results.material} results={results.material} />
-                    <ResultCard title={t.results.capacity} results={results.capacity} />
-                    <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} />
-                    <ResultCard title={t.results.settlement} results={results.settlement} />
-                  </div>
-                ) : (
-                  <div className="no-results">
-                    <p>📊</p>
-                    <p>{t.results.noResults}</p>
-                    <p style={{ fontSize: '0.8rem', marginTop: 6 }}>{t.results.enterParams}</p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Main: PlanView ── */}
+      {/* ── Main Content ── */}
       <main className="dash-main">
-        <PlanView
-          parameters={parameters}
-          lang={lang}
-          onParameterChange={handleInputChange}
-          soilLayers={soilLayers}
-        />
+
+        {/* ── Home ── */}
+        {activePage === 'home' && (
+          <Dashboard lang={lang} user={user} onNewProject={handleNewProject} onGoProjects={() => setActivePage('projects')} />
+        )}
+
+        {/* ── Projects ── */}
+        {activePage === 'projects' && (
+          <ProjectsPage
+            lang={lang}
+            token={token}
+            onLoadProject={handleLoadProject}
+            onNewProject={handleNewProject}
+            onDeleteProject={(id) => {
+              if (currentProjectId === id) resetWorkspace();
+            }}
+          />
+        )}
+
+        {/* ── Workspace ── */}
+        {activePage === 'workspace' && (
+          <>
+            {/* Parameters */}
+            {activeTab === 'parameters' && (
+              <div className="page-container">
+                <div className="page-header">
+                  <h2>{tr ? 'Parametreler' : 'Parameters'}</h2>
+                </div>
+                <div className="page-content">
+                  {error && <div className="page-error">⚠️ {error}</div>}
+                  <div className="params-grid">
+                    <div className="param-card">
+                      <h3>{t.geometry.title}</h3>
+                      <div className="param-card-form">
+                        <InputField label={t.geometry.diameter} name="D" value={parameters.D} onChange={handleInputChange} unit="m" placeholder="0.6" min={0.3} max={3.0} step={0.1} tooltip={t.geometry.diameterTip} />
+                        <InputField label={t.geometry.spacing} name="s" value={parameters.s} onChange={handleInputChange} unit="m" placeholder="1.6" min={0.5} max={10} step={0.1} tooltip={t.geometry.spacingTip} />
+                        <InputField label={t.geometry.height} name="H" value={parameters.H} onChange={handleInputChange} unit="m" placeholder="12" min={1} max={50} tooltip={t.geometry.heightTip} />
+                      </div>
+                    </div>
+                    <div className="param-card">
+                      <h3>{t.soil.title}</h3>
+                      {layerResults && <div className="sync-info">✅ {tr ? 'Zemin tabakalarından aktarıldı' : 'Synced from soil layers'}</div>}
+                      <div className="param-card-form">
+                        <InputField label={t.soil.cu} name="cu" value={parameters.cu} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.cu} onUnitChange={handleUnitChange} placeholder="25" min={5} max={200} tooltip={t.soil.cuTip} />
+                        <InputField label={t.soil.Es} name="Es" value={parameters.Es} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Es} onUnitChange={handleUnitChange} placeholder="10" min={1} max={1000} step={1} tooltip={t.soil.EsTip} />
+                        <InputField label={t.soil.alpha} name="alpha" value={parameters.alpha} onChange={handleInputChange} unit="-" placeholder="0.5" min={0.3} max={1.0} step={0.05} tooltip={t.soil.alphaTip} />
+                        <InputField label={t.soil.Nc} name="Nc" value={parameters.Nc} onChange={handleInputChange} unit="-" placeholder="9" min={5.14} max={9} step={0.1} tooltip={t.soil.NcTip} />
+                      </div>
+                    </div>
+                    <div className="param-card">
+                      <h3>{t.jetgrout.title}</h3>
+                      <div className="param-card-form">
+                        <InputField label={t.jetgrout.strength} name="sigmaJet" value={parameters.sigmaJet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.sigmaJet} onUnitChange={handleUnitChange} placeholder="3.0" min={0.5} max={20} step={0.1} tooltip={t.jetgrout.strengthTip} />
+                        <InputField label={t.jetgrout.modulus} name="Ejg" value={parameters.Ejg} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Ejg} onUnitChange={handleUnitChange} placeholder="450" min={50} max={2000} step={10} tooltip={t.jetgrout.modulusTip} />
+                        <InputField label={t.jetgrout.materialFs} name="Fs" value={parameters.Fs} onChange={handleInputChange} unit="-" placeholder="2.0" min={1.5} max={4.0} step={0.1} tooltip={t.jetgrout.materialFsTip} />
+                        <InputField label={t.jetgrout.bearingFS} name="FS" value={parameters.FS} onChange={handleInputChange} unit="-" placeholder="1.5" min={1.0} max={3.0} step={0.1} tooltip={t.jetgrout.bearingFSTip} />
+                      </div>
+                    </div>
+                    <div className="param-card">
+                      <h3>{t.loading.title}</h3>
+                      <div className="param-card-form">
+                        <InputField label={t.loading.pressure} name="qtemel" value={parameters.qtemel} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qtemel} onUnitChange={handleUnitChange} placeholder="150" min={50} max={1000} step={10} tooltip={t.loading.pressureTip} />
+                        <InputField label={t.loading.netPressure} name="qnet" value={parameters.qnet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qnet} onUnitChange={handleUnitChange} placeholder="" min={0} max={500} step={5} tooltip={t.loading.netPressureTip} />
+                      </div>
+                    </div>
+                  </div>
+                  <button className="page-calculate-btn" onClick={handleCalculate} disabled={loading}>
+                    {loading ? t.calculating : t.calculate}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Soil Layers */}
+            {activeTab === 'soilLayers' && (
+              <div className="page-container">
+                <div className="page-header">
+                  <h2>{tr ? 'Zemin Tabakaları' : 'Soil Layers'}</h2>
+                </div>
+                <div className="page-content page-content-soil">
+                  <SoilLayerEditor layers={soilLayers} onChange={setSoilLayers} translations={t.soilLayers} lang={lang} />
+                  {layerResults && <LayerResultsPanel results={layerResults} translations={t.soilLayers} lang={lang} />}
+                </div>
+              </div>
+            )}
+
+            {/* Cross Section */}
+            {activeTab === 'crossSection' && (
+              <div className="page-container">
+                <div className="page-header">
+                  <h2>{tr ? 'Kesit Görünümü' : 'Cross Section View'}</h2>
+                </div>
+                <div className="page-content page-content-full">
+                  <CrossSectionView parameters={parameters} soilLayers={soilLayers} lang={lang} onParameterChange={handleInputChange} />
+                </div>
+              </div>
+            )}
+
+            {/* Plan View */}
+            {activeTab === 'planView' && (
+              <PlanView
+                parameters={parameters}
+                lang={lang}
+                onParameterChange={handleInputChange}
+                soilLayers={soilLayers}
+                initialDrawingData={drawingDataRef.current}
+                onDrawingDataChange={handleDrawingDataChange}
+              />
+            )}
+
+            {/* Results */}
+            {activeTab === 'results' && (
+              <div className="page-container">
+                <div className="page-header">
+                  <h2>{tr ? 'Hesap Sonuçları' : 'Calculation Results'}</h2>
+                </div>
+                <div className="page-content">
+                  {results ? (
+                    <div className="results-grid">
+                      <ResultCard title={t.results.geometry} results={results.geometry} />
+                      <ResultCard title={t.results.material} results={results.material} />
+                      <ResultCard title={t.results.capacity} results={results.capacity} />
+                      <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} />
+                      <ResultCard title={t.results.settlement} results={results.settlement} />
+                    </div>
+                  ) : (
+                    <div className="no-results">
+                      <p>📊</p>
+                      <p>{t.results.noResults}</p>
+                      <p style={{ fontSize: '0.8rem', marginTop: 6 }}>{t.results.enterParams}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </main>
+
+      {/* ── Save Modal ── */}
+      {showSaveModal && (
+        <SaveProjectModal
+          lang={lang}
+          token={token}
+          currentProjectId={currentProjectId}
+          onSave={handleSaveComplete}
+          onClose={() => setShowSaveModal(false)}
+          projectData={getProjectData()}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,103 @@
+.dashboard-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px;
+    text-align: center;
+    background: #0d1117;
+}
+
+.dashboard-hero {
+    max-width: 520px;
+}
+
+.hero-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    filter: drop-shadow(0 4px 20px rgba(79, 195, 247, 0.2));
+}
+
+.dashboard-hero h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.hero-subtitle {
+    font-size: 1rem;
+    color: #4fc3f7;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.hero-welcome {
+    font-size: 0.95rem;
+    color: #81d4fa;
+    padding: 10px 20px;
+    background: rgba(79, 195, 247, 0.08);
+    border: 1px solid rgba(79, 195, 247, 0.15);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: inline-block;
+}
+
+.hero-description {
+    font-size: 0.9rem;
+    color: #78909c;
+    line-height: 1.7;
+    margin-bottom: 32px;
+}
+
+/* Quick action cards — now clickable buttons */
+.hero-quick-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.quick-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 28px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 120px;
+    color: inherit;
+    font-family: inherit;
+}
+
+.quick-action-card:hover {
+    border-color: rgba(79, 195, 247, 0.25);
+    background: rgba(79, 195, 247, 0.06);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(79, 195, 247, 0.1);
+}
+
+.quick-action-card span {
+    font-size: 1.6rem;
+}
+
+.quick-action-card p {
+    font-size: 0.78rem;
+    color: #78909c;
+    font-weight: 500;
+}
+
+.dashboard-version {
+    position: absolute;
+    bottom: 20px;
+    display: flex;
+    gap: 16px;
+    color: #37474f;
+    font-size: 0.75rem;
+}
