@@ -101,3 +101,16 @@
     color: #37474f;
     font-size: 0.75rem;
 }
+
+/* DXF import action card — orange accent */
+.quick-action-card.dxf-action {
+    border-color: rgba(255, 183, 77, 0.15);
+}
+.quick-action-card.dxf-action:hover {
+    border-color: rgba(255, 183, 77, 0.4);
+    background: rgba(255, 183, 77, 0.08);
+    box-shadow: 0 4px 16px rgba(255, 183, 77, 0.1);
+}
+.quick-action-card.dxf-action p {
+    color: #ffb74d;
+}

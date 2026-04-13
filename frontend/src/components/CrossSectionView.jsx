@@ -15,10 +15,36 @@ const soilNames = {
     tr: { kum: 'Kum', kil: 'Kil', silt: 'Silt', kaya: 'Kaya', cakil: 'Çakıl' }
 };
 
-function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
+function CrossSectionView({ parameters, soilLayers, lang, onParameterChange, extraParams, onExtraParamsChange }) {
     const canvasRef = useRef(null);
-    const [groundSurface, setGroundSurface] = useState(0);   // Zemin yüzeyi derinliği (m) - 0 = yüzeyde
-    const [waterTable, setWaterTable] = useState(3);          // Yeraltı su seviyesi derinliği (m)
+    const [groundSurface, setGroundSurface] = useState(0);   // Zemin yüzeyi derinliği (m)
+    const [waterTable, setWaterTable] = useState(3);           // Yeraltı su seviyesi derinliği (m)
+
+    // Extra visual params (local, synced up via callback)
+    const [localFoundation, setLocalFoundation] = useState(extraParams?.foundationThickness ?? 0.5);
+    const [localFill, setLocalFill] = useState(extraParams?.fillHeight ?? 0);
+
+    // Sync from parent if extraParams changes externally
+    useEffect(() => {
+        if (extraParams?.foundationThickness !== undefined) setLocalFoundation(extraParams.foundationThickness);
+        if (extraParams?.fillHeight !== undefined) setLocalFill(extraParams.fillHeight);
+    }, [extraParams]);
+
+    const notifyExtra = (field, value) => {
+        if (onExtraParamsChange) {
+            onExtraParamsChange({ ...extraParams, foundationThickness: localFoundation, fillHeight: localFill, [field]: value });
+        }
+    };
+
+    const handleFoundationChange = (val) => {
+        setLocalFoundation(val);
+        notifyExtra('foundationThickness', val);
+    };
+
+    const handleFillChange = (val) => {
+        setLocalFill(val);
+        notifyExtra('fillHeight', val);
+    };
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -29,16 +55,19 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         const H = parseFloat(parameters.H) || 12;
         const gwDepth = parseFloat(waterTable) || 0;
         const surfaceDepth = parseFloat(groundSurface) || 0;
+        const foundationT = parseFloat(localFoundation) || 0;
+        const fillH = parseFloat(localFill) || 0;
 
-        // Toplam zemin derinliği
+        // Total visible depth range
         const totalSoilDepth = soilLayers.reduce((sum, l) => sum + (parseFloat(l.thickness) || 0), 0);
-        const totalDepth = Math.max(surfaceDepth + totalSoilDepth, surfaceDepth + H) * 1.08; // %8 margin
+        // We will show fill above zemin surface (negative depth direction)
+        // totalAbove = fillH + foundationT displayed above zemin surface
+        const totalAbove = fillH + foundationT; // how much we show above surface (m)
+        const totalBelow = Math.max(totalSoilDepth, H) * 1.08;
 
-        // Görünür genişlik: iki kolon göster (aradaki spacing görülsün)
         const numCols = 2;
         const totalWidth = s * numCols;
 
-        // High-DPI
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr;
@@ -49,35 +78,115 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         const W = rect.width;
         const HH = rect.height;
 
-        // Padding — geniş tutuldu: boyut okları ve etiketler için
         const pad = { top: 80, right: 90, bottom: 55, left: 95 };
         const availW = W - pad.left - pad.right;
         const availH = HH - pad.top - pad.bottom;
 
-        // Uniform (proportional) scale — same pixels/m for both axes
-        const ppmX = availW / totalWidth;   // pixels per meter based on width
-        const ppmY = availH / totalDepth;   // pixels per meter based on height
-        const ppm = Math.min(ppmX, ppmY);   // use the constraining one
+        const totalDepthRange = totalAbove + totalBelow;
 
-        // Actual chart dims (may be smaller than available)
+        const ppmX = availW / totalWidth;
+        const ppmY = availH / totalDepthRange;
+        const ppm = Math.min(ppmX, ppmY);
+
         const chartW = ppm * totalWidth;
-        const chartH = ppm * totalDepth;
+        const chartH = ppm * totalDepthRange;
 
-        // Center the drawing within the available space
         const offsetX = pad.left + (availW - chartW) / 2;
         const offsetY = pad.top + (availH - chartH) / 2;
 
-        // Scale functions (uniform)
+        // 0 = zemin yüzeyi. Negatif = yukarı (dolgu/temel), pozitif = aşağı (zemin)
+        // yScale: depth in metres from zemin surface → canvas Y
         const xScale = (m) => offsetX + m * ppm;
-        const yScale = (m) => offsetY + m * ppm;
+        const yScale = (d) => offsetY + (totalAbove + d) * ppm;   // d=0 is surface
         const wScale = (m) => m * ppm;
         const hScale = (m) => m * ppm;
 
-        // Temizle
         ctx.clearRect(0, 0, W, HH);
 
+        const surfaceY = yScale(0);  // zemin yüzey Y konumu
+
+        // ── TEMEL (Foundation slab) — EN ÜSTTE ──
+        if (foundationT > 0) {
+            const foundTop = yScale(-fillH - foundationT); // temel en yukarıda
+            const foundBot = yScale(-fillH);               // dolgunun üstü
+            const fH = foundBot - foundTop;
+
+            const concGrad = ctx.createLinearGradient(offsetX, foundTop, offsetX, foundBot);
+            concGrad.addColorStop(0, 'rgba(180, 180, 190, 0.65)');
+            concGrad.addColorStop(1, 'rgba(140, 140, 155, 0.50)');
+            ctx.fillStyle = concGrad;
+            ctx.fillRect(offsetX, foundTop, chartW, fH);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(offsetX, foundTop, chartW, fH);
+            ctx.clip();
+            ctx.strokeStyle = 'rgba(80, 80, 100, 0.35)';
+            ctx.lineWidth = 0.5;
+            const stepF = 10;
+            for (let px = offsetX - fH; px < offsetX + chartW; px += stepF) {
+                ctx.beginPath(); ctx.moveTo(px, foundTop); ctx.lineTo(px + fH, foundBot); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(px + fH, foundTop); ctx.lineTo(px, foundBot); ctx.stroke();
+            }
+            ctx.restore();
+
+            ctx.strokeStyle = 'rgba(200, 200, 220, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(offsetX, foundTop, chartW, fH);
+
+            ctx.fillStyle = '#b0bec5';
+            ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${lang === 'tr' ? 'Temel' : 'Foundation'} (${foundationT}m)`, offsetX + chartW + 8, (foundTop + foundBot) / 2);
+
+            const dimX_f = offsetX - 30;
+            drawDimensionLine(ctx, dimX_f, foundTop, dimX_f, foundBot, `${foundationT}m`, 'left');
+        }
+
+        // ── DOLGU (Fill) — ALTTA, ZEMİN YÜZEYİNE BİTİŞİK ──
+        if (fillH > 0) {
+            const fillTop = yScale(-fillH);  // dolgu zeminin hemen üstünde
+            const fillBot = yScale(0);       // zemin yüzeyi
+            const fillHeight_ = fillBot - fillTop;
+
+            const fillGrad = ctx.createLinearGradient(offsetX, fillTop, offsetX, fillBot);
+            fillGrad.addColorStop(0, 'rgba(139, 90, 43, 0.55)');
+            fillGrad.addColorStop(1, 'rgba(160, 110, 60, 0.35)');
+            ctx.fillStyle = fillGrad;
+            ctx.fillRect(offsetX, fillTop, chartW, fillHeight_);
+
+            ctx.strokeStyle = 'rgba(139, 90, 43, 0.4)';
+            ctx.lineWidth = 0.5;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(offsetX, fillTop, chartW, fillHeight_);
+            ctx.clip();
+            for (let py = fillTop; py < fillTop + fillHeight_; py += 10) {
+                ctx.beginPath(); ctx.moveTo(offsetX, py); ctx.lineTo(offsetX + fillHeight_, py + fillHeight_); ctx.stroke();
+            }
+            ctx.restore();
+
+            ctx.fillStyle = '#cd7f32';
+            ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${lang === 'tr' ? 'Dolgu' : 'Fill'} (${fillH}m)`, offsetX + chartW + 8, (fillTop + fillBot) / 2);
+
+            ctx.strokeStyle = 'rgba(180, 120, 60, 0.6)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(offsetX, fillTop);
+            ctx.lineTo(offsetX + chartW, fillTop);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const dimX_fill = offsetX - 52;
+            drawDimensionLine(ctx, dimX_fill, fillTop, dimX_fill, fillBot, `${fillH}m`, 'left');
+        }
+
         // ── YÜZEY ÇİZGİSİ ──
-        const surfaceY = yScale(surfaceDepth);
         ctx.strokeStyle = '#66bb6a';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -85,28 +194,15 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         ctx.lineTo(offsetX + chartW + 10, surfaceY);
         ctx.stroke();
 
-        // Yüzey deseni (çim)
+        // Çim deseni
         ctx.fillStyle = '#66bb6a';
         ctx.font = '10px sans-serif';
         for (let x = offsetX; x < offsetX + chartW; x += 12) {
             ctx.fillText('⌃', x, surfaceY - 2);
         }
 
-        // Yüzey üstü boşluk (kazı üstü alan - açık gri)
-        if (surfaceDepth > 0) {
-            ctx.fillStyle = 'rgba(200, 220, 255, 0.06)';
-            ctx.fillRect(offsetX, offsetY, chartW, surfaceY - offsetY);
-            // Kazı derinliği etiketi
-            ctx.fillStyle = '#66bb6a';
-            ctx.font = '11px Inter, system-ui, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(surfaceDepth.toFixed(1) + 'm', offsetX - 30, surfaceY);
-        }
-        // Yüzey deseni (çim) - already drawn above
-
         // ── ZEMİN TABAKALARI ──
-        let cumulativeDepth = surfaceDepth;
+        let cumulativeDepth = 0;
         soilLayers.forEach((layer) => {
             const thickness = parseFloat(layer.thickness) || 0;
             const y1 = yScale(cumulativeDepth);
@@ -114,16 +210,13 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             const layerH = y2 - y1;
             const colors = soilColors[layer.soilType] || soilColors.kil;
 
-            // Ana dolgu
             ctx.fillStyle = colors.fill;
             ctx.globalAlpha = 0.35;
             ctx.fillRect(offsetX, y1, chartW, layerH);
             ctx.globalAlpha = 1.0;
 
-            // Desen çiz
             drawPattern(ctx, layer.soilType, offsetX, y1, chartW, layerH, colors.fill);
 
-            // Katman sınır çizgisi
             if (cumulativeDepth > 0) {
                 ctx.strokeStyle = 'rgba(255,255,255,0.3)';
                 ctx.lineWidth = 1;
@@ -135,7 +228,6 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
                 ctx.setLineDash([]);
             }
 
-            // Katman etiketi (sağda)
             const midY = (y1 + y2) / 2;
             const name = soilNames[lang]?.[layer.soilType] || layer.soilType;
             if (layerH > 18) {
@@ -150,7 +242,7 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         });
 
         // Alt sınır
-        const bottomY = yScale(surfaceDepth + totalSoilDepth);
+        const bottomY = yScale(totalSoilDepth);
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
         ctx.lineWidth = 1;
         ctx.setLineDash([6, 4]);
@@ -162,17 +254,15 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
 
         // ── JET GROUT KOLONLARI ──
         for (let i = 0; i < numCols; i++) {
-            const colCenterX = s / 2 + i * s; // metre cinsinden merkez
+            const colCenterX = s / 2 + i * s;
             const colLeft = xScale(colCenterX - D / 2);
             const colWidth = wScale(D);
-            const colTop = yScale(surfaceDepth);
+            const colTop = yScale(0);
             const colHeight = hScale(H);
 
-            // Kolon gölgesi
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fillRect(colLeft + 3, colTop + 3, colWidth, colHeight);
 
-            // Kolon gradient
             const grad = ctx.createLinearGradient(colLeft, colTop, colLeft + colWidth, colTop);
             grad.addColorStop(0, 'rgba(100, 181, 246, 0.7)');
             grad.addColorStop(0.3, 'rgba(144, 202, 249, 0.85)');
@@ -182,12 +272,10 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             ctx.fillStyle = grad;
             ctx.fillRect(colLeft, colTop, colWidth, colHeight);
 
-            // Kolon kenar çizgisi
             ctx.strokeStyle = '#42a5f5';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(colLeft, colTop, colWidth, colHeight);
 
-            // Kolon alt çizgisi (uç)
             ctx.strokeStyle = '#1e88e5';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -195,70 +283,50 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             ctx.lineTo(colLeft + colWidth, colTop + colHeight);
             ctx.stroke();
 
-            // Çapraz çizgi deseni (beton)
             ctx.strokeStyle = 'rgba(255,255,255,0.12)';
             ctx.lineWidth = 0.5;
-            const step = 8;
-            for (let y = colTop; y < colTop + colHeight; y += step) {
+            const step2 = 8;
+            for (let y = colTop; y < colTop + colHeight; y += step2) {
                 ctx.beginPath();
                 ctx.moveTo(colLeft, y);
-                ctx.lineTo(colLeft + colWidth, y + step);
+                ctx.lineTo(colLeft + colWidth, y + step2);
                 ctx.stroke();
             }
         }
 
         // ── BOYUT ÇİZGİLERİ (D ve s) ──
-        // D boyut çizgisi (ilk kolon üzerinde)
         const col1CenterX = s / 2;
         const col1Left = xScale(col1CenterX - D / 2);
         const col1Right = xScale(col1CenterX + D / 2);
-        const colTopY = yScale(surfaceDepth);
+        const colTopY = yScale(0);
         const dimY_D = colTopY - 18;
         drawDimensionLine(ctx, col1Left, dimY_D, col1Right, dimY_D, `D = ${D}m`, 'top');
 
-        // s boyut çizgisi (iki kolon merkezi arasında)
         const col2CenterX = s / 2 + s;
         const cx1 = xScale(col1CenterX);
         const cx2 = xScale(col2CenterX);
         const dimY_s = offsetY - 38;
         drawDimensionLine(ctx, cx1, dimY_s, cx2, dimY_s, `s = ${s}m`, 'top');
 
-        // Uzatma çizgileri (D için)
         ctx.strokeStyle = 'rgba(255, 171, 64, 0.4)';
         ctx.lineWidth = 0.5;
         ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(col1Left, colTopY);
-        ctx.lineTo(col1Left, dimY_D - 5);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(col1Right, colTopY);
-        ctx.lineTo(col1Right, dimY_D - 5);
-        ctx.stroke();
-
-        // Uzatma çizgileri (s için)
-        ctx.beginPath();
-        ctx.moveTo(cx1, dimY_D - 8);
-        ctx.lineTo(cx1, dimY_s - 5);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cx2, dimY_D - 8);
-        ctx.lineTo(cx2, dimY_s - 5);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(col1Left, colTopY); ctx.lineTo(col1Left, dimY_D - 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(col1Right, colTopY); ctx.lineTo(col1Right, dimY_D - 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx1, dimY_D - 8); ctx.lineTo(cx1, dimY_s - 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx2, dimY_D - 8); ctx.lineTo(cx2, dimY_s - 5); ctx.stroke();
         ctx.setLineDash([]);
 
         // ── YERALTI SU SEVİYESİ ──
-        if (gwDepth > 0 && gwDepth < totalDepth) {
+        if (gwDepth > 0 && gwDepth < totalSoilDepth) {
             const gwY = yScale(gwDepth);
 
-            // Su seviyesi dolgu (yarı saydam mavi)
             const waterGrad = ctx.createLinearGradient(0, gwY, 0, offsetY + chartH);
             waterGrad.addColorStop(0, 'rgba(33, 150, 243, 0.08)');
             waterGrad.addColorStop(1, 'rgba(33, 150, 243, 0.15)');
             ctx.fillStyle = waterGrad;
             ctx.fillRect(offsetX, gwY, chartW, offsetY + chartH - gwY);
 
-            // Su seviyesi çizgisi (kesikli mavi)
             ctx.strokeStyle = '#2196f3';
             ctx.lineWidth = 2;
             ctx.setLineDash([8, 4]);
@@ -268,7 +336,6 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Ters üçgen sembolü (standart yeraltı suyu sembolü)
             const triSize = 8;
             const triX = offsetX + chartW + 12;
             ctx.fillStyle = '#2196f3';
@@ -279,7 +346,6 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             ctx.closePath();
             ctx.fill();
 
-            // Etiket
             ctx.fillStyle = '#2196f3';
             ctx.font = '10px Inter, system-ui, sans-serif';
             ctx.textAlign = 'left';
@@ -294,17 +360,14 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
-        // 0m (en üst)
-        ctx.fillText('0', offsetX - 30, offsetY);
+        // 0m = zemin yüzeyi
+        ctx.fillText('0', offsetX - 30, surfaceY);
 
-        // Her katman sınırı
-        let cumD = surfaceDepth;
+        let cumD = 0;
         soilLayers.forEach((layer) => {
             cumD += parseFloat(layer.thickness) || 0;
             const y = yScale(cumD);
             ctx.fillText(cumD.toFixed(1) + 'm', offsetX - 30, y);
-
-            // Tick
             ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -313,22 +376,17 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             ctx.stroke();
         });
 
-        // H derinliği (eğer katman sınırıyla çakışmıyorsa)
-        const hY = yScale(surfaceDepth + H);
-        const hMatchesLayer = soilLayers.some(() => {
-            let d = 0;
-            for (const l of soilLayers) {
-                d += parseFloat(l.thickness) || 0;
-                if (Math.abs(d - H) < 0.1) return true;
-            }
-            return false;
-        });
+        const hY = yScale(H);
+        let hMatchesLayer = false;
+        let checkD = 0;
+        for (const l of soilLayers) {
+            checkD += parseFloat(l.thickness) || 0;
+            if (Math.abs(checkD - H) < 0.1) { hMatchesLayer = true; break; }
+        }
         if (!hMatchesLayer) {
             ctx.fillStyle = '#42a5f5';
             ctx.fillText(H.toFixed(1) + 'm', offsetX - 30, hY);
         }
-
-        // Derinlik tick'leri yeterli — Y eksen başlığı kaldırıldı (H oku ile çakışıyordu)
 
         // ── LEJAND ──
         const legendY = offsetY + chartH + 15;
@@ -336,7 +394,6 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
 
-        // Jet Grout lejandı
         ctx.fillStyle = 'rgba(144, 202, 249, 0.7)';
         ctx.fillRect(offsetX, legendY, 16, 12);
         ctx.strokeStyle = '#42a5f5';
@@ -345,7 +402,6 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         ctx.fillStyle = '#e0e0e0';
         ctx.fillText('Jet Grout', offsetX + 22, legendY + 6);
 
-        // Improvement ratio
         const Ar = (Math.PI * (D / 2) ** 2) / (s ** 2);
         const arText = lang === 'tr'
             ? `İyileştirme Oranı (Ar) = ${(Ar * 100).toFixed(1)}%`
@@ -353,7 +409,7 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
         ctx.fillStyle = '#90caf9';
         ctx.fillText(arText, offsetX + 100, legendY + 6);
 
-    }, [parameters, soilLayers, lang, waterTable, groundSurface]);
+    }, [parameters, soilLayers, lang, waterTable, groundSurface, localFoundation, localFill]);
 
     const tr = lang === 'tr';
 
@@ -362,6 +418,97 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
             <h3>{tr ? 'Jet Grout Kesit Görünümü' : 'Jet Grout Cross-Section View'}</h3>
 
             <div className="cross-section-controls">
+                {/* D — Çap */}
+                <div className="cs-control-group">
+                    <label>{tr ? 'Kolon Çapı (D)' : 'Column Diameter (D)'}</label>
+                    <div className="cs-input-row">
+                        <input
+                            type="number"
+                            value={parameters.D || 0.6}
+                            onChange={(e) => onParameterChange && onParameterChange({ target: { name: 'D', value: e.target.value } })}
+                            min={0.3}
+                            max={3.0}
+                            step={0.1}
+                        />
+                        <span className="cs-unit">m</span>
+                    </div>
+                </div>
+
+                {/* s — Aralık */}
+                <div className="cs-control-group">
+                    <label>{tr ? 'Kolon Aralığı (s)' : 'Column Spacing (s)'}</label>
+                    <div className="cs-input-row">
+                        <input
+                            type="number"
+                            value={parameters.s || 1.6}
+                            onChange={(e) => onParameterChange && onParameterChange({ target: { name: 's', value: e.target.value } })}
+                            min={0.5}
+                            max={10.0}
+                            step={0.1}
+                        />
+                        <span className="cs-unit">m</span>
+                    </div>
+                </div>
+
+                {/* H — Kolon Yüksekliği */}
+                <div className="cs-control-group">
+                    <label>{tr ? 'Kolon Yüksekliği (H)' : 'Column Height (H)'}</label>
+                    <div className="cs-input-row">
+                        <input
+                            type="number"
+                            value={parameters.H || 12}
+                            onChange={(e) => onParameterChange && onParameterChange({ target: { name: 'H', value: e.target.value } })}
+                            min={1}
+                            max={50}
+                            step={0.5}
+                        />
+                        <span className="cs-unit">m</span>
+                    </div>
+                </div>
+
+                <div className="cs-divider" />
+
+                {/* Temel Kalınlığı */}
+                <div className="cs-control-group">
+                    <label className="cs-label-foundation">
+                        <span className="cs-badge-icon">▭</span>
+                        {tr ? 'Temel Kalınlığı' : 'Foundation Thickness'}
+                    </label>
+                    <div className="cs-input-row">
+                        <input
+                            type="number"
+                            value={localFoundation}
+                            onChange={(e) => handleFoundationChange(parseFloat(e.target.value) || 0)}
+                            min={0}
+                            max={5}
+                            step={0.1}
+                        />
+                        <span className="cs-unit">m</span>
+                    </div>
+                </div>
+
+                {/* Dolgu */}
+                <div className="cs-control-group">
+                    <label className="cs-label-fill">
+                        <span className="cs-badge-icon">▤</span>
+                        {tr ? 'Dolgu Yüksekliği' : 'Fill Height'}
+                    </label>
+                    <div className="cs-input-row">
+                        <input
+                            type="number"
+                            value={localFill}
+                            onChange={(e) => handleFillChange(parseFloat(e.target.value) || 0)}
+                            min={0}
+                            max={10}
+                            step={0.1}
+                        />
+                        <span className="cs-unit">m</span>
+                    </div>
+                </div>
+
+                <div className="cs-divider" />
+
+                {/* Zemin Yüzeyi */}
                 <div className="cs-control-group">
                     <label>{tr ? 'Zemin Yüzeyi Derinliği' : 'Ground Surface Depth'}</label>
                     <div className="cs-input-row">
@@ -376,6 +523,8 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
                         <span className="cs-unit">m</span>
                     </div>
                 </div>
+
+                {/* Yeraltı Suyu */}
                 <div className="cs-control-group">
                     <label>
                         <span className="cs-water-icon">▼</span>
@@ -387,20 +536,6 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange }) {
                             value={waterTable}
                             onChange={(e) => setWaterTable(e.target.value)}
                             min={0}
-                            max={50}
-                            step={0.5}
-                        />
-                        <span className="cs-unit">m</span>
-                    </div>
-                </div>
-                <div className="cs-control-group">
-                    <label>{tr ? 'Kolon Yüksekliği (H)' : 'Column Height (H)'}</label>
-                    <div className="cs-input-row">
-                        <input
-                            type="number"
-                            value={parameters.H || 12}
-                            onChange={(e) => onParameterChange && onParameterChange({ target: { name: 'H', value: e.target.value } })}
-                            min={1}
                             max={50}
                             step={0.5}
                         />
@@ -426,13 +561,11 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
     ctx.font = 'bold 11px Inter, system-ui, sans-serif';
 
     if (side === 'top') {
-        // Yatay boyut çizgisi
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
 
-        // Sol ok
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x1 + arrowSize, y1 - arrowSize);
@@ -440,7 +573,6 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
         ctx.closePath();
         ctx.fill();
 
-        // Sağ ok
         ctx.beginPath();
         ctx.moveTo(x2, y2);
         ctx.lineTo(x2 - arrowSize, y2 - arrowSize);
@@ -448,18 +580,15 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
         ctx.closePath();
         ctx.fill();
 
-        // Etiket
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         ctx.fillText(label, (x1 + x2) / 2, y1 - 3);
     } else if (side === 'left') {
-        // Dikey boyut çizgisi
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
 
-        // Üst ok
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x1 - arrowSize, y1 + arrowSize);
@@ -467,7 +596,6 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
         ctx.closePath();
         ctx.fill();
 
-        // Alt ok
         ctx.beginPath();
         ctx.moveTo(x2, y2);
         ctx.lineTo(x2 - arrowSize, y2 - arrowSize);
@@ -475,7 +603,6 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
         ctx.closePath();
         ctx.fill();
 
-        // Etiket
         ctx.save();
         ctx.translate(x1 - 8, (y1 + y2) / 2);
         ctx.rotate(-Math.PI / 2);
@@ -498,7 +625,7 @@ function drawPattern(ctx, soilType, x, y, w, h, color) {
     ctx.lineWidth = 0.5;
 
     switch (soilType) {
-        case 'kum': // Nokta deseni
+        case 'kum':
             for (let px = x; px < x + w; px += 10) {
                 for (let py = y; py < y + h; py += 10) {
                     const ox = (Math.sin(px * 13.7 + py * 7.3) * 3);
@@ -510,7 +637,7 @@ function drawPattern(ctx, soilType, x, y, w, h, color) {
             }
             break;
 
-        case 'kil': // Yatay çizgi deseni
+        case 'kil':
             for (let py = y; py < y + h; py += 8) {
                 ctx.beginPath();
                 ctx.moveTo(x, py);
@@ -519,7 +646,7 @@ function drawPattern(ctx, soilType, x, y, w, h, color) {
             }
             break;
 
-        case 'silt': // Kısa tire deseni
+        case 'silt':
             for (let px = x; px < x + w; px += 14) {
                 for (let py = y; py < y + h; py += 10) {
                     ctx.beginPath();
@@ -530,7 +657,7 @@ function drawPattern(ctx, soilType, x, y, w, h, color) {
             }
             break;
 
-        case 'kaya': // Çapraz çizgi
+        case 'kaya':
             for (let px = x - h; px < x + w; px += 12) {
                 ctx.beginPath();
                 ctx.moveTo(px, y);
@@ -543,7 +670,7 @@ function drawPattern(ctx, soilType, x, y, w, h, color) {
             }
             break;
 
-        case 'cakil': // Daire deseni
+        case 'cakil':
             for (let px = x + 8; px < x + w; px += 16) {
                 for (let py = y + 6; py < y + h; py += 14) {
                     ctx.beginPath();

@@ -1,6 +1,6 @@
 import './Dashboard.css';
 
-function Dashboard({ lang, user, onNewProject, onGoProjects }) {
+function Dashboard({ lang, user, onNewProject, onGoProjects, onImportDxf }) {
     const tr = lang === 'tr';
 
     return (
@@ -34,6 +34,10 @@ function Dashboard({ lang, user, onNewProject, onGoProjects }) {
                     <button className="quick-action-card" onClick={onGoProjects}>
                         <span>📁</span>
                         <p>{tr ? 'Projelerim' : 'My Projects'}</p>
+                    </button>
+                    <button className="quick-action-card dxf-action" onClick={onImportDxf}>
+                        <span>📐</span>
+                        <p>{tr ? 'DXF İçe Aktar' : 'Import DXF'}</p>
                     </button>
                 </div>
             </div>

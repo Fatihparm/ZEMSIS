@@ -104,22 +104,30 @@ body {
 
 /* ── Sidebar Project Divider ── */
 .sidebar-project-divider {
-  padding: 8px 6px 6px;
+  padding: 6px 4px 4px;
   margin-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  width: 64px;
 }
 
 .sidebar-project-divider span {
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   color: #4fc3f7;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  font-weight: 600;
+  font-weight: 700;
   display: block;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 56px;
+  margin: 0 auto;
+  background: rgba(79, 195, 247, 0.07);
+  border-radius: 4px;
+  padding: 3px 4px;
+  border: 1px solid rgba(79, 195, 247, 0.12);
+  cursor: default;
 }
 
 /* Sub-tab styling (slightly indented) */
@@ -143,6 +151,15 @@ body {
   height: 100%;
   background: #0d1117;
   overflow: hidden;
+}
+
+/* Full-bleed container variant — no header, no padding */
+.page-container.page-container-full {
+  padding: 0;
+}
+.page-container.page-container-full > * {
+  flex: 1;
+  min-height: 0;
 }
 
 /* ── Page Header ── */

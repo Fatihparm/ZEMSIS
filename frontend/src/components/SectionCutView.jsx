@@ -139,12 +139,14 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, label, side) {
     }
 }
 
-function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, sectionColor, onClose }) {
+function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, sectionColor, onClose, extraParams }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
 
     const D = parseFloat(parameters.D) || 0.6;
     const H = parseFloat(parameters.H) || 12;
+    const foundationT = parseFloat(extraParams?.foundationThickness) || 0;
+    const fillH = parseFloat(extraParams?.fillHeight) || 0;
     const tr = lang === 'tr';
 
     useEffect(() => {
@@ -162,7 +164,9 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
 
         // Total soil depth
         const totalSoilDepth = soilLayers.reduce((sum, l) => sum + (parseFloat(l.thickness) || 0), 0);
-        const totalDepth = Math.max(totalSoilDepth, H) * 1.08;
+        const totalAbove = foundationT + fillH; // above surface
+        const totalBelow = Math.max(totalSoilDepth, H) * 1.08;
+        const totalDepthRange = totalAbove + totalBelow;
 
         // Canvas setup (high-DPI)
         const dpr = window.devicePixelRatio || 1;
@@ -182,26 +186,89 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
 
         // Scale (independent axes for section view)
         const ppmX = availW / lineLen;
-        const ppmY = availH / totalDepth;
+        const ppmY = availH / totalDepthRange;
 
         // Chart dims
         const chartW = availW;
-        const chartH = ppmY * totalDepth;
+        const chartH = ppmY * totalDepthRange;
 
         const offsetX = pad.left;
         const offsetY = pad.top + (availH - chartH) / 2;
 
         // Scalers
-        const xScale = (t) => offsetX + t * ppmX;     // t = dist along section line (m)
-        const yScale = (d) => offsetY + d * ppmY;     // d = depth from surface (m)
+        const xScale = (t) => offsetX + t * ppmX;              // t = dist along section line (m)
+        const yScale = (d) => offsetY + (totalAbove + d) * ppmY; // d=0 is ground surface
         const wScale = (m) => m * ppmX;
         const hScale = (m) => m * ppmY;
 
         // Clear
         ctx.clearRect(0, 0, W, HH);
 
-        // ── Surface line ──
         const surfaceY = yScale(0);
+
+        // ── TEMEL (Foundation slab) — EN ÜSTTE ──
+        if (foundationT > 0) {
+            const foundTop = yScale(-fillH - foundationT); // temel en yukarıda
+            const foundBot = yScale(-fillH);               // dolgunun üstü
+            const fHpx = foundBot - foundTop;
+
+            const concGrad = ctx.createLinearGradient(offsetX, foundTop, offsetX, foundBot);
+            concGrad.addColorStop(0, 'rgba(180, 180, 190, 0.65)');
+            concGrad.addColorStop(1, 'rgba(140, 140, 155, 0.50)');
+            ctx.fillStyle = concGrad;
+            ctx.fillRect(offsetX, foundTop, chartW, fHpx);
+
+            ctx.save();
+            ctx.beginPath(); ctx.rect(offsetX, foundTop, chartW, fHpx); ctx.clip();
+            ctx.strokeStyle = 'rgba(80, 80, 100, 0.35)'; ctx.lineWidth = 0.5;
+            const step = 10;
+            for (let px = offsetX - fHpx; px < offsetX + chartW; px += step) {
+                ctx.beginPath(); ctx.moveTo(px, foundTop); ctx.lineTo(px + fHpx, foundBot); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(px + fHpx, foundTop); ctx.lineTo(px, foundBot); ctx.stroke();
+            }
+            ctx.restore();
+
+            ctx.strokeStyle = 'rgba(200, 200, 220, 0.7)'; ctx.lineWidth = 1.5;
+            ctx.strokeRect(offsetX, foundTop, chartW, fHpx);
+
+            ctx.fillStyle = '#b0bec5';
+            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillText(`${tr ? 'Temel' : 'Foundation'} (${foundationT}m)`, offsetX + chartW + 6, (foundTop + foundBot) / 2);
+        }
+
+        // ── DOLGU (Fill) — ALTTA, ZEMİN YÜZEYİNE BİTİŞİK ──
+        if (fillH > 0) {
+            const fillTop = yScale(-fillH);  // dolgu zeminin hemen üstünde
+            const fillBot = yScale(0);       // zemin yüzeyi
+            const fHpx = fillBot - fillTop;
+
+            const fillGrad = ctx.createLinearGradient(offsetX, fillTop, offsetX, fillBot);
+            fillGrad.addColorStop(0, 'rgba(139, 90, 43, 0.55)');
+            fillGrad.addColorStop(1, 'rgba(160, 110, 60, 0.35)');
+            ctx.fillStyle = fillGrad;
+            ctx.fillRect(offsetX, fillTop, chartW, fHpx);
+
+            ctx.save();
+            ctx.beginPath(); ctx.rect(offsetX, fillTop, chartW, fHpx); ctx.clip();
+            ctx.strokeStyle = 'rgba(139, 90, 43, 0.4)'; ctx.lineWidth = 0.5;
+            for (let py = fillTop; py < fillTop + fHpx; py += 10) {
+                ctx.beginPath(); ctx.moveTo(offsetX, py); ctx.lineTo(offsetX + fHpx, py + fHpx); ctx.stroke();
+            }
+            ctx.restore();
+
+            ctx.fillStyle = '#cd7f32';
+            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillText(`${tr ? 'Dolgu' : 'Fill'} (${fillH}m)`, offsetX + chartW + 6, (fillTop + fillBot) / 2);
+
+            ctx.strokeStyle = 'rgba(180, 120, 60, 0.6)'; ctx.lineWidth = 1;
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath(); ctx.moveTo(offsetX, fillTop); ctx.lineTo(offsetX + chartW, fillTop); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // ── Surface line ──
         ctx.strokeStyle = '#66bb6a';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -272,7 +339,7 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
         ctx.setLineDash([]);
 
         // ── Jet Grout Columns along section ──
-        const colTopY = yScale(0);
+        const colTopY = yScale(0);  // starts at ground surface
         const colHeight = hScale(H);
 
         sectionCols.forEach((col) => {
@@ -350,21 +417,38 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
         ctx.beginPath(); ctx.moveTo(offsetX, colTopY + colHeight); ctx.lineTo(hDimX - 5, colTopY + colHeight); ctx.stroke();
         ctx.setLineDash([]);
 
+        // ── Foundation + Fill height labels (left axis) ──
+        if (foundationT > 0) {
+            const foundTop = yScale(-fillH - foundationT);
+            const foundBot = yScale(-fillH);
+            ctx.fillStyle = '#b0bec5'; ctx.font = '9px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillText(`-${(fillH + foundationT).toFixed(1)}m`, offsetX - 6, (foundTop + foundBot) / 2);
+        }
+        if (fillH > 0) {
+            const fillTop = yScale(-fillH);
+            const fillBot = yScale(0);
+            ctx.fillStyle = '#cd7f32'; ctx.font = '9px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillText(`-${fillH.toFixed(1)}m`, offsetX - 6, (fillTop + fillBot) / 2);
+        }
+
         // ── Depth scale (Y axis) ──
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.font = '10px Inter, system-ui, sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
-        // 0m
-        ctx.fillText('0', offsetX - 30, offsetY);
+        // 0m = ground surface
+        ctx.fillText('0', offsetX - 6, surfaceY);
 
         // Layer boundaries
         let cumD = 0;
         soilLayers.forEach((layer) => {
             cumD += parseFloat(layer.thickness) || 0;
             const y = yScale(cumD);
-            ctx.fillText(cumD.toFixed(1) + 'm', offsetX - 30, y);
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillText(cumD.toFixed(1) + 'm', offsetX - 6, y);
             // Tick
             ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.lineWidth = 1;
@@ -381,7 +465,7 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
         }
         if (!hMatchesLayer) {
             ctx.fillStyle = '#42a5f5';
-            ctx.fillText(H.toFixed(1) + 'm', offsetX - 30, hY);
+            ctx.fillText(H.toFixed(1) + 'm', offsetX - 6, hY);
         }
 
         // ── Section length scale (X axis, bottom) ──
@@ -423,7 +507,7 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
             ctx.fillText(colText, offsetX + 100, legendY + 5);
         }
 
-    }, [sectionLine, columns, parameters, soilLayers, lang, D, H, tr]);
+    }, [sectionLine, columns, parameters, soilLayers, lang, D, H, tr, foundationT, fillH]);
 
     // Resize observer
     useEffect(() => {

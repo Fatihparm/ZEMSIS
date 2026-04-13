@@ -125,6 +125,19 @@
     pointer-events: none;
 }
 
+/* DXF import button — distinct orange-gold accent */
+.toolbar-btn.dxf-import-btn {
+    background: rgba(255, 183, 77, 0.08);
+    border-color: rgba(255, 183, 77, 0.25);
+    color: #ffb74d;
+}
+.toolbar-btn.dxf-import-btn:hover:not(:disabled) {
+    background: rgba(255, 183, 77, 0.16);
+    border-color: rgba(255, 183, 77, 0.5);
+    color: #ffd54f;
+    box-shadow: 0 0 10px rgba(255, 183, 77, 0.12);
+}
+
 .section-cut-action-btn svg {
     display: block;
     pointer-events: none;
@@ -285,6 +298,10 @@
 
 .plan-canvas.cursor-grabbing {
     cursor: grabbing;
+}
+
+.plan-canvas.cursor-grab {
+    cursor: grab;
 }
 
 /* ── Resize handle ── */

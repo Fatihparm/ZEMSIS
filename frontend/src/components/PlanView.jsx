@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import SectionCutView from './SectionCutView';
+import DxfImportModal from './DxfImportModal';
 import './PlanView.css';
 
 // ── Section line colors ──
@@ -59,7 +60,7 @@ function sectionLabel(index) {
 }
 
 // ── PlanView Component ──
-function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDrawingData, onDrawingDataChange }) {
+function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDrawingData, onDrawingDataChange, extraParams, openDxfModal, onDxfModalOpened }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const initializedRef = useRef(false);
@@ -76,6 +77,17 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     const [hoveredVertex, setHoveredVertex] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
 
+    // ── Column entity state ──
+    const [columnPositions, setColumnPositions] = useState(() =>
+        initialDrawingData?.columnPositions || []
+    );
+    const [columnsAutoSync, setColumnsAutoSync] = useState(() =>
+        initialDrawingData?.columnsAutoSync !== undefined ? initialDrawingData.columnsAutoSync : true
+    );
+    const [selectedColumn, setSelectedColumn] = useState(null);
+    const [isDraggingColumn, setIsDraggingColumn] = useState(false);
+    const [hoveredColumn, setHoveredColumn] = useState(null);
+
     // Undo / Redo stacks
     const [undoStack, setUndoStack] = useState([]);
     const [redoStack, setRedoStack] = useState([]);
@@ -89,6 +101,17 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     );
     const [sectionStart, setSectionStart] = useState(null); // temp start point while drawing
     const [activeSectionId, setActiveSectionId] = useState(null);
+
+    // DXF import modal
+    const [showDxfModal, setShowDxfModal] = useState(false);
+
+    // Open DXF modal from outside (e.g. home page button)
+    useEffect(() => {
+        if (openDxfModal) {
+            setShowDxfModal(true);
+            onDxfModalOpened && onDxfModalOpened();
+        }
+    }, [openDxfModal]);
 
     // Notify parent of drawing data changes (skip initial render)
     useEffect(() => {
@@ -105,10 +128,12 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     start: { x: sl.start.x, y: sl.start.y },
                     end: { x: sl.end.x, y: sl.end.y },
                     label: sl.label
-                }))
+                })),
+                columnPositions: columnPositions.map(c => ({ id: c.id, x: c.x, y: c.y })),
+                columnsAutoSync,
             });
         }
-    }, [vertices, isClosed, sectionLines]);
+    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     // Split view
     const [splitRatio, setSplitRatio] = useState(0.6); // 60% plan, 40% section
@@ -138,52 +163,60 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setUndoStack(prev => [...prev, {
             vertices: vertices.map(v => ({ ...v })),
             isClosed,
-            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } }))
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+            columnPositions: columnPositions.map(c => ({ ...c })),
+            columnsAutoSync,
         }]);
         setRedoStack([]);
-    }, [vertices, isClosed, sectionLines]);
+    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     const handleUndo = useCallback(() => {
         setUndoStack(prev => {
             if (prev.length === 0) return prev;
             const newStack = [...prev];
             const snapshot = newStack.pop();
-            // Push current state to redo
             setRedoStack(r => [...r, {
                 vertices: vertices.map(v => ({ ...v })),
                 isClosed,
-                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } }))
+                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+                columnPositions: columnPositions.map(c => ({ ...c })),
+                columnsAutoSync,
             }]);
-            // Restore snapshot
             setVertices(snapshot.vertices);
             setIsClosed(snapshot.isClosed);
             setSectionLines(snapshot.sectionLines);
+            if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
+            if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
             setSelectedVertex(null);
             setHoveredVertex(null);
+            setSelectedColumn(null);
             return newStack;
         });
-    }, [vertices, isClosed, sectionLines]);
+    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     const handleRedo = useCallback(() => {
         setRedoStack(prev => {
             if (prev.length === 0) return prev;
             const newStack = [...prev];
             const snapshot = newStack.pop();
-            // Push current state to undo
             setUndoStack(u => [...u, {
                 vertices: vertices.map(v => ({ ...v })),
                 isClosed,
-                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } }))
+                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+                columnPositions: columnPositions.map(c => ({ ...c })),
+                columnsAutoSync,
             }]);
-            // Restore snapshot
             setVertices(snapshot.vertices);
             setIsClosed(snapshot.isClosed);
             setSectionLines(snapshot.sectionLines);
+            if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
+            if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
             setSelectedVertex(null);
             setHoveredVertex(null);
+            setSelectedColumn(null);
             return newStack;
         });
-    }, [vertices, isClosed, sectionLines]);
+    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     // ── Active section ──
     const activeSection = sectionLines.find(sl => sl.id === activeSectionId) || null;
@@ -236,6 +269,16 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         }
         return cols;
     }, [s]);
+
+    // ── Auto-sync columns when polygon or spacing changes ──
+    useEffect(() => {
+        if (!columnsAutoSync || !isClosed || vertices.length < 3) {
+            if (!isClosed) setColumnPositions([]);
+            return;
+        }
+        const newCols = computeColumns(vertices);
+        setColumnPositions(newCols.map((c, i) => ({ id: `auto-${i}-${c.x.toFixed(2)}-${c.y.toFixed(2)}`, x: c.x, y: c.y })));
+    }, [vertices, isClosed, computeColumns, columnsAutoSync]);
 
     // ── Draw ──
     useEffect(() => {
@@ -389,34 +432,60 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ctx.setLineDash([]);
         }
 
-        // ── Jet grout columns ──
-        if (isClosed && vertices.length >= 3) {
-            const cols = computeColumns(vertices);
+        // ── Jet grout columns (entity-based, draggable) ──
+        if (columnPositions.length > 0) {
             const colR = (D / 2) * ppm;
 
-            cols.forEach(({ x, y }) => {
-                const p = worldToScreen(x, y, metrics);
+            columnPositions.forEach((col, idx) => {
+                const p = worldToScreen(col.x, col.y, metrics);
+                const isSelected = selectedColumn === idx;
+                const isHovered = hoveredColumn === idx;
 
+                // Shadow
                 ctx.beginPath();
-                ctx.arc(p.x + 1, p.y + 1, colR, 0, Math.PI * 2);
+                ctx.arc(p.x + 1.5, p.y + 1.5, colR, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
                 ctx.fill();
 
+                // Body gradient
                 const grad = ctx.createRadialGradient(p.x - colR * 0.3, p.y - colR * 0.3, colR * 0.1, p.x, p.y, colR);
-                grad.addColorStop(0, 'rgba(220, 60, 60, 0.9)');
-                grad.addColorStop(0.6, 'rgba(180, 40, 40, 0.8)');
-                grad.addColorStop(1, 'rgba(140, 25, 25, 0.65)');
+                if (isSelected) {
+                    grad.addColorStop(0, 'rgba(100, 220, 120, 0.95)');
+                    grad.addColorStop(0.6, 'rgba(60, 180, 80, 0.85)');
+                    grad.addColorStop(1, 'rgba(30, 140, 55, 0.70)');
+                } else if (isHovered) {
+                    grad.addColorStop(0, 'rgba(255, 200, 100, 0.95)');
+                    grad.addColorStop(0.6, 'rgba(220, 160, 60, 0.85)');
+                    grad.addColorStop(1, 'rgba(180, 120, 30, 0.70)');
+                } else {
+                    grad.addColorStop(0, 'rgba(220, 60, 60, 0.90)');
+                    grad.addColorStop(0.6, 'rgba(180, 40, 40, 0.80)');
+                    grad.addColorStop(1, 'rgba(140, 25, 25, 0.65)');
+                }
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, colR, 0, Math.PI * 2);
                 ctx.fillStyle = grad;
                 ctx.fill();
 
-                ctx.strokeStyle = 'rgba(255, 90, 90, 0.85)';
-                ctx.lineWidth = 0.8;
+                // Border
+                ctx.strokeStyle = isSelected ? '#4caf50' : isHovered ? '#ffd54f' : 'rgba(255, 90, 90, 0.85)';
+                ctx.lineWidth = isSelected ? 2.5 : isHovered ? 1.5 : 0.8;
                 ctx.stroke();
 
+                // Selection ring
+                if (isSelected) {
+                    ctx.setLineDash([4, 3]);
+                    ctx.strokeStyle = 'rgba(76, 175, 80, 0.6)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, colR + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Center dot
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
                 ctx.fillStyle = '#fff';
                 ctx.fill();
             });
@@ -581,7 +650,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             }
         });
 
-    }, [vertices, isClosed, drawingMode, mouseWorld, hoveredVertex, selectedVertex, zoom, pan, D, s, rectStart, sectionLines, sectionStart, activeSectionId, computeColumns, getCanvasMetrics, screenToWorld, worldToScreen]);
+    }, [vertices, isClosed, drawingMode, mouseWorld, hoveredVertex, selectedVertex, zoom, pan, D, s, rectStart, sectionLines, sectionStart, activeSectionId, columnPositions, selectedColumn, hoveredColumn, getCanvasMetrics, screenToWorld, worldToScreen]);
 
     // ── Resize observer ──
     useEffect(() => {
@@ -604,6 +673,19 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         }
         return -1;
     }, [vertices, getCanvasMetrics, worldToScreen]);
+
+    // ── Find column near screen position ──
+    const findColumn = useCallback((sx, sy) => {
+        const metrics = getCanvasMetrics();
+        if (!metrics) return -1;
+        const { ppm } = metrics;
+        const colR = Math.max((D / 2) * ppm, 8); // min 8px hit area
+        for (let i = 0; i < columnPositions.length; i++) {
+            const p = worldToScreen(columnPositions[i].x, columnPositions[i].y, metrics);
+            if (Math.hypot(p.x - sx, p.y - sy) < colR + 3) return i;
+        }
+        return -1;
+    }, [columnPositions, D, getCanvasMetrics, worldToScreen]);
 
     // ── Find section line near screen position ──
     const findSectionLine = useCallback((sx, sy) => {
@@ -662,16 +744,27 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             if (drawingMode === 'select') {
                 const vi = findVertex(sx, sy);
                 if (vi >= 0) {
-                    pushUndo(); // snapshot before drag starts
+                    pushUndo();
                     setSelectedVertex(vi);
+                    setSelectedColumn(null);
                     setIsDragging(true);
                 } else {
-                    // Check if clicking on a section line
-                    const sl = findSectionLine(sx, sy);
-                    if (sl) {
-                        setActiveSectionId(sl.id);
-                    } else {
+                    // Check column first (before section lines)
+                    const ci = findColumn(sx, sy);
+                    if (ci >= 0) {
+                        pushUndo();
+                        setSelectedColumn(ci);
                         setSelectedVertex(null);
+                        setIsDraggingColumn(true);
+                    } else {
+                        // Check if clicking on a section line
+                        const sl = findSectionLine(sx, sy);
+                        if (sl) {
+                            setActiveSectionId(sl.id);
+                        } else {
+                            setSelectedVertex(null);
+                            setSelectedColumn(null);
+                        }
                     }
                 }
             } else if (drawingMode === 'draw') {
@@ -736,7 +829,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                 }
             }
         }
-    }, [drawingMode, isClosed, vertices, pan, rectStart, sectionStart, sectionLines, findVertex, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
+    }, [drawingMode, isClosed, vertices, pan, rectStart, sectionStart, sectionLines, findVertex, findColumn, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
 
     const handleMouseMove = useCallback((e) => {
         const canvas = canvasRef.current;
@@ -766,6 +859,21 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             return;
         }
 
+        // Column dragging
+        if (isDraggingColumn && selectedColumn !== null) {
+            const world = screenToWorld(sx, sy, metrics);
+            const wx = snapToGrid(world.x);
+            const wy = snapToGrid(world.y);
+            setColumnPositions(prev => {
+                const nv = [...prev];
+                nv[selectedColumn] = { ...nv[selectedColumn], x: wx, y: wy };
+                return nv;
+            });
+            // Disable auto-sync once user manually moves a column
+            setColumnsAutoSync(false);
+            return;
+        }
+
         const world = screenToWorld(sx, sy, metrics);
         const wx = snapToGrid(world.x);
         const wy = snapToGrid(world.y);
@@ -773,11 +881,20 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
         const vi = findVertex(sx, sy);
         setHoveredVertex(vi >= 0 ? vi : null);
-    }, [isPanning, isDragging, selectedVertex, findVertex, getCanvasMetrics, screenToWorld, snapToGrid]);
+
+        // Hover highlight for columns (only in select mode)
+        if (drawingMode === 'select') {
+            const ci = findColumn(sx, sy);
+            setHoveredColumn(ci >= 0 ? ci : null);
+        } else {
+            setHoveredColumn(null);
+        }
+    }, [isPanning, isDragging, isDraggingColumn, selectedVertex, selectedColumn, drawingMode, findVertex, findColumn, getCanvasMetrics, screenToWorld, snapToGrid]);
 
     const handleMouseUp = useCallback(() => {
         setIsPanning(false);
         setIsDragging(false);
+        setIsDraggingColumn(false);
     }, []);
 
     // Wheel zoom — must be non-passive to preventDefault
@@ -838,7 +955,44 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setIsClosed(false);
         setSelectedVertex(null);
         setHoveredVertex(null);
+        setSelectedColumn(null);
+        setColumnPositions([]);
+        setColumnsAutoSync(true);
         setRectStart(null);
+    };
+
+    const handleResetColumns = () => {
+        if (!isClosed || vertices.length < 3) return;
+        pushUndo();
+        const newCols = computeColumns(vertices);
+        setColumnPositions(newCols.map((c, i) => ({ id: `auto-${i}-${c.x.toFixed(2)}-${c.y.toFixed(2)}`, x: c.x, y: c.y })));
+        setColumnsAutoSync(true);
+        setSelectedColumn(null);
+    };
+
+    // ── DXF import handler ──
+    const handleDxfImport = (data) => {
+        // data: { vertices, isClosed, columnPositions }
+        pushUndo();
+        setVertices(data.vertices.map(v => ({ x: v.x, y: v.y })));
+        setIsClosed(data.isClosed);
+        setSelectedVertex(null);
+        setHoveredVertex(null);
+        setSelectedColumn(null);
+        setRectStart(null);
+        setSectionStart(null);
+
+        if (data.columnPositions && data.columnPositions.length > 0) {
+            setColumnPositions(data.columnPositions);
+            setColumnsAutoSync(false);
+        } else {
+            // Auto-generate columns if no explicit column layer given
+            setColumnsAutoSync(true);
+            // The auto-sync effect will fire because vertices/isClosed changed
+        }
+
+        // Switch to select mode so user can see & adjust immediately
+        setDrawingMode('select');
     };
 
     const handleClose = () => {
@@ -936,8 +1090,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     // ── Computed info ──
     const area = isClosed && vertices.length >= 3 ? polygonArea(vertices) : 0;
     const perimeter = isClosed && vertices.length >= 3 ? polygonPerimeter(vertices) : 0;
-    const columns = isClosed && vertices.length >= 3 ? computeColumns(vertices) : [];
-    const totalColumns = columns.length;
+    const totalColumns = columnPositions.length;
     const Ajet = Math.PI * (D / 2) ** 2;
     const Ar = area > 0 ? (totalColumns * Ajet / area) * 100 : 0;
 
@@ -950,6 +1103,23 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
                 {/* Toolbar */}
                 <div className="plan-toolbar">
+                    {/* DXF Import button — far left */}
+                    <button
+                        className="toolbar-btn icon-btn dxf-import-btn"
+                        onClick={() => setShowDxfModal(true)}
+                        data-tooltip={tr ? 'DXF Dosyasından İçe Aktar' : 'Import from DXF File'}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <polyline points="12 18 8 14 12 10" />
+                            <line x1="16" y1="14" x2="8" y2="14" />
+                        </svg>
+                    </button>
+
+                    <div className="toolbar-divider" />
+
                     <div className="toolbar-group">
                         <button
                             className={`toolbar-btn icon-btn ${drawingMode === 'draw' ? 'active' : ''}`}
@@ -1032,6 +1202,36 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
                     <div className="toolbar-divider" />
 
+                    {/* Reset columns / auto-sync toggle */}
+                    <div className="toolbar-group">
+                        <button
+                            className={`toolbar-btn icon-btn ${!columnsAutoSync ? 'active' : ''}`}
+                            onClick={handleResetColumns}
+                            disabled={!isClosed}
+                            data-tooltip={tr ? 'Kolonları Sıfırla (Otomatik Yerleşim)' : 'Reset Columns (Auto Layout)'}
+                            style={!columnsAutoSync ? { borderColor: '#ff9800', color: '#ff9800' } : {}}
+                        >
+                            {/* Grid/reset icon */}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                                <path d="M4.93 4.93a10 10 0 0 0 0 14.14" />
+                                <line x1="12" y1="2" x2="12" y2="5" />
+                                <line x1="12" y1="19" x2="12" y2="22" />
+                                <line x1="2" y1="12" x2="5" y2="12" />
+                                <line x1="19" y1="12" x2="22" y2="12" />
+                            </svg>
+                        </button>
+                        {!columnsAutoSync && (
+                            <span style={{ fontSize: '10px', color: '#ff9800', marginLeft: '2px' }}
+                                title={tr ? 'Kolonlar manuel konumda' : 'Columns in manual position'}>
+                                ✋
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="toolbar-divider" />
+
                     {/* Section cut button */}
                     <button
                         className={`toolbar-btn section-cut-action-btn ${drawingMode === 'section' ? 'active' : ''}`}
@@ -1078,7 +1278,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     style={showSectionPanel ? { flex: `0 0 ${splitRatio * 100}%` } : { flex: 1 }}>
                     <canvas
                         ref={canvasRef}
-                        className={`plan-canvas ${drawingMode === 'draw' || drawingMode === 'rectangle' || drawingMode === 'section' ? 'cursor-crosshair' : ''} ${drawingMode === 'select' ? (isDragging ? 'cursor-grabbing' : 'cursor-pointer') : ''} ${isPanning ? 'cursor-grabbing' : ''}`}
+                        className={`plan-canvas ${drawingMode === 'draw' || drawingMode === 'rectangle' || drawingMode === 'section' ? 'cursor-crosshair' : ''} ${drawingMode === 'select' ? (isDragging || isDraggingColumn ? 'cursor-grabbing' : hoveredColumn !== null ? 'cursor-grab' : 'cursor-pointer') : ''} ${isPanning ? 'cursor-grabbing' : ''}`}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}
@@ -1148,16 +1348,26 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     <div className="plan-section-panel" style={{ flex: `0 0 ${(1 - splitRatio) * 100}%` }}>
                         <SectionCutView
                             sectionLine={activeSection}
-                            columns={columns}
+                            columns={columnPositions}
                             parameters={parameters}
                             soilLayers={soilLayers || []}
                             lang={lang}
                             sectionColor={activeSectionColor}
                             onClose={() => setActiveSectionId(null)}
+                            extraParams={extraParams}
                         />
                     </div>
                 )}
-            </div>
+            </div>      {/* /plan-split-container */}
+
+            {/* DXF Import Modal (inside root wrapper so overlay works) */}
+            {showDxfModal && (
+                <DxfImportModal
+                    lang={lang}
+                    onImport={handleDxfImport}
+                    onClose={() => setShowDxfModal(false)}
+                />
+            )}
         </div>
     );
 }

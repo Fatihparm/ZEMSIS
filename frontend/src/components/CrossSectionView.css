@@ -97,3 +97,25 @@
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.4);
 }
+
+/* Dikey ayraç */
+.cs-divider {
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    align-self: stretch;
+    margin: 0 4px;
+}
+
+/* Foundation / Fill label badge */
+.cs-label-foundation {
+    color: #b0bec5 !important;
+}
+
+.cs-label-fill {
+    color: #cd7f32 !important;
+}
+
+.cs-badge-icon {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}

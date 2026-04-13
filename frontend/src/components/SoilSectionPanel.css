@@ -1,0 +1,414 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SoilSectionPanel — Unified Soil Layers + Cross-Section
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ssp-wrapper {
+    display: flex;
+    height: 100%;
+    background: #0d1117;
+    gap: 0;
+    position: relative;
+}
+
+/* ── Left panel ─────────────────────────────────────────────────────────────── */
+.ssp-left {
+    width: 280px;
+    min-width: 250px;
+    max-width: 320px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.ssp-left-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ssp-left-header h4 {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #b0bec5;
+    letter-spacing: 0.3px;
+}
+
+.ssp-depth-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #4fc3f7;
+    background: rgba(79, 195, 247, 0.1);
+    border: 1px solid rgba(79, 195, 247, 0.15);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+/* ── Extra params (foundation, fill, GW) ──────────────────────────────────── */
+.ssp-extra-params {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ssp-extra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ssp-extra-row label {
+    font-size: 0.72rem;
+    color: #78909c;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.ssp-extra-icon {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+.ssp-extra-input {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.ssp-extra-input input {
+    width: 56px;
+    padding: 3px 5px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    color: #e0e0e0;
+    text-align: right;
+}
+
+.ssp-extra-input input:focus {
+    border-color: rgba(79, 195, 247, 0.4);
+    outline: none;
+}
+
+.ssp-extra-input span {
+    font-size: 0.65rem;
+    color: #546e7a;
+    min-width: 14px;
+}
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+.ssp-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.05);
+    margin: 4px 14px;
+}
+
+/* ── Layer stack ──────────────────────────────────────────────────────────── */
+.ssp-layer-stack {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+}
+
+.ssp-surface-tag {
+    text-align: center;
+    padding: 6px 0;
+}
+
+.ssp-surface-tag span {
+    font-size: 0.65rem;
+    color: #66bb6a;
+    letter-spacing: 1px;
+}
+
+/* ── Layer row ────────────────────────────────────────────────────────────── */
+.ssp-layer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin: 2px 0;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ssp-layer-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ssp-layer-row.active {
+    background: rgba(79, 195, 247, 0.08);
+    border-left-color: #4fc3f7 !important;
+    box-shadow: inset 0 0 0 1px rgba(79, 195, 247, 0.12);
+}
+
+.ssp-layer-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    flex-shrink: 0;
+}
+
+.ssp-layer-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ssp-layer-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #cfd8dc;
+}
+
+.ssp-layer-depth {
+    font-size: 0.65rem;
+    color: #546e7a;
+}
+
+.ssp-layer-thick {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ssp-layer-thick input {
+    width: 44px;
+    padding: 3px 4px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    color: #e0e0e0;
+    text-align: right;
+}
+
+.ssp-layer-thick input:focus {
+    border-color: rgba(79, 195, 247, 0.4);
+    outline: none;
+}
+
+.ssp-layer-thick span {
+    font-size: 0.62rem;
+    color: #546e7a;
+}
+
+.ssp-layer-drag {
+    cursor: grab;
+    color: #37474f;
+    font-size: 0.7rem;
+    padding: 0 2px;
+    user-select: none;
+    letter-spacing: -2px;
+}
+
+.ssp-layer-drag:hover {
+    color: #78909c;
+}
+
+/* ── Add layer button ─────────────────────────────────────────────────────── */
+.ssp-add-btn {
+    margin: 8px 12px 12px;
+    padding: 8px 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4fc3f7;
+    background: rgba(79, 195, 247, 0.06);
+    border: 1px dashed rgba(79, 195, 247, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ssp-add-btn:hover {
+    background: rgba(79, 195, 247, 0.12);
+    border-color: rgba(79, 195, 247, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Floating Popup — Word-style parameter editor
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ssp-popup {
+    position: fixed;
+    z-index: 1000;
+    width: 260px;
+    background: #161b22;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(79, 195, 247, 0.08),
+        0 0 20px rgba(79, 195, 247, 0.04);
+    animation: ssp-popup-in 0.15s ease-out;
+    overflow: hidden;
+}
+
+@keyframes ssp-popup-in {
+    from { opacity: 0; transform: translateX(-6px) scale(0.97); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.ssp-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(79, 195, 247, 0.04);
+}
+
+.ssp-popup-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #b0bec5;
+}
+
+.ssp-popup-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.ssp-popup-del,
+.ssp-popup-close {
+    background: none;
+    border: none;
+    color: #546e7a;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.12s;
+}
+
+.ssp-popup-del:hover {
+    background: rgba(244, 67, 54, 0.12);
+    color: #ef5350;
+}
+
+.ssp-popup-close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #b0bec5;
+}
+
+.ssp-popup-body {
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.ssp-popup-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ssp-popup-row label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #90caf9;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.ssp-popup-row label span {
+    font-size: 0.62rem;
+    font-weight: 400;
+    color: #546e7a;
+}
+
+.ssp-popup-row select {
+    flex: 1;
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    color: #e0e0e0;
+}
+
+.ssp-popup-row select:focus {
+    border-color: rgba(79, 195, 247, 0.4);
+    outline: none;
+}
+
+.ssp-popup-input {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.ssp-popup-input input {
+    width: 64px;
+    padding: 4px 5px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    color: #e0e0e0;
+    text-align: right;
+}
+
+.ssp-popup-input input:focus {
+    border-color: rgba(79, 195, 247, 0.4);
+    outline: none;
+}
+
+.ssp-popup-input span {
+    font-size: 0.62rem;
+    color: #546e7a;
+    min-width: 28px;
+    text-align: left;
+}
+
+.ssp-popup-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 2px 0;
+}
+
+.ssp-popup-section-title {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #455a64;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 2px;
+}
+
+/* ── Right panel: Cross-section canvas ────────────────────────────────────── */
+.ssp-right {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+.ssp-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+.ssp-left::-webkit-scrollbar { width: 4px; }
+.ssp-left::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+.ssp-layer-stack::-webkit-scrollbar { width: 4px; }
+.ssp-layer-stack::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 4px; }

@@ -96,11 +96,21 @@ function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, proj
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={tr ? 'Örn: Zemin İyileştirme Projesi A' : 'e.g. Ground Improvement Project A'}
+              onChange={(e) => setName(e.target.value.slice(0, 50))}
+              placeholder={tr ? 'Örn: Zemin İyileştirme A' : 'e.g. Ground Improvement A'}
               required
               autoFocus
+              maxLength={50}
             />
+            <span className="modal-char-count" style={{
+              fontSize: '0.72rem',
+              color: name.length >= 45 ? '#ef9a9a' : '#607d8b',
+              textAlign: 'right',
+              display: 'block',
+              marginTop: '4px'
+            }}>
+              {name.length}/50
+            </span>
           </div>
 
           <div className="modal-field">

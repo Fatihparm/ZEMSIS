@@ -3,7 +3,7 @@ import InputField from './components/InputField';
 import ResultCard from './components/ResultCard';
 import SoilLayerEditor from './components/SoilLayerEditor';
 import LayerResultsPanel from './components/LayerResultsPanel';
-import CrossSectionView from './components/CrossSectionView';
+import SoilSectionPanel from './components/SoilSectionPanel';
 import PlanView from './components/PlanView';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
@@ -200,6 +200,9 @@ function App() {
   const [currentProjectName, setCurrentProjectName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
 
+  // ── Extra visual params (foundation, fill) ──
+  const [extraParams, setExtraParams] = useState({ foundationThickness: 0.5, fillHeight: 0 });
+
   // Drawing data stored in ref (updated by PlanView callback)
   const drawingDataRef = useRef(null);
 
@@ -254,6 +257,7 @@ function App() {
     setUnits({ ...defaultUnits });
     setResults(null);
     setLayerResults(null);
+    setExtraParams({ foundationThickness: 0.5, fillHeight: 0 });
     setActivePage('home');
     setActiveTab('parameters');
   };
@@ -341,6 +345,7 @@ function App() {
     if (project.soilLayers && project.soilLayers.length > 0) setSoilLayers(project.soilLayers);
     if (project.units) setUnits(project.units);
     if (project.results) setResults(project.results);
+    if (project.extraParams) setExtraParams(project.extraParams);
     drawingDataRef.current = project.drawingData || null;
     setActivePage('workspace');
     setActiveTab('parameters');
@@ -355,9 +360,28 @@ function App() {
     setUnits({ ...defaultUnits });
     setResults(null);
     setLayerResults(null);
+    setExtraParams({ foundationThickness: 0.5, fillHeight: 0 });
     drawingDataRef.current = null;
     setActivePage('workspace');
     setActiveTab('parameters');
+  };
+
+  // ── Import DXF from home page ──
+  const [pendingDxfImport, setPendingDxfImport] = useState(false);
+  const handleImportDxf = () => {
+    // Create a fresh workspace and go to Drawing tab with DXF modal open
+    setCurrentProjectId(null);
+    setCurrentProjectName('');
+    setParameters({ ...defaultParameters });
+    setSoilLayers([...defaultSoilLayers]);
+    setUnits({ ...defaultUnits });
+    setResults(null);
+    setLayerResults(null);
+    setExtraParams({ foundationThickness: 0.5, fillHeight: 0 });
+    drawingDataRef.current = null;
+    setPendingDxfImport(true);
+    setActivePage('workspace');
+    setActiveTab('planView');
   };
 
   // ── Save complete ──
@@ -375,6 +399,7 @@ function App() {
     results,
     drawingData: drawingDataRef.current,
     units,
+    extraParams,
   });
 
   const handleDrawingDataChange = (data) => {
@@ -395,8 +420,7 @@ function App() {
   // Workspace tabs — shown only when activePage === 'workspace'
   const workspaceTabs = [
     { key: 'parameters', icon: '⚙️', label: tr ? 'Parametreler' : 'Parameters' },
-    { key: 'soilLayers', icon: '🌍', label: tr ? 'Zemin' : 'Soil' },
-    { key: 'crossSection', icon: '📐', label: tr ? 'Kesit' : 'Section' },
+    { key: 'soilSection', icon: '🌍', label: tr ? 'Zemin & Kesit' : 'Soil & Section' },
     { key: 'planView', icon: '✏️', label: tr ? 'Çizim' : 'Drawing' },
     { key: 'results', icon: '📊', label: tr ? 'Sonuçlar' : 'Results' },
   ];
@@ -424,7 +448,9 @@ function App() {
           {activePage === 'workspace' && (
             <>
               <div className="sidebar-project-divider">
-                <span>{currentProjectName || (tr ? 'Yeni Proje' : 'New Project')}</span>
+                <span title={currentProjectName || (tr ? 'Yeni Proje' : 'New Project')}>
+                  {currentProjectName || (tr ? 'Yeni Proje' : 'New Project')}
+                </span>
               </div>
               {workspaceTabs.map(tab => (
                 <button
@@ -483,7 +509,7 @@ function App() {
 
         {/* ── Home ── */}
         {activePage === 'home' && (
-          <Dashboard lang={lang} user={user} onNewProject={handleNewProject} onGoProjects={() => setActivePage('projects')} />
+          <Dashboard lang={lang} user={user} onNewProject={handleNewProject} onGoProjects={() => setActivePage('projects')} onImportDxf={handleImportDxf} />
         )}
 
         {/* ── Projects ── */}
@@ -553,28 +579,19 @@ function App() {
               </div>
             )}
 
-            {/* Soil Layers */}
-            {activeTab === 'soilLayers' && (
-              <div className="page-container">
-                <div className="page-header">
-                  <h2>{tr ? 'Zemin Tabakaları' : 'Soil Layers'}</h2>
-                </div>
-                <div className="page-content page-content-soil">
-                  <SoilLayerEditor layers={soilLayers} onChange={setSoilLayers} translations={t.soilLayers} lang={lang} />
-                  {layerResults && <LayerResultsPanel results={layerResults} translations={t.soilLayers} lang={lang} />}
-                </div>
-              </div>
-            )}
-
-            {/* Cross Section */}
-            {activeTab === 'crossSection' && (
-              <div className="page-container">
-                <div className="page-header">
-                  <h2>{tr ? 'Kesit Görünümü' : 'Cross Section View'}</h2>
-                </div>
-                <div className="page-content page-content-full">
-                  <CrossSectionView parameters={parameters} soilLayers={soilLayers} lang={lang} onParameterChange={handleInputChange} />
-                </div>
+            {/* Soil & Section — unified panel */}
+            {activeTab === 'soilSection' && (
+              <div className="page-container page-container-full">
+                <SoilSectionPanel
+                  layers={soilLayers}
+                  onChange={setSoilLayers}
+                  parameters={parameters}
+                  lang={lang}
+                  onParameterChange={handleInputChange}
+                  extraParams={extraParams}
+                  onExtraParamsChange={setExtraParams}
+                  translations={t.soilLayers}
+                />
               </div>
             )}
 
@@ -587,6 +604,9 @@ function App() {
                 soilLayers={soilLayers}
                 initialDrawingData={drawingDataRef.current}
                 onDrawingDataChange={handleDrawingDataChange}
+                extraParams={extraParams}
+                openDxfModal={pendingDxfImport}
+                onDxfModalOpened={() => setPendingDxfImport(false)}
               />
             )}
 
