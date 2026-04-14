@@ -450,6 +450,40 @@ function SoilSectionPanel({
                 </div>
 
                 <div className="ssp-divider" />
+                <div className="ssp-extra-params">
+                    <div className="ssp-extra-row">
+                        <label>
+                            <span className="ssp-extra-icon">○</span>
+                            {tr ? 'Çap (D)' : 'Diameter (D)'}
+                        </label>
+                        <div className="ssp-extra-input">
+                            <input type="number" name="D" value={parameters.D} onChange={onParameterChange} min={0.3} max={3.0} step={0.1} />
+                            <span>m</span>
+                        </div>
+                    </div>
+                    <div className="ssp-extra-row">
+                        <label>
+                            <span className="ssp-extra-icon">↔</span>
+                            {tr ? 'Aralık (s)' : 'Spacing (s)'}
+                        </label>
+                        <div className="ssp-extra-input">
+                            <input type="number" name="s" value={parameters.s} onChange={onParameterChange} min={0.5} max={10.0} step={0.1} />
+                            <span>m</span>
+                        </div>
+                    </div>
+                    <div className="ssp-extra-row">
+                        <label>
+                            <span className="ssp-extra-icon">↕</span>
+                            {tr ? 'Boy (H)' : '  Length (H)'}
+                        </label>
+                        <div className="ssp-extra-input">
+                            <input type="number" name="H" value={parameters.H} onChange={onParameterChange} min={1} max={50} step={0.5} />
+                            <span>m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="ssp-divider" />
 
                 {/* Layer stack */}
                 <div className="ssp-layer-stack">
@@ -495,7 +529,7 @@ function SoilSectionPanel({
                 </div>
 
                 {/* Add layer button */}
-                <button className="ssp-add-btn" onClick={addLayer}>
+                <button className="ssp-add-btn" onClick={addLayer} style={{ marginTop: '15px' }}>
                     + {tr ? 'Tabaka Ekle' : 'Add Layer'}
                 </button>
             </div>

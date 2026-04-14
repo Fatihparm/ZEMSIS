@@ -1,29 +1,42 @@
 # 🏗️ Jet-Grout-Calc
 
-Jet Grouting hesaplamaları için modern web uygulaması. React frontend ve Node.js backend ile geliştirilmiştir.
+Jet Grouting zemin iyileştirme projeleri için kapsamlı, etkileşimli ve modern web uygulaması. React frontend ve Node.js/PostgreSQL backend mimarisi ile geliştirilmiş tam donanımlı bir mühendislik aracıdır.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## 📋 Özellikler
 
-- ✅ Jet Grout kolon geometrisi hesaplamaları
-- ✅ Tekil kolon taşıma kapasitesi analizi
-- ✅ İyileştirilmiş zemin parametreleri
-- ✅ Oturma analizi
-- ✅ Modern ve responsive arayüz
-- ✅ Gerçek zamanlı hesaplama
+- ✅ **Jet Grout Hesaplamaları**: Kolon geometrisi, tekil/grup taşıma kapasitesi ve oturma analizleri.
+- ✅ **Etkileşimli Çizim Modülü (PlanView)**: Zoom, pan, poligon çizimi, kesit hattı belirleme araçları.
+- ✅ **DXF Ayrıştırıcı (DxfParser)**: Gerçek dünya profesyonel CAD (.dxf) projelerinden çember ve poligon okuma/işleme.
+- ✅ **Gelişmiş Zemin ve Kesit Görünümü (SoilSectionPanel)**: Tek sayfada birleştirilmiş zemin tabakası yönetimi, kalınlık düzenleme ve detaylı Mohr-Coulomb parametreleri girişi.
+- ✅ **Undo/Redo Sistemi**: Çizim modülünde geri/ileri alma olanaklarıyla esnek çalışma (Ctrl+Z / Ctrl+Y).
+- ✅ **Kullanıcı Doğrulama ve Proje Yönetimi**: PostgreSQL entegrasyonu ile kullanıcı oluşturma, proje kaydetme/yükleme, geçmiş projeleri yönetme.
+- ✅ **Modern & Responsive Arayüz**: Dinamik araç çubukları, interaktif araç ipuçları (tooltips), Poppins/Inter font aileleriyle şık tipografi ve Glassmorphism dokunuşları.
 
 ## 🚀 Kurulum
 
 ### Gereksinimler
 - Node.js v18+
 - npm v9+
+- PostgreSQL
+- PostgreSQL için boş bir veritabanı (örn. `jet_grout_db`)
 
 ### Backend Kurulumu
 ```bash
 cd backend
 npm install
+```
+Backend kök dizininde bir `.env` dosyası oluşturarak PostgreSQL bağlantı bilgilerinizi ve JWT anahtarınızı ekleyin:
+```env
+PORT=3001
+DB_USER=postgres
+DB_HOST=localhost
+DB_NAME=jet_grout_db
+DB_PASSWORD=sifreniz
+DB_PORT=5432
+JWT_SECRET=gizli_anahtariniz
 ```
 
 ### Frontend Kurulumu
@@ -37,7 +50,7 @@ npm install
 ### Backend'i Başlat (Terminal 1)
 ```bash
 cd backend
-npm start
+npm run dev
 ```
 Backend http://localhost:3001 adresinde çalışacaktır.
 
@@ -77,75 +90,32 @@ Frontend http://localhost:5173 adresinde çalışacaktır.
 | `E_iyileştirilmiş = Ejg·a + Es·(1-a)` | İyileştirilmiş modül |
 | `δ = qnet·L / E_iyileştirilmiş` | Oturma miktarı |
 
-## 🔧 API Endpoints
-
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| GET | `/api/health` | Sağlık kontrolü |
-| GET | `/api/defaults` | Varsayılan parametreler |
-| GET | `/api/parameters` | Parametre tanımları |
-| POST | `/api/calculate` | Hesaplama yap |
-
-### Örnek API İsteği
-```bash
-curl -X POST http://localhost:3001/api/calculate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "parameters": {
-      "D": 0.8,
-      "s": 1.5,
-      "cu": 25,
-      "sigmaJet": 5000,
-      "Es": 5000,
-      "H": 10,
-      "qtemel": 150,
-      "FS": 2.5
-    }
-  }'
-```
-
 ## 📁 Proje Yapısı
 
-```
+```text
 Jet-Grout/
 ├── backend/
-│   ├── index.js           # Express API sunucusu
-│   ├── calculations.js    # Hesaplama fonksiyonları
+│   ├── index.js           # Express API ve Auth sunucusu
+│   ├── calculations.js    # Geoteknik hesaplama fonksiyonları
 │   └── package.json
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx        # Ana React bileşeni
-│   │   ├── App.css        # Stil dosyası
-│   │   └── components/
-│   │       ├── InputField.jsx
-│   │       ├── InputField.css
-│   │       ├── ResultCard.jsx
-│   │       └── ResultCard.css
+│   │   ├── App.jsx        # Ana React Router yapısı
+│   │   ├── App.css        # Global stiller (Poppins, Inter vb.)
+│   │   └── components/    # UI Bileşenleri (PlanView, SoilSectionPanel, vb.)
 │   ├── index.html
 │   └── package.json
 │
 └── README.md
 ```
 
-## 📝 Giriş Parametreleri
-
-| Parametre | Sembol | Birim | Açıklama |
-|-----------|--------|-------|----------|
-| Kolon Çapı | D | m | Jet grout kolon çapı |
-| Kolon Aralığı | s | m | Kolon karelaj aralığı |
-| Kolon Yüksekliği | H | m | İyileştirme derinliği |
-| Drenajsız Kohezyon | cu | kPa | Zemin kayma mukavemeti |
-| Zemin Modülü | Es | kPa | Zemin elastisite modülü |
-| Jet Grout Mukavemeti | σjet | kPa | Serbest basınç dayanımı |
-| Temel Basıncı | qtemel | kPa | Uygulanan temel basıncı |
-| Güvenlik Katsayısı | FS | - | Global güvenlik faktörü |
-
 ## 🛠️ Teknolojiler
 
-- **Frontend:** React 18, Vite
+- **Frontend:** React 19, Vite, Canvas API
 - **Backend:** Node.js, Express
-- **Styling:** CSS3 (Glassmorphism)
+- **Veritabanı & Güvenlik:** PostgreSQL, `pg`, `bcrypt`, `jsonwebtoken`
+- **Styling:** Vanilla CSS, CSS Variables, Modern Typography (Poppins & Inter)
 
 ## 📜 Lisans
 

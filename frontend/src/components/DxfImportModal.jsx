@@ -4,11 +4,11 @@ import './DxfImportModal.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const UNITS = [
-    { value: 'mm',   label: 'Millimetres (mm)' },
-    { value: 'cm',   label: 'Centimetres (cm)' },
-    { value: 'm',    label: 'Metres (m)' },
+    { value: 'mm', label: 'Millimetres (mm)' },
+    { value: 'cm', label: 'Centimetres (cm)' },
+    { value: 'm', label: 'Metres (m)' },
     { value: 'inch', label: 'Inches (in)' },
-    { value: 'ft',   label: 'Feet (ft)' },
+    { value: 'ft', label: 'Feet (ft)' },
 ];
 
 function fmtNum(n, dec = 2) {
@@ -34,16 +34,16 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
 
     // Step: 'upload' | 'configure' | 'preview'
     const [step, setStep] = useState('upload');
-    const [dxfResult, setDxfResult]       = useState(null);
-    const [fileName, setFileName]         = useState('');
-    const [parseError, setParseError]     = useState('');
-    const [warnings, setWarnings]         = useState([]);
+    const [dxfResult, setDxfResult] = useState(null);
+    const [fileName, setFileName] = useState('');
+    const [parseError, setParseError] = useState('');
+    const [warnings, setWarnings] = useState([]);
 
     // Config
     const [boundaryLayer, setBoundaryLayer] = useState('');
-    const [columnLayer, setColumnLayer]     = useState('__none__');
-    const [unit, setUnit]                   = useState('m');
-    const [autoCenter, setAutoCenter]       = useState(true);
+    const [columnLayer, setColumnLayer] = useState('__none__');
+    const [unit, setUnit] = useState('m');
+    const [autoCenter, setAutoCenter] = useState(true);
 
     // Preview
     const [preview, setPreview] = useState(null);
@@ -153,16 +153,15 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                 {/* Step indicator */}
                 <div className="dxf-steps">
                     {[
-                        { id: 'upload',    label: tr ? '1. Dosya' : '1. File' },
+                        { id: 'upload', label: tr ? '1. Dosya' : '1. File' },
                         { id: 'configure', label: tr ? '2. Katmanlar' : '2. Layers' },
-                        { id: 'preview',   label: tr ? '3. Önizleme' : '3. Preview' },
+                        { id: 'preview', label: tr ? '3. Önizleme' : '3. Preview' },
                     ].map(s => (
                         <div key={s.id}
-                            className={`dxf-step ${step === s.id ? 'active' : ''} ${
-                                (step === 'configure' && s.id === 'upload') ||
-                                (step === 'preview' && (s.id === 'upload' || s.id === 'configure'))
+                            className={`dxf-step ${step === s.id ? 'active' : ''} ${(step === 'configure' && s.id === 'upload') ||
+                                    (step === 'preview' && (s.id === 'upload' || s.id === 'configure'))
                                     ? 'done' : ''
-                            }`}>
+                                }`}>
                             {s.label}
                         </div>
                     ))}

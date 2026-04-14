@@ -108,9 +108,11 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     // Open DXF modal from outside (e.g. home page button)
     useEffect(() => {
         if (openDxfModal) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setShowDxfModal(true);
             onDxfModalOpened && onDxfModalOpened();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [openDxfModal]);
 
     // Notify parent of drawing data changes (skip initial render)
@@ -133,6 +135,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                 columnsAutoSync,
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     // Split view
@@ -171,52 +174,52 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     const handleUndo = useCallback(() => {
-        setUndoStack(prev => {
-            if (prev.length === 0) return prev;
-            const newStack = [...prev];
-            const snapshot = newStack.pop();
-            setRedoStack(r => [...r, {
-                vertices: vertices.map(v => ({ ...v })),
-                isClosed,
-                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
-                columnPositions: columnPositions.map(c => ({ ...c })),
-                columnsAutoSync,
-            }]);
-            setVertices(snapshot.vertices);
-            setIsClosed(snapshot.isClosed);
-            setSectionLines(snapshot.sectionLines);
-            if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
-            if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
-            setSelectedVertex(null);
-            setHoveredVertex(null);
-            setSelectedColumn(null);
-            return newStack;
-        });
-    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
+        if (undoStack.length === 0) return;
+        const newStack = [...undoStack];
+        const snapshot = newStack.pop();
+        
+        setRedoStack(r => [...r, {
+            vertices: vertices.map(v => ({ ...v })),
+            isClosed,
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+            columnPositions: columnPositions.map(c => ({ ...c })),
+            columnsAutoSync,
+        }]);
+        
+        setUndoStack(newStack);
+        setVertices(snapshot.vertices);
+        setIsClosed(snapshot.isClosed);
+        setSectionLines(snapshot.sectionLines);
+        if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
+        if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
+        setSelectedVertex(null);
+        setHoveredVertex(null);
+        setSelectedColumn(null);
+    }, [undoStack, vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     const handleRedo = useCallback(() => {
-        setRedoStack(prev => {
-            if (prev.length === 0) return prev;
-            const newStack = [...prev];
-            const snapshot = newStack.pop();
-            setUndoStack(u => [...u, {
-                vertices: vertices.map(v => ({ ...v })),
-                isClosed,
-                sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
-                columnPositions: columnPositions.map(c => ({ ...c })),
-                columnsAutoSync,
-            }]);
-            setVertices(snapshot.vertices);
-            setIsClosed(snapshot.isClosed);
-            setSectionLines(snapshot.sectionLines);
-            if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
-            if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
-            setSelectedVertex(null);
-            setHoveredVertex(null);
-            setSelectedColumn(null);
-            return newStack;
-        });
-    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
+        if (redoStack.length === 0) return;
+        const newStack = [...redoStack];
+        const snapshot = newStack.pop();
+        
+        setUndoStack(u => [...u, {
+            vertices: vertices.map(v => ({ ...v })),
+            isClosed,
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+            columnPositions: columnPositions.map(c => ({ ...c })),
+            columnsAutoSync,
+        }]);
+        
+        setRedoStack(newStack);
+        setVertices(snapshot.vertices);
+        setIsClosed(snapshot.isClosed);
+        setSectionLines(snapshot.sectionLines);
+        if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
+        if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
+        setSelectedVertex(null);
+        setHoveredVertex(null);
+        setSelectedColumn(null);
+    }, [redoStack, vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
 
     // ── Active section ──
     const activeSection = sectionLines.find(sl => sl.id === activeSectionId) || null;
@@ -273,11 +276,14 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     // ── Auto-sync columns when polygon or spacing changes ──
     useEffect(() => {
         if (!columnsAutoSync || !isClosed || vertices.length < 3) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             if (!isClosed) setColumnPositions([]);
             return;
         }
         const newCols = computeColumns(vertices);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setColumnPositions(newCols.map((c, i) => ({ id: `auto-${i}-${c.x.toFixed(2)}-${c.y.toFixed(2)}`, x: c.x, y: c.y })));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [vertices, isClosed, computeColumns, columnsAutoSync]);
 
     // ── Draw ──

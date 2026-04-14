@@ -71,7 +71,7 @@ export function parseDxf(text) {
 
             // Handle POLYLINE: its VERTEX sub-entities appear as separate code-0 tokens
             if (entityType === 'POLYLINE') {
-                const [entity, newPi] = parsePolyline(entityPairs, pairs, pi, warnings);
+                const [entity, newPi] = parsePolyline(entityPairs, pairs, pi);
                 if (entity) rawEntities.push(entity);
                 pi = newPi;
             } else {
@@ -93,7 +93,7 @@ export function parseDxf(text) {
     }
 
     // Compute bounding box per layer for UI preview
-    for (const [lname, ld] of Object.entries(layers)) {
+    for (const ld of Object.values(layers)) {
         ld.bbox = computeLayerBBox(ld);
         ld.entityCount = ld.polylines.length + ld.points.length;
     }
@@ -105,7 +105,9 @@ export function parseDxf(text) {
 function parseEntity(type, pairs) {
     switch (type) {
         case 'LWPOLYLINE': return parseLwPolyline(pairs);
-        case 'POINT':      return parsePoint(pairs);
+        case 'POINT':
+        case 'CIRCLE':
+        case 'INSERT':     return parsePoint(pairs);
         case 'LINE':       return parseLine(pairs);
         default:           return null;
     }
@@ -133,7 +135,7 @@ function parseLwPolyline(pairs) {
 
 // ── POLYLINE + VERTEX ──────────────────────────────────────────────────────────
 // POLYLINE header pairs + subsequent VERTEX entities until SEQEND
-function parsePolyline(headerPairs, allPairs, pi, warnings) {
+function parsePolyline(headerPairs, allPairs, pi) {
     const e = { type: 'poly', layer: '0', vertices: [], closed: false };
 
     // Parse POLYLINE header
