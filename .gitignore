@@ -27,5 +27,6 @@ dist-ssr
 
 /backend/test-all-excel-scenarios.js
 /backend/test-excel-verification.js
+/deprem-zemin-main
 
 

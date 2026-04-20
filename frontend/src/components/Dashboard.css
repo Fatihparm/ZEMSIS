@@ -1,116 +1,117 @@
 .dashboard-home {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 40px;
-    text-align: center;
-    background: #0d1117;
+  min-height: 100%;
+  padding: 30px 25px;
 }
 
 .dashboard-hero {
-    max-width: 520px;
+  position: relative;
+  overflow: hidden;
+  padding: 25px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(80, 177, 200, 0.22), transparent 22%),
+    linear-gradient(135deg, rgba(17, 62, 104, 0.98), rgba(26, 34, 52, 0.98));
+  color: var(--color-white);
+  box-shadow: var(--shadow-lg);
 }
 
 .hero-icon {
-    font-size: 4rem;
-    margin-bottom: 16px;
-    filter: drop-shadow(0 4px 20px rgba(79, 195, 247, 0.2));
+  width: 84px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 700;
 }
 
 .dashboard-hero h1 {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #e0e0e0;
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
+  color: var(--color-white);
+  font-size: clamp(2rem, 4vw, 3rem);
 }
 
 .hero-subtitle {
-    font-size: 1rem;
-    color: #4fc3f7;
-    font-weight: 500;
-    margin-bottom: 16px;
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1rem;
 }
 
 .hero-welcome {
-    font-size: 0.95rem;
-    color: #81d4fa;
-    padding: 10px 20px;
-    background: rgba(79, 195, 247, 0.08);
-    border: 1px solid rgba(79, 195, 247, 0.15);
-    border-radius: 10px;
-    margin-bottom: 20px;
-    display: inline-block;
+  display: inline-flex;
+  margin-top: 22px;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-weight: 600;
 }
 
 .hero-description {
-    font-size: 0.9rem;
-    color: #78909c;
-    line-height: 1.7;
-    margin-bottom: 32px;
+  max-width: 640px;
+  margin: 22px 0 30px;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.7;
+  font-size: 0.96rem;
 }
 
-/* Quick action cards — now clickable buttons */
 .hero-quick-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
 }
 
 .quick-action-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 18px 28px;
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    min-width: 120px;
-    color: inherit;
-    font-family: inherit;
+  padding: 22px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-white);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .quick-action-card:hover {
-    border-color: rgba(79, 195, 247, 0.25);
-    background: rgba(79, 195, 247, 0.06);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(79, 195, 247, 0.1);
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .quick-action-card span {
-    font-size: 1.6rem;
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .quick-action-card p {
-    font-size: 0.78rem;
-    color: #78909c;
-    font-weight: 500;
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-white);
 }
 
 .dashboard-version {
-    position: absolute;
-    bottom: 20px;
-    display: flex;
-    gap: 16px;
-    color: #37474f;
-    font-size: 0.75rem;
+  margin-top: 18px;
+  display: flex;
+  gap: 14px;
+  color: var(--color-gray-500);
+  font-size: 0.78rem;
 }
 
-/* DXF import action card — orange accent */
-.quick-action-card.dxf-action {
-    border-color: rgba(255, 183, 77, 0.15);
-}
-.quick-action-card.dxf-action:hover {
-    border-color: rgba(255, 183, 77, 0.4);
-    background: rgba(255, 183, 77, 0.08);
-    box-shadow: 0 4px 16px rgba(255, 183, 77, 0.1);
-}
-.quick-action-card.dxf-action p {
-    color: #ffb74d;
+@media (max-width: 720px) {
+  .dashboard-home {
+    padding: 18px;
+  }
+
+  .dashboard-hero {
+    padding: 28px 22px;
+  }
 }

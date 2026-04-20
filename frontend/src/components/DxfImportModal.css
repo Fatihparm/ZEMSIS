@@ -1,486 +1,248 @@
-/* ══════════════════════════════════════════════
-   DxfImportModal — Premium Dark UI
-   ══════════════════════════════════════════════ */
-
 .dxf-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    animation: dxfOverlayIn 0.2s ease;
-}
-
-@keyframes dxfOverlayIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(8px);
 }
 
 .dxf-modal {
-    background: linear-gradient(135deg, #12151f 0%, #1a1e2e 100%);
-    border: 1px solid rgba(79, 195, 247, 0.2);
-    border-radius: 16px;
-    width: min(680px, 95vw);
-    max-height: 88vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow:
-        0 4px 40px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    animation: dxfModalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: min(760px, calc(100% - 24px));
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 
-@keyframes dxfModalIn {
-    from { opacity: 0; transform: scale(0.94) translateY(12px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
+.dxf-modal-header,
+.dxf-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  background: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
-/* ── Header ── */
-.dxf-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+.dxf-modal-footer {
+  justify-content: flex-end;
+  border-bottom: 0;
+  border-top: 1px solid var(--color-gray-200);
 }
 
 .dxf-modal-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #4fc3f7;
-    font-family: 'Poppins', 'Inter', system-ui, sans-serif;
-    letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  font-weight: 700;
 }
 
-.dxf-modal-close {
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 1.1rem;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
-    transition: all 0.15s;
-}
-.dxf-modal-close:hover {
-    color: #ef5350;
-    background: rgba(239, 83, 80, 0.12);
+.dxf-modal-close,
+.dxf-change-file,
+.dxf-toggle-all-btn,
+.dxf-manual-guide-btn,
+.dxf-guide-toggle,
+.dxf-btn {
+  cursor: pointer;
 }
 
-/* ── Steps ── */
-.dxf-steps {
-    display: flex;
-    gap: 0;
-    padding: 12px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.dxf-modal-close,
+.dxf-change-file,
+.dxf-toggle-all-btn,
+.dxf-manual-guide-btn {
+  border: 1px solid var(--color-gray-200);
+  border-radius: 10px;
+  background: var(--color-white);
+  color: var(--color-gray-500);
 }
 
-.dxf-step {
-    flex: 1;
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.25);
-    padding: 6px 0;
-    position: relative;
-    letter-spacing: 0.3px;
-    transition: color 0.2s;
-}
-
-.dxf-step::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0; right: 0;
-    height: 2px;
-    background: transparent;
-    border-radius: 2px;
-    transition: background 0.2s;
-}
-
-.dxf-step.active {
-    color: #4fc3f7;
-}
-.dxf-step.active::after {
-    background: #4fc3f7;
-}
-
-.dxf-step.done {
-    color: rgba(102, 187, 106, 0.8);
-}
-.dxf-step.done::after {
-    background: rgba(102, 187, 106, 0.5);
-}
-
-/* ── Body ── */
 .dxf-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 24px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(79, 195, 247, 0.2) transparent;
+  flex: 1;
+  overflow: auto;
+  padding: 18px 22px;
 }
 
-/* ── Upload area ── */
+.dxf-upload-area,
+.dxf-selector-container,
+.dxf-guide-content,
+.dxf-instruction {
+  border-radius: 18px;
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+}
+
 .dxf-upload-area {
-    border: 2px dashed rgba(79, 195, 247, 0.25);
-    border-radius: 12px;
-    padding: 48px 32px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: rgba(79, 195, 247, 0.03);
+  padding: 46px 24px;
+  text-align: center;
+  border-style: dashed;
 }
 
-.dxf-upload-area:hover,
-.dxf-upload-area.drag-over {
-    border-color: rgba(79, 195, 247, 0.6);
-    background: rgba(79, 195, 247, 0.06);
-    transform: scale(1.01);
+.dxf-upload-text,
+.dxf-file-name,
+.dxf-poly-layer,
+.dxf-modal-title {
+  color: var(--color-gray-800);
 }
 
-.dxf-upload-area svg {
-    color: rgba(79, 195, 247, 0.5);
-    margin-bottom: 16px;
-}
-
-.dxf-upload-text {
-    color: #e0e0e0;
-    font-size: 0.95rem;
-    font-weight: 500;
-    margin: 0 0 8px;
-}
-
-.dxf-upload-sub {
-    color: rgba(255, 255, 255, 0.3);
-    font-size: 0.78rem;
-    margin: 0;
-}
-
-/* ── Configure ── */
-.dxf-file-info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    background: rgba(79, 195, 247, 0.07);
-    border: 1px solid rgba(79, 195, 247, 0.15);
-    border-radius: 8px;
-    margin-bottom: 16px;
-}
-
-.dxf-file-name {
-    color: #90caf9;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.dxf-file-layers {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.75rem;
-}
-
-/* Layer table */
-.dxf-layer-table-wrapper {
-    overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    margin-bottom: 20px;
-    max-height: 180px;
-    overflow-y: auto;
-}
-
-.dxf-layer-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8rem;
-}
-
-.dxf-layer-table th {
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.5);
-    font-weight: 600;
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    top: 0;
-}
-
-.dxf-layer-table td {
-    padding: 7px 12px;
-    color: #e0e0e0;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.dxf-layer-table tbody tr:hover td {
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.dxf-layer-table tr.selected-boundary td {
-    background: rgba(79, 195, 247, 0.08);
-    color: #4fc3f7;
-}
-
-.dxf-layer-table code {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 0.8rem;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 1px 5px;
-    border-radius: 3px;
-    color: #81d4fa;
-}
-
-.dxf-dim {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.4);
-    font-family: 'JetBrains Mono', monospace;
-}
-.dxf-dim-empty {
-    color: rgba(255, 255, 255, 0.2);
-}
-
-/* ── Settings ── */
-.dxf-settings {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.dxf-setting-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.dxf-setting-row label {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 0.83rem;
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 500;
-}
-
-.dxf-setting-icon {
-    font-size: 1rem;
-    opacity: 0.8;
-}
-
-.dxf-setting-row select {
-    width: 220px;
-    padding: 7px 10px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 7px;
-    color: #e0e0e0;
-    font-size: 0.82rem;
-    font-family: 'Inter', system-ui, sans-serif;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.15s;
-}
-
-.dxf-setting-row select:focus {
-    border-color: #42a5f5;
-    box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.15);
-}
-
-.dxf-setting-row select option {
-    background: #1a1e2e;
-}
-
-.dxf-setting-check label {
-    cursor: pointer;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.82rem;
-}
-.dxf-setting-check input[type=checkbox] {
-    accent-color: #4fc3f7;
-    width: 15px; height: 15px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-/* ── Warnings ── */
-.dxf-warnings {
-    margin-top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
+.dxf-upload-sub,
+.dxf-manual-banner-text,
+.dxf-smart-banner-text,
+.dxf-guide-content > p,
+.dxf-instruction,
+.dxf-poly-dim,
+.dxf-stat-chip,
 .dxf-warning {
-    color: #ffb74d;
-    font-size: 0.78rem;
-    background: rgba(255, 183, 77, 0.08);
-    border: 1px solid rgba(255, 183, 77, 0.2);
-    border-radius: 6px;
-    padding: 6px 10px;
+  color: var(--color-gray-500);
 }
 
-/* ── Error ── */
-.dxf-error {
-    color: #ef5350;
-    font-size: 0.82rem;
-    background: rgba(239, 83, 80, 0.08);
-    border: 1px solid rgba(239, 83, 80, 0.2);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-top: 12px;
+.dxf-spinner,
+.loading-spinner {
+  border-top-color: var(--color-primary);
 }
 
-/* ── Preview ── */
-.dxf-preview-stats {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
+.dxf-parsing,
+.dxf-results {
+  display: grid;
+  gap: 12px;
 }
 
-.dxf-stat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 14px 12px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-}
-
-.dxf-stat-icon { font-size: 1.3rem; }
-
-.dxf-stat-label {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.4);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-
-.dxf-stat-value {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #4fc3f7;
-    font-family: 'Poppins', system-ui, sans-serif;
-}
-
-/* Coord preview */
-.dxf-coord-preview {
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 16px;
-}
-
-.dxf-coord-title {
-    background: rgba(255, 255, 255, 0.04);
-    padding: 8px 12px;
-    font-size: 0.73rem;
-    color: rgba(255, 255, 255, 0.4);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-
-.dxf-coord-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8rem;
-}
-
-.dxf-coord-table th {
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.4);
-    font-weight: 600;
-    text-align: left;
-    padding: 6px 12px;
-}
-
-.dxf-coord-table td {
-    padding: 5px 12px;
-    color: #e0e0e0;
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-}
-
+.dxf-file-info,
+.dxf-smart-banner,
+.dxf-manual-banner,
+.dxf-warning,
+.dxf-error,
 .dxf-import-note {
-    font-size: 0.78rem;
-    color: #ffb74d;
-    background: rgba(255, 183, 77, 0.07);
-    border: 1px solid rgba(255, 183, 77, 0.15);
-    border-radius: 7px;
-    padding: 8px 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--color-gray-200);
 }
 
-/* ── Footer ── */
-.dxf-modal-footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 16px 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
+.dxf-file-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #effbff;
+}
+
+.dxf-smart-banner {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.dxf-manual-banner,
+.dxf-import-note,
+.dxf-warning {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.dxf-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.dxf-guide-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 14px;
+  background: var(--color-white);
+  color: var(--color-gray-600);
+}
+
+.dxf-guide-chevron {
+  margin-left: auto;
+}
+
+.dxf-guide-content,
+.dxf-layer-filter,
+.dxf-poly-list {
+  padding: 14px;
+}
+
+.dxf-guide-layers,
+.dxf-poly-items,
+.dxf-warnings {
+  display: grid;
+  gap: 8px;
+}
+
+.dxf-guide-layer-item,
+.dxf-poly-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+}
+
+.dxf-layer-chips,
+.dxf-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dxf-layer-chip,
+.dxf-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+}
+
+.dxf-layer-chip.active,
+.dxf-stat-chip.highlight,
+.dxf-stat-chip.smart {
+  background: #effbff;
+  border-color: rgba(80, 177, 200, 0.4);
+  color: var(--color-primary);
+}
+
+.dxf-selector-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.dxf-selector-svg {
+  width: 100%;
+  min-height: 200px;
+  max-height: 300px;
 }
 
 .dxf-btn {
-    padding: 8px 18px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-family: 'Inter', system-ui, sans-serif;
-    border: 1px solid transparent;
-}
-
-.dxf-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 0;
+  font-weight: 700;
 }
 
 .dxf-btn-ghost {
-    background: transparent;
-    border-color: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.5);
-}
-.dxf-btn-ghost:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    color: #e0e0e0;
-}
-
-.dxf-btn-primary {
-    background: rgba(79, 195, 247, 0.15);
-    border-color: rgba(79, 195, 247, 0.35);
-    color: #4fc3f7;
-}
-.dxf-btn-primary:hover:not(:disabled) {
-    background: rgba(79, 195, 247, 0.25);
-    border-color: rgba(79, 195, 247, 0.6);
-    box-shadow: 0 0 12px rgba(79, 195, 247, 0.15);
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
 }
 
 .dxf-btn-import {
-    background: linear-gradient(135deg, rgba(66, 165, 245, 0.85), rgba(79, 195, 247, 0.8));
-    border-color: rgba(79, 195, 247, 0.5);
-    color: #fff;
-    box-shadow: 0 2px 12px rgba(79, 195, 247, 0.20);
-}
-.dxf-btn-import:hover:not(:disabled) {
-    background: linear-gradient(135deg, #42a5f5, #4fc3f7);
-    box-shadow: 0 4px 20px rgba(79, 195, 247, 0.35);
-    transform: translateY(-1px);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: var(--color-white);
 }

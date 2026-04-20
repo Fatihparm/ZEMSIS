@@ -66,12 +66,22 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     const initializedRef = useRef(false);
 
     // Drawing state
-    const [vertices, setVertices] = useState(() =>
-        initialDrawingData?.vertices || []
-    );
-    const [isClosed, setIsClosed] = useState(() =>
-        initialDrawingData?.isClosed || false
-    );
+    const [polygons, setPolygons] = useState(() => {
+        if (initialDrawingData?.polygons) return initialDrawingData.polygons;
+        if (initialDrawingData?.vertices?.length > 0) {
+            return [{ id: 'poly-1', vertices: initialDrawingData.vertices, isClosed: initialDrawingData.isClosed || false }];
+        }
+        return [];
+    });
+    const [activePolygonId, setActivePolygonId] = useState(() => {
+        if (initialDrawingData?.polygons?.length > 0) return initialDrawingData.polygons[0].id;
+        if (initialDrawingData?.vertices?.length > 0) return 'poly-1';
+        return null;
+    });
+
+    const activePolygon = polygons.find(p => p.id === activePolygonId) || polygons[0] || null;
+    const vertices = activePolygon ? activePolygon.vertices : [];
+    const isClosed = activePolygon ? activePolygon.isClosed : false;
     const [drawingMode, setDrawingMode] = useState('draw'); // draw | rectangle | select | section
     const [selectedVertex, setSelectedVertex] = useState(null);
     const [hoveredVertex, setHoveredVertex] = useState(null);
@@ -122,9 +132,13 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             return;
         }
         if (onDrawingDataChange) {
+            const processedPolygons = polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ x: v.x, y: v.y })) }));
             onDrawingDataChange({
-                vertices: vertices.map(v => ({ x: v.x, y: v.y })),
-                isClosed,
+                polygons: processedPolygons,
+                activePolygonId,
+                // Backward compatibility
+                vertices: processedPolygons.length > 0 ? processedPolygons[0].vertices : [],
+                isClosed: processedPolygons.length > 0 ? processedPolygons[0].isClosed : false,
                 sectionLines: sectionLines.map(sl => ({
                     id: sl.id,
                     start: { x: sl.start.x, y: sl.start.y },
@@ -136,7 +150,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
+    }, [polygons, activePolygonId, sectionLines, columnPositions, columnsAutoSync]);
 
     // Split view
     const [splitRatio, setSplitRatio] = useState(0.6); // 60% plan, 40% section
@@ -164,14 +178,14 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     // ── Undo/Redo helpers ──
     const pushUndo = useCallback(() => {
         setUndoStack(prev => [...prev, {
-            vertices: vertices.map(v => ({ ...v })),
-            isClosed,
+            polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
+            activePolygonId,
             sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
         setRedoStack([]);
-    }, [vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
+    }, [polygons, activePolygonId, sectionLines, columnPositions, columnsAutoSync]);
 
     const handleUndo = useCallback(() => {
         if (undoStack.length === 0) return;
@@ -179,23 +193,28 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         const snapshot = newStack.pop();
         
         setRedoStack(r => [...r, {
-            vertices: vertices.map(v => ({ ...v })),
-            isClosed,
+            polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
+            activePolygonId,
             sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
         
         setUndoStack(newStack);
-        setVertices(snapshot.vertices);
-        setIsClosed(snapshot.isClosed);
+        if (snapshot.polygons) {
+            setPolygons(snapshot.polygons);
+            setActivePolygonId(snapshot.activePolygonId);
+        } else if (snapshot.vertices) {
+            setPolygons([{ id: 'poly-1', vertices: snapshot.vertices, isClosed: snapshot.isClosed }]);
+            setActivePolygonId('poly-1');
+        }
         setSectionLines(snapshot.sectionLines);
         if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
         if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
         setSelectedVertex(null);
         setHoveredVertex(null);
         setSelectedColumn(null);
-    }, [undoStack, vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
+    }, [undoStack, polygons, activePolygonId, sectionLines, columnPositions, columnsAutoSync]);
 
     const handleRedo = useCallback(() => {
         if (redoStack.length === 0) return;
@@ -203,23 +222,28 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         const snapshot = newStack.pop();
         
         setUndoStack(u => [...u, {
-            vertices: vertices.map(v => ({ ...v })),
-            isClosed,
+            polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
+            activePolygonId,
             sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
         
         setRedoStack(newStack);
-        setVertices(snapshot.vertices);
-        setIsClosed(snapshot.isClosed);
+        if (snapshot.polygons) {
+            setPolygons(snapshot.polygons);
+            setActivePolygonId(snapshot.activePolygonId);
+        } else if (snapshot.vertices) {
+            setPolygons([{ id: 'poly-1', vertices: snapshot.vertices, isClosed: snapshot.isClosed }]);
+            setActivePolygonId('poly-1');
+        }
         setSectionLines(snapshot.sectionLines);
         if (snapshot.columnPositions !== undefined) setColumnPositions(snapshot.columnPositions);
         if (snapshot.columnsAutoSync !== undefined) setColumnsAutoSync(snapshot.columnsAutoSync);
         setSelectedVertex(null);
         setHoveredVertex(null);
         setSelectedColumn(null);
-    }, [redoStack, vertices, isClosed, sectionLines, columnPositions, columnsAutoSync]);
+    }, [redoStack, polygons, activePolygonId, sectionLines, columnPositions, columnsAutoSync]);
 
     // ── Active section ──
     const activeSection = sectionLines.find(sl => sl.id === activeSectionId) || null;
@@ -257,15 +281,25 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     }, [gridSnap]);
 
     // ── Compute jet grout columns ──
-    const computeColumns = useCallback((verts) => {
-        if (verts.length < 3) return [];
-        const bounds = polygonBounds(verts);
+    const computeColumns = useCallback((polys) => {
+        const closedPolys = polys.filter(p => p.isClosed && p.vertices.length >= 3);
+        if (closedPolys.length === 0) return [];
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        closedPolys.forEach(p => {
+            const b = polygonBounds(p.vertices);
+            if (b.minX < minX) minX = b.minX;
+            if (b.minY < minY) minY = b.minY;
+            if (b.maxX > maxX) maxX = b.maxX;
+            if (b.maxY > maxY) maxY = b.maxY;
+        });
+
         const cols = [];
-        const startX = Math.ceil(bounds.minX / s) * s;
-        const startY = Math.ceil(bounds.minY / s) * s;
-        for (let x = startX; x <= bounds.maxX; x += s) {
-            for (let y = startY; y <= bounds.maxY; y += s) {
-                if (pointInPolygon(x, y, verts)) {
+        const startX = Math.ceil(minX / s) * s;
+        const startY = Math.ceil(minY / s) * s;
+        for (let x = startX; x <= maxX; x += s) {
+            for (let y = startY; y <= maxY; y += s) {
+                if (closedPolys.some(p => pointInPolygon(x, y, p.vertices))) {
                     cols.push({ x, y });
                 }
             }
@@ -275,16 +309,17 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
     // ── Auto-sync columns when polygon or spacing changes ──
     useEffect(() => {
-        if (!columnsAutoSync || !isClosed || vertices.length < 3) {
+        const hasClosed = polygons.some(p => p.isClosed && p.vertices.length >= 3);
+        if (!columnsAutoSync || !hasClosed) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
-            if (!isClosed) setColumnPositions([]);
+            if (!hasClosed) setColumnPositions([]);
             return;
         }
-        const newCols = computeColumns(vertices);
+        const newCols = computeColumns(polygons);
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setColumnPositions(newCols.map((c, i) => ({ id: `auto-${i}-${c.x.toFixed(2)}-${c.y.toFixed(2)}`, x: c.x, y: c.y })));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [vertices, isClosed, computeColumns, columnsAutoSync]);
+    }, [polygons, computeColumns, columnsAutoSync]);
 
     // ── Draw ──
     useEffect(() => {
@@ -367,38 +402,45 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             if (p.y > 10 && p.y < H - 10) ctx.fillText(`${wy}`, o.x - 6, p.y);
         }
 
-        // ── Polygon fill ──
-        if (isClosed && vertices.length >= 3) {
-            ctx.beginPath();
-            const p0 = worldToScreen(vertices[0].x, vertices[0].y, metrics);
-            ctx.moveTo(p0.x, p0.y);
-            for (let i = 1; i < vertices.length; i++) {
-                const p = worldToScreen(vertices[i].x, vertices[i].y, metrics);
-                ctx.lineTo(p.x, p.y);
-            }
-            ctx.closePath();
-            ctx.fillStyle = 'rgba(255, 152, 0, 0.08)';
-            ctx.fill();
-        }
+        // ── Polygons fill & edges ──
+        polygons.forEach(poly => {
+            const popVerts = poly.vertices;
+            if (popVerts.length === 0) return;
+            const isActive = poly.id === activePolygonId;
 
-        // ── Polygon edges ──
-        if (vertices.length >= 2) {
-            ctx.strokeStyle = '#ff9800';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([]);
-            ctx.beginPath();
-            const p0 = worldToScreen(vertices[0].x, vertices[0].y, metrics);
-            ctx.moveTo(p0.x, p0.y);
-            for (let i = 1; i < vertices.length; i++) {
-                const p = worldToScreen(vertices[i].x, vertices[i].y, metrics);
-                ctx.lineTo(p.x, p.y);
+            // Fill
+            if (poly.isClosed && popVerts.length >= 3) {
+                ctx.beginPath();
+                const p0 = worldToScreen(popVerts[0].x, popVerts[0].y, metrics);
+                ctx.moveTo(p0.x, p0.y);
+                for (let i = 1; i < popVerts.length; i++) {
+                    const p = worldToScreen(popVerts[i].x, popVerts[i].y, metrics);
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = isActive ? 'rgba(255, 152, 0, 0.08)' : 'rgba(150, 150, 150, 0.05)';
+                ctx.fill();
             }
-            if (isClosed) ctx.closePath();
-            ctx.stroke();
-        }
+
+            // Edges
+            if (popVerts.length >= 2) {
+                ctx.strokeStyle = isActive ? '#ff9800' : '#888';
+                ctx.lineWidth = isActive ? 2 : 1.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                const p0 = worldToScreen(popVerts[0].x, popVerts[0].y, metrics);
+                ctx.moveTo(p0.x, p0.y);
+                for (let i = 1; i < popVerts.length; i++) {
+                    const p = worldToScreen(popVerts[i].x, popVerts[i].y, metrics);
+                    ctx.lineTo(p.x, p.y);
+                }
+                if (poly.isClosed) ctx.closePath();
+                ctx.stroke();
+            }
+        });
 
         // ── Preview line from last vertex to mouse ──
-        if (!isClosed && vertices.length > 0 && drawingMode === 'draw') {
+        if (activePolygon && !isClosed && vertices.length > 0 && drawingMode === 'draw') {
             const lastV = vertices[vertices.length - 1];
             const pLast = worldToScreen(lastV.x, lastV.y, metrics);
             const pMouse = worldToScreen(mouseWorld.x, mouseWorld.y, metrics);
@@ -656,14 +698,14 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             }
         });
 
-    }, [vertices, isClosed, drawingMode, mouseWorld, hoveredVertex, selectedVertex, zoom, pan, D, s, rectStart, sectionLines, sectionStart, activeSectionId, columnPositions, selectedColumn, hoveredColumn, getCanvasMetrics, screenToWorld, worldToScreen]);
+    }, [polygons, activePolygonId, vertices, isClosed, activePolygon, drawingMode, mouseWorld, hoveredVertex, selectedVertex, zoom, pan, D, s, rectStart, sectionLines, sectionStart, activeSectionId, columnPositions, selectedColumn, hoveredColumn, getCanvasMetrics, screenToWorld, worldToScreen]);
 
     // ── Resize observer ──
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
         const ro = new ResizeObserver(() => {
-            setVertices(v => [...v]);
+            setPolygons(v => [...v]);
         });
         ro.observe(container);
         return () => ro.disconnect();
@@ -740,7 +782,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                 setSectionStart(null);
             } else if (!isClosed && vertices.length > 0 && drawingMode === 'draw') {
                 pushUndo();
-                setVertices(v => v.slice(0, -1));
+                setPolygons(prev => prev.map(p => p.id === activePolygonId ? { ...p, vertices: p.vertices.slice(0, -1) } : p));
             }
             return;
         }
@@ -768,29 +810,40 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         if (sl) {
                             setActiveSectionId(sl.id);
                         } else {
+                            const world = screenToWorld(sx, sy, metrics);
+                            const clickedPoly = polygons.find(p => p.isClosed && p.vertices.length >= 3 && pointInPolygon(world.x, world.y, p.vertices));
+                            if (clickedPoly && clickedPoly.id !== activePolygonId) {
+                                setActivePolygonId(clickedPoly.id);
+                            }
                             setSelectedVertex(null);
                             setSelectedColumn(null);
                         }
                     }
                 }
             } else if (drawingMode === 'draw') {
-                if (isClosed) return;
                 const world = screenToWorld(sx, sy, metrics);
                 const wx = snapToGrid(world.x);
                 const wy = snapToGrid(world.y);
 
-                if (vertices.length >= 3) {
-                    const p0 = worldToScreen(vertices[0].x, vertices[0].y, metrics);
-                    if (Math.hypot(sx - p0.x, sy - p0.y) < 15) {
-                        pushUndo();
-                        setIsClosed(true);
-                        return;
+                if (activePolygon && !isClosed) {
+                    if (vertices.length >= 3) {
+                        const p0 = worldToScreen(vertices[0].x, vertices[0].y, metrics);
+                        if (Math.hypot(sx - p0.x, sy - p0.y) < 15) {
+                            pushUndo();
+                            setPolygons(prev => prev.map(p => p.id === activePolygonId ? { ...p, isClosed: true } : p));
+                            return;
+                        }
                     }
+                    pushUndo();
+                    setPolygons(prev => prev.map(p => p.id === activePolygonId ? { ...p, vertices: [...p.vertices, { x: wx, y: wy }] } : p));
+                } else {
+                    pushUndo();
+                    const newId = `poly-${Date.now()}`;
+                    setPolygons(prev => [...prev, { id: newId, vertices: [{ x: wx, y: wy }], isClosed: false }]);
+                    setActivePolygonId(newId);
                 }
-                pushUndo();
-                setVertices(v => [...v, { x: wx, y: wy }]);
             } else if (drawingMode === 'rectangle') {
-                if (isClosed) return;
+                if (activePolygon && !isClosed) return;
                 const world = screenToWorld(sx, sy, metrics);
                 const wx = snapToGrid(world.x);
                 const wy = snapToGrid(world.y);
@@ -803,11 +856,13 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     const y2 = Math.max(rectStart.y, wy);
                     if (Math.abs(x2 - x1) > 0.1 && Math.abs(y2 - y1) > 0.1) {
                         pushUndo();
-                        setVertices([
+                        const newId = `poly-${Date.now()}`;
+                        const newVerts = [
                             { x: x1, y: y1 }, { x: x2, y: y1 },
                             { x: x2, y: y2 }, { x: x1, y: y2 }
-                        ]);
-                        setIsClosed(true);
+                        ];
+                        setPolygons(prev => [...prev, { id: newId, vertices: newVerts, isClosed: true }]);
+                        setActivePolygonId(newId);
                     }
                     setRectStart(null);
                 }
@@ -835,7 +890,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                 }
             }
         }
-    }, [drawingMode, isClosed, vertices, pan, rectStart, sectionStart, sectionLines, findVertex, findColumn, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
+    }, [drawingMode, isClosed, vertices, activePolygon, activePolygonId, polygons, pan, rectStart, sectionStart, sectionLines, findVertex, findColumn, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
 
     const handleMouseMove = useCallback((e) => {
         const canvas = canvasRef.current;
@@ -857,11 +912,14 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             const world = screenToWorld(sx, sy, metrics);
             const wx = snapToGrid(world.x);
             const wy = snapToGrid(world.y);
-            setVertices(v => {
-                const nv = [...v];
-                nv[selectedVertex] = { x: wx, y: wy };
-                return nv;
-            });
+            setPolygons(prev => prev.map(p => {
+                if (p.id === activePolygonId) {
+                    const nv = [...p.vertices];
+                    nv[selectedVertex] = { x: wx, y: wy };
+                    return { ...p, vertices: nv };
+                }
+                return p;
+            }));
             return;
         }
 
@@ -895,7 +953,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         } else {
             setHoveredColumn(null);
         }
-    }, [isPanning, isDragging, isDraggingColumn, selectedVertex, selectedColumn, drawingMode, findVertex, findColumn, getCanvasMetrics, screenToWorld, snapToGrid]);
+    }, [isPanning, isDragging, isDraggingColumn, selectedVertex, selectedColumn, drawingMode, activePolygonId, findVertex, findColumn, getCanvasMetrics, screenToWorld, snapToGrid]);
 
     const handleMouseUp = useCallback(() => {
         setIsPanning(false);
@@ -957,20 +1015,23 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     // ── Toolbar actions ──
     const handleClear = () => {
         pushUndo();
-        setVertices([]);
-        setIsClosed(false);
+        if (activePolygonId) {
+            setPolygons(prev => prev.filter(p => p.id !== activePolygonId));
+            setActivePolygonId(null);
+        } else {
+            setPolygons([]);
+        }
         setSelectedVertex(null);
         setHoveredVertex(null);
         setSelectedColumn(null);
-        setColumnPositions([]);
-        setColumnsAutoSync(true);
         setRectStart(null);
     };
 
     const handleResetColumns = () => {
-        if (!isClosed || vertices.length < 3) return;
+        const hasClosed = polygons.some(p => p.isClosed && p.vertices.length >= 3);
+        if (!hasClosed) return;
         pushUndo();
-        const newCols = computeColumns(vertices);
+        const newCols = computeColumns(polygons);
         setColumnPositions(newCols.map((c, i) => ({ id: `auto-${i}-${c.x.toFixed(2)}-${c.y.toFixed(2)}`, x: c.x, y: c.y })));
         setColumnsAutoSync(true);
         setSelectedColumn(null);
@@ -978,10 +1039,20 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
     // ── DXF import handler ──
     const handleDxfImport = (data) => {
-        // data: { vertices, isClosed, columnPositions }
+        // data: { polygons, vertices, isClosed, columnPositions, columnDiameter, unit }
         pushUndo();
-        setVertices(data.vertices.map(v => ({ x: v.x, y: v.y })));
-        setIsClosed(data.isClosed);
+        
+        if (data.polygons && data.polygons.length > 0) {
+            setPolygons(data.polygons);
+            setActivePolygonId(data.polygons[0].id);
+        } else if (data.vertices && data.vertices.length > 0) {
+            setPolygons([{ id: `poly-${Date.now()}`, vertices: data.vertices, isClosed: data.isClosed }]);
+            setActivePolygonId(`poly-${Date.now()}`);
+        } else {
+            setPolygons([]);
+            setActivePolygonId(null);
+        }
+
         setSelectedVertex(null);
         setHoveredVertex(null);
         setSelectedColumn(null);
@@ -994,7 +1065,11 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         } else {
             // Auto-generate columns if no explicit column layer given
             setColumnsAutoSync(true);
-            // The auto-sync effect will fire because vertices/isClosed changed
+        }
+
+        // If DXF circles provided a diameter, update the D parameter
+        if (data.columnDiameter && data.columnDiameter > 0 && onParameterChange) {
+            onParameterChange({ target: { name: 'D', value: String(data.columnDiameter.toFixed(2)) } });
         }
 
         // Switch to select mode so user can see & adjust immediately
@@ -1002,19 +1077,23 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     };
 
     const handleClose = () => {
-        if (vertices.length >= 3 && !isClosed) {
+        if (activePolygon && activePolygon.vertices.length >= 3 && !activePolygon.isClosed) {
             pushUndo();
-            setIsClosed(true);
+            setPolygons(prev => prev.map(p => p.id === activePolygonId ? { ...p, isClosed: true } : p));
         }
     };
 
     const handleDeleteVertex = () => {
-        if (selectedVertex !== null && vertices.length > 0) {
+        if (selectedVertex !== null && activePolygon && activePolygon.vertices.length > 0) {
             pushUndo();
-            const newVerts = vertices.filter((_, i) => i !== selectedVertex);
-            setVertices(newVerts);
+            setPolygons(prev => prev.map(p => {
+                if (p.id === activePolygonId) {
+                    const newVerts = p.vertices.filter((_, i) => i !== selectedVertex);
+                    return { ...p, vertices: newVerts, isClosed: newVerts.length < 3 ? false : p.isClosed };
+                }
+                return p;
+            }));
             setSelectedVertex(null);
-            if (newVerts.length < 3) setIsClosed(false);
         }
     };
 
@@ -1027,7 +1106,8 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     };
 
     const handleZoomFit = () => {
-        if (vertices.length === 0) {
+        const allVerts = polygons.flatMap(p => p.vertices);
+        if (allVerts.length === 0) {
             setPan({ x: 0, y: 0 });
             setZoom(1);
             return;
@@ -1035,7 +1115,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         const canvas = canvasRef.current;
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
-        const bounds = polygonBounds(vertices);
+        const bounds = polygonBounds(allVerts);
         const worldW = (bounds.maxX - bounds.minX) || 10;
         const worldH = (bounds.maxY - bounds.minY) || 10;
         const margin = 1.4;
@@ -1094,8 +1174,8 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     }, [handleUndo, handleRedo]);
 
     // ── Computed info ──
-    const area = isClosed && vertices.length >= 3 ? polygonArea(vertices) : 0;
-    const perimeter = isClosed && vertices.length >= 3 ? polygonPerimeter(vertices) : 0;
+    const area = polygons.reduce((sum, p) => p.isClosed && p.vertices.length >= 3 ? sum + polygonArea(p.vertices) : sum, 0);
+    const perimeter = polygons.reduce((sum, p) => p.isClosed && p.vertices.length >= 3 ? sum + polygonPerimeter(p.vertices) : sum, 0);
     const totalColumns = columnPositions.length;
     const Ajet = Math.PI * (D / 2) ** 2;
     const Ar = area > 0 ? (totalColumns * Ajet / area) * 100 : 0;
@@ -1213,7 +1293,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         <button
                             className={`toolbar-btn icon-btn ${!columnsAutoSync ? 'active' : ''}`}
                             onClick={handleResetColumns}
-                            disabled={!isClosed}
+                            disabled={!polygons.some(p => p.isClosed && p.vertices.length >= 3)}
                             data-tooltip={tr ? 'Kolonları Sıfırla (Otomatik Yerleşim)' : 'Reset Columns (Auto Layout)'}
                             style={!columnsAutoSync ? { borderColor: '#ff9800', color: '#ff9800' } : {}}
                         >
@@ -1243,7 +1323,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         className={`toolbar-btn section-cut-action-btn ${drawingMode === 'section' ? 'active' : ''}`}
                         onClick={() => { setDrawingMode('section'); setRectStart(null); setSectionStart(null); }}
                         data-tooltip={tr ? 'Kesit Al — 2 tıkla kesit çizgisi tanımla' : 'Section Cut — 2 clicks to define section line'}
-                        disabled={!isClosed}
+                        disabled={!polygons.some(p => p.isClosed && p.vertices.length >= 3)}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg>
                     </button>
@@ -1300,7 +1380,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     </div>
 
                     {/* Info overlay */}
-                    {isClosed && (
+                    {polygons.some(p => p.isClosed && p.vertices.length >= 3) && (
                         <div className="plan-info-overlay">
                             <div className="plan-info-item">
                                 <span className="info-icon">📐</span>

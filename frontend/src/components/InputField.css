@@ -1,130 +1,91 @@
 .input-field {
-    margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 
 .input-field label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    color: #90caf9;
-    font-weight: 500;
-    font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--color-gray-700);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
-.input-field .tooltip-trigger {
-    cursor: pointer;
-    color: #4fc3f7;
-    font-size: 0.85rem;
-    user-select: none;
-    transition: color 0.2s ease;
+.tooltip-trigger {
+  color: var(--color-secondary-dark);
+  cursor: pointer;
+  font-size: 0.84rem;
 }
 
-.input-field .tooltip-trigger:hover {
-    color: #81d4fa;
-}
-
-/* Portal Tooltip (rendered on document.body) */
 .tooltip-portal-box {
-    position: fixed;
-    transform: translate(-50%, -100%);
-    background: rgba(15, 20, 40, 0.97);
-    color: #e0e0e0;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 0.82rem;
-    font-weight: 400;
-    line-height: 1.5;
-    white-space: normal;
-    width: max-content;
-    max-width: 280px;
-    border: 1px solid rgba(79, 195, 247, 0.4);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 12px rgba(79, 195, 247, 0.15);
-    pointer-events: none;
-    z-index: 99999;
-    animation: tooltipFadeIn 0.15s ease;
-}
-
-@keyframes tooltipFadeIn {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -100%) translateY(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translate(-50%, -100%) translateY(0);
-    }
+  position: fixed;
+  transform: translate(-50%, -100%);
+  max-width: 300px;
+  padding: 12px 14px;
+  background: var(--sidebar-bg);
+  color: var(--color-white);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-lg);
+  z-index: 99999;
+  font-size: 0.8rem;
+  line-height: 1.55;
 }
 
 .input-wrapper {
-    display: flex;
-    align-items: stretch;
-    border: 2px solid rgba(79, 195, 247, 0.3);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.3s ease;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 14px;
+  background: var(--color-white);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .input-wrapper:focus-within {
-    border-color: #4fc3f7;
-    box-shadow: 0 0 12px rgba(79, 195, 247, 0.25);
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 4px rgba(80, 177, 200, 0.14);
 }
 
 .input-field input {
-    flex: 1;
-    padding: 12px 14px;
-    border: none;
-    background: rgba(0, 0, 0, 0.3);
-    color: #fff;
-    font-size: 1rem;
-    outline: none;
-    min-width: 0;
+  flex: 1;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--color-gray-800);
+  outline: 0;
 }
 
 .input-field input::placeholder {
-    color: #555;
+  color: var(--color-gray-400);
 }
 
-.input-field .unit {
-    display: flex;
-    align-items: center;
-    padding: 0 14px;
-    background: rgba(79, 195, 247, 0.15);
-    color: #4fc3f7;
-    font-weight: 600;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    border-left: 1px solid rgba(79, 195, 247, 0.3);
+.unit,
+.unit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 0 12px;
+  background: var(--color-gray-100);
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-left: 1px solid var(--color-gray-200);
 }
 
-/* Unit Toggle Styles */
 .unit-toggle {
-    display: flex;
-    border-left: 1px solid rgba(79, 195, 247, 0.3);
+  display: flex;
 }
 
-.unit-toggle .unit-btn {
-    padding: 8px 12px;
-    border: none;
-    background: rgba(0, 0, 0, 0.3);
-    color: #666;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+.unit-btn {
+  border: 0;
+  cursor: pointer;
 }
 
-.unit-toggle .unit-btn:not(:last-child) {
-    border-right: 1px solid rgba(79, 195, 247, 0.2);
-}
-
-.unit-toggle .unit-btn:hover {
-    background: rgba(79, 195, 247, 0.1);
-    color: #90caf9;
-}
-
-.unit-toggle .unit-btn.active {
-    background: rgba(79, 195, 247, 0.25);
-    color: #4fc3f7;
+.unit-btn.active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: var(--color-white);
 }

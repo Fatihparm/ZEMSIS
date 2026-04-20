@@ -1,478 +1,251 @@
-/* ══════════════════════════════════════════════
-   PlanView — Interactive AutoCAD-style Drawing
-   ══════════════════════════════════════════════ */
-
 .plan-view-fullscreen-wrapper {
-    background: rgba(255, 255, 255, 0.03);
-    border: none;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    flex: 1;
-    min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-gray-50);
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* ── Header ── */
 .plan-view-header {
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 14px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--color-gray-200);
+  flex-shrink: 0;
 }
 
 .plan-view-header h3 {
-    color: #4fc3f7;
-    margin: 0 0 12px 0;
-    font-size: 1.05rem;
-    font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-primary);
+  font-size: 0.9rem;
 }
 
-/* ── Toolbar ── */
 .plan-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .toolbar-group {
-    display: flex;
-    gap: 4px;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .toolbar-divider {
-    width: 1px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.12);
-    margin: 0 4px;
+  width: 1px;
+  height: 24px;
+  background: var(--color-gray-200);
 }
 
 .toolbar-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 10px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: #b0bec5;
-    font-size: 0.78rem;
-    font-family: 'Inter', system-ui, sans-serif;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 12px;
+  background: var(--color-white);
+  color: var(--color-gray-600);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.toolbar-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e0e0e0;
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
+.toolbar-btn:hover:not(:disabled),
 .toolbar-btn.active {
-    background: rgba(79, 195, 247, 0.2);
-    color: #4fc3f7;
-    border-color: rgba(79, 195, 247, 0.4);
+  border-color: rgba(80, 177, 200, 0.45);
+  background: #effbff;
+  color: var(--color-primary);
 }
 
 .toolbar-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-/* ── Custom tooltip via data-tooltip ── */
-.toolbar-btn[data-tooltip] {
-    position: relative;
-}
-
-.toolbar-btn[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 6px 10px;
-    background: rgba(20, 20, 30, 0.95);
-    color: #e0e0e0;
-    font-size: 0.72rem;
-    font-weight: 500;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
-    z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.toolbar-btn[data-tooltip]:hover::after {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Icon-only buttons */
 .toolbar-btn.icon-btn {
-    padding: 7px;
-    line-height: 0;
+  padding: 6px;
 }
 
-.toolbar-btn.icon-btn svg {
-    display: block;
-    pointer-events: none;
-}
-
-/* DXF import button — distinct orange-gold accent */
 .toolbar-btn.dxf-import-btn {
-    background: rgba(255, 183, 77, 0.08);
-    border-color: rgba(255, 183, 77, 0.25);
-    color: #ffb74d;
-}
-.toolbar-btn.dxf-import-btn:hover:not(:disabled) {
-    background: rgba(255, 183, 77, 0.16);
-    border-color: rgba(255, 183, 77, 0.5);
-    color: #ffd54f;
-    box-shadow: 0 0 10px rgba(255, 183, 77, 0.12);
-}
-
-.section-cut-action-btn svg {
-    display: block;
-    pointer-events: none;
-}
-
-/* Spacer pushes section button to the right */
-.toolbar-spacer {
-    flex: 1;
-    min-width: 8px;
-}
-
-/* Section cut action — prominent button */
-.section-cut-action-btn {
-    padding: 9px 12px !important;
-    background: rgba(79, 195, 247, 0.1) !important;
-    border: 1.5px solid rgba(79, 195, 247, 0.25) !important;
-    border-radius: 8px !important;
-    color: #4fc3f7 !important;
-    transition: all 0.2s ease;
-    line-height: 0;
-    flex-shrink: 0;
-}
-
-.section-cut-action-btn:hover:not(:disabled) {
-    background: rgba(79, 195, 247, 0.2) !important;
-    border-color: rgba(79, 195, 247, 0.5) !important;
-    color: #81d4fa !important;
-    box-shadow: 0 0 12px rgba(79, 195, 247, 0.15);
-    transform: scale(1.05);
-}
-
-.section-cut-action-btn.active {
-    background: rgba(79, 195, 247, 0.3) !important;
-    border-color: #4fc3f7 !important;
-    color: #e1f5fe !important;
-    box-shadow: 0 0 16px rgba(79, 195, 247, 0.2);
-}
-
-.section-cut-action-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    background: rgba(255, 255, 255, 0.04) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    color: #546e7a !important;
-    box-shadow: none;
-    transform: none;
-}
-
-/* ── Toolbar inline params ── */
-.toolbar-params {
-    gap: 8px;
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fdba74;
 }
 
 .toolbar-param {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
 }
 
 .toolbar-param label {
-    font-size: 0.7rem;
-    color: #90caf9;
-    font-weight: 600;
-    letter-spacing: 0.2px;
-    white-space: nowrap;
+  color: var(--color-gray-600);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .toolbar-param input {
-    width: 60px;
-    padding: 4px 6px;
-    border-radius: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-    color: #e0e0e0;
-    font-size: 0.8rem;
-    font-family: 'Inter', system-ui, sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.toolbar-param input:focus {
-    border-color: #42a5f5;
-    box-shadow: 0 0 0 2px rgba(66, 165, 245, 0.15);
+  width: 58px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 10px;
+  background: var(--color-white);
 }
 
 .toolbar-param span {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.35);
+  color: var(--color-gray-400);
+  font-size: 0.72rem;
 }
 
-/* ── Toolbar section buttons ── */
+.section-cut-action-btn {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: var(--color-white);
+  border-color: transparent;
+}
+
 .toolbar-sections {
-    gap: 4px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .toolbar-section-item {
-    display: flex;
-    align-items: center;
-    gap: 1px;
-}
-
-.toolbar-section-btn {
-    font-weight: 700;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 0.75rem !important;
-    padding: 5px 8px !important;
-    letter-spacing: 0.5px;
+  display: flex;
+  gap: 4px;
 }
 
 .toolbar-section-delete {
-    padding: 5px 5px !important;
-    font-size: 0.85rem !important;
-    color: #78909c !important;
-    border-radius: 0 6px 6px 0 !important;
-    min-width: 22px;
-    justify-content: center;
+  min-width: 30px;
 }
 
-.toolbar-section-delete:hover:not(:disabled) {
-    color: #ef5350 !important;
-    background: rgba(244, 67, 54, 0.15) !important;
+.toolbar-sections .toolbar-btn {
+  min-height: 30px;
+  padding: 4px 10px;
 }
-
-/* ══════════════════════════════════════════════
-   Split Container (Plan + Section)
-   ══════════════════════════════════════════════ */
 
 .plan-split-container {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* ── Canvas container ── */
-.plan-canvas-container {
-    position: relative;
-    min-height: 120px;
-    background: #0d1117;
-    overflow: hidden;
+.plan-canvas-container,
+.plan-section-panel {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-white);
 }
 
 .plan-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-/* Cursors */
-.plan-canvas.cursor-crosshair {
-    cursor: crosshair;
-}
-
-.plan-canvas.cursor-pointer {
-    cursor: pointer;
-}
-
-.plan-canvas.cursor-grabbing {
-    cursor: grabbing;
-}
-
-.plan-canvas.cursor-grab {
-    cursor: grab;
-}
-
-/* ── Resize handle ── */
 .plan-split-handle {
-    flex-shrink: 0;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    cursor: ns-resize;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.plan-split-handle:hover {
-    background: rgba(79, 195, 247, 0.12);
+  height: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--color-gray-100);
+  border-top: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid var(--color-gray-200);
+  cursor: ns-resize;
 }
 
 .plan-split-handle-bar {
-    width: 40px;
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.2);
+  width: 48px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-gray-400);
 }
 
-.plan-split-handle:hover .plan-split-handle-bar {
-    background: rgba(79, 195, 247, 0.5);
+.plan-coord-display,
+.plan-info-overlay .plan-info-item,
+.plan-section-hint {
+  backdrop-filter: blur(10px);
 }
 
-/* ── Section panel ── */
-.plan-section-panel {
-    min-height: 100px;
-    overflow: hidden;
-}
-
-/* ── Coordinate display ── */
 .plan-coord-display {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    display: flex;
-    gap: 12px;
-    padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.75rem;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    color: #90caf9;
-    user-select: none;
-    pointer-events: none;
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-gray-200);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-primary);
+  font-size: 0.78rem;
 }
 
 .coord-zoom {
-    color: rgba(255, 255, 255, 0.4);
-    padding-left: 8px;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 10px;
+  border-left: 1px solid var(--color-gray-200);
+  color: var(--color-gray-500);
 }
 
-/* ── Info overlay ── */
 .plan-info-overlay {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    pointer-events: none;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 8px;
 }
 
 .plan-info-overlay .plan-info-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.75);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    min-width: 150px;
-}
-
-.plan-info-overlay .info-icon {
-    font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 172px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .plan-info-overlay .info-label {
-    font-size: 0.72rem;
-    color: #90caf9;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    flex: 1;
+  flex: 1;
+  color: var(--color-gray-500);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .plan-info-overlay .info-value {
-    font-size: 0.85rem;
-    color: #e0e0e0;
-    font-weight: 600;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
-/* ── Section mode hint ── */
 .plan-section-hint {
-    position: absolute;
-    bottom: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 16px;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(79, 195, 247, 0.3);
-    border-radius: 8px;
-    color: #4fc3f7;
-    font-size: 0.82rem;
-    white-space: nowrap;
-    pointer-events: none;
-    animation: sectionHintPulse 2s ease-in-out infinite;
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(17, 62, 104, 0.92);
+  color: var(--color-white);
+  font-size: 0.82rem;
 }
 
-@keyframes sectionHintPulse {
-    0%, 100% { opacity: 0.8; }
-    50% { opacity: 1; }
-}
-
-/* ── Help hint ── */
-.plan-help-hint {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, 0.3);
-    font-size: 0.9rem;
-    text-align: center;
-    max-width: 400px;
-    pointer-events: none;
-    line-height: 1.6;
-}
-
-/* ── Responsive ── */
 @media (max-width: 900px) {
-    .plan-toolbar {
-        gap: 4px;
-    }
+  .plan-toolbar {
+    align-items: flex-start;
+  }
 
-    .toolbar-btn {
-        padding: 5px 7px;
-        font-size: 0.72rem;
-    }
-
-    .toolbar-params {
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .plan-canvas-container {
-        min-height: 250px;
-    }
-}
-
-@media (max-width: 600px) {
-    .plan-canvas-container {
-        min-height: 200px;
-    }
-
-    .toolbar-divider {
-        display: none;
-    }
-
-    .plan-toolbar {
-        flex-wrap: wrap;
-        gap: 3px;
-    }
+  .toolbar-divider {
+    display: none;
+  }
 }
