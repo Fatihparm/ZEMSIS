@@ -368,18 +368,37 @@ export function dxfExtractCandidates(dxfResult) {
     for (const lname of polySourceLayers) {
         const ld = allLayers[lname];
         if (!ld) continue;
+
         for (const poly of ld.polylines) {
-            if (poly.closed && poly.vertices.length >= 3) {
-                const area = shoelaceArea(poly.vertices);
-                const bbox = polyBBox(poly.vertices);
+            const normalizedVertices = normalizeClosedVertices(poly.vertices);
+            if ((poly.closed || isEffectivelyClosed(poly.vertices)) && normalizedVertices) {
+                const area = shoelaceArea(normalizedVertices);
+                const bbox = polyBBox(normalizedVertices);
                 polylineCandidates.push({
                     id: polyId++,
-                    vertices: poly.vertices,
-                    closed: poly.closed,
+                    vertices: normalizedVertices,
+                    closed: true,
                     layer: lname,
                     area,
                     bbox,
-                    vertexCount: poly.vertices.length,
+                    vertexCount: normalizedVertices.length,
+                });
+            }
+        }
+
+        if (!polylineCandidates.some(poly => poly.layer === lname)) {
+            const reconstructedPolygons = buildClosedPolygonsFromSegments(ld.polylines);
+            for (const vertices of reconstructedPolygons) {
+                const area = shoelaceArea(vertices);
+                const bbox = polyBBox(vertices);
+                polylineCandidates.push({
+                    id: polyId++,
+                    vertices,
+                    closed: true,
+                    layer: lname,
+                    area,
+                    bbox,
+                    vertexCount: vertices.length,
                 });
             }
         }
@@ -426,9 +445,12 @@ export function dxfExtractCandidates(dxfResult) {
     // ── Build per-layer summary for manual filter UI ──
     const availableLayers = layerNames.map(name => {
         const ld = allLayers[name];
+        const reconstructedCount = buildClosedPolygonsFromSegments(ld.polylines).length;
         return {
             name,
-            polylineCount: ld.polylines.filter(p => p.closed && p.vertices.length >= 3).length,
+            polylineCount: ld.polylines.filter(p =>
+                (p.closed || isEffectivelyClosed(p.vertices)) && normalizeClosedVertices(p.vertices)
+            ).length || reconstructedCount,
             circleCount: ld.circles.length,
             entityCount: ld.entityCount,
         };
@@ -456,6 +478,120 @@ function polyBBox(verts) {
         if (v.y > maxY) maxY = v.y;
     }
     return { minX, minY, maxX, maxY };
+}
+
+function pointsAlmostEqual(a, b, eps = 1e-2) {
+    return Math.abs(a.x - b.x) <= eps && Math.abs(a.y - b.y) <= eps;
+}
+
+function isEffectivelyClosed(vertices, eps = 1e-2) {
+    return vertices.length >= 3 && pointsAlmostEqual(vertices[0], vertices[vertices.length - 1], eps);
+}
+
+function normalizeClosedVertices(vertices, eps = 1e-2) {
+    if (!vertices || vertices.length < 3) return null;
+    const cleaned = vertices.map(v => ({ x: v.x, y: v.y }));
+    if (isEffectivelyClosed(cleaned, eps)) cleaned.pop();
+    return cleaned.length >= 3 ? cleaned : null;
+}
+
+function pointKey(pt, eps = 1e-2) {
+    const qx = Math.round(pt.x / eps);
+    const qy = Math.round(pt.y / eps);
+    return `${qx}:${qy}`;
+}
+
+function lineLikeSegmentsFromPolylines(polylines) {
+    const segments = [];
+
+    for (const poly of polylines) {
+        if (!poly?.vertices || poly.vertices.length < 2) continue;
+
+        for (let i = 0; i < poly.vertices.length - 1; i++) {
+            const start = poly.vertices[i];
+            const end = poly.vertices[i + 1];
+            if (!pointsAlmostEqual(start, end)) {
+                segments.push({ start, end });
+            }
+        }
+
+        if (poly.closed && poly.vertices.length >= 3) {
+            const start = poly.vertices[poly.vertices.length - 1];
+            const end = poly.vertices[0];
+            if (!pointsAlmostEqual(start, end)) {
+                segments.push({ start, end });
+            }
+        }
+    }
+
+    return segments;
+}
+
+function buildClosedPolygonsFromSegments(polylines, eps = 1e-2) {
+    const segments = lineLikeSegmentsFromPolylines(polylines);
+    if (segments.length < 3) return [];
+
+    const nodes = new Map();
+    const adjacency = new Map();
+
+    const ensureNode = (pt) => {
+        const key = pointKey(pt, eps);
+        if (!nodes.has(key)) nodes.set(key, { x: pt.x, y: pt.y });
+        if (!adjacency.has(key)) adjacency.set(key, []);
+        return key;
+    };
+
+    segments.forEach((segment, index) => {
+        const a = ensureNode(segment.start);
+        const b = ensureNode(segment.end);
+        if (a === b) return;
+        adjacency.get(a).push({ edgeIndex: index, next: b });
+        adjacency.get(b).push({ edgeIndex: index, next: a });
+    });
+
+    const visited = new Set();
+    const polygons = [];
+
+    for (const [startKey, edges] of adjacency.entries()) {
+        if (edges.length !== 2) continue;
+
+        for (const edge of edges) {
+            if (visited.has(edge.edgeIndex)) continue;
+
+            const path = [nodes.get(startKey)];
+            let currentKey = startKey;
+            let previousEdgeIndex = null;
+            let currentEdge = edge;
+
+            while (currentEdge) {
+                visited.add(currentEdge.edgeIndex);
+                currentKey = currentEdge.next;
+                path.push(nodes.get(currentKey));
+
+                if (currentKey === startKey) break;
+
+                const nextOptions = (adjacency.get(currentKey) || []).filter(option =>
+                    option.edgeIndex !== currentEdge.edgeIndex &&
+                    option.edgeIndex !== previousEdgeIndex
+                );
+
+                if (nextOptions.length !== 1) {
+                    currentEdge = null;
+                    break;
+                }
+
+                previousEdgeIndex = currentEdge.edgeIndex;
+                currentEdge = visited.has(nextOptions[0].edgeIndex) ? null : nextOptions[0];
+            }
+
+            if (path.length >= 4 && pointsAlmostEqual(path[0], path[path.length - 1], eps)) {
+                const vertices = normalizeClosedVertices(path, eps);
+                if (vertices) polygons.push(vertices);
+            }
+        }
+    }
+
+    return polygons;
 }
 
 // ── Phase 2: Build final project data from user selection ─────────────────────

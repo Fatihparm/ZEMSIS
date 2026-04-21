@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 *.dxf
+*.pdf
 
 
 /backend/test-all-excel-scenarios.js

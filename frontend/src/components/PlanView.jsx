@@ -310,9 +310,12 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     // ── Auto-sync columns when polygon or spacing changes ──
     useEffect(() => {
         const hasClosed = polygons.some(p => p.isClosed && p.vertices.length >= 3);
-        if (!columnsAutoSync || !hasClosed) {
+        if (!columnsAutoSync) {
+            return;
+        }
+        if (!hasClosed) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
-            if (!hasClosed) setColumnPositions([]);
+            setColumnPositions([]);
             return;
         }
         const newCols = computeColumns(polygons);
@@ -1072,6 +1075,30 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             onParameterChange({ target: { name: 'D', value: String(data.columnDiameter.toFixed(2)) } });
         }
 
+        // Auto zoom fit to the newly imported data
+        const newVerts = [];
+        if (data.polygons) data.polygons.forEach(p => newVerts.push(...p.vertices));
+        if (data.vertices) newVerts.push(...data.vertices);
+        if (data.columnPositions) newVerts.push(...data.columnPositions);
+
+        if (newVerts.length > 0) {
+            const bounds = polygonBounds(newVerts);
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect();
+                const worldW = (bounds.maxX - bounds.minX) || 10;
+                const worldH = (bounds.maxY - bounds.minY) || 10;
+                const margin = 1.4;
+                const zx = rect.width / (worldW * margin * 20);
+                const zy = rect.height / (worldH * margin * 20);
+                const newZoom = Math.min(zx, zy, 10);
+                const centerX = (bounds.minX + bounds.maxX) / 2;
+                const centerY = (bounds.minY + bounds.maxY) / 2;
+                setPan({ x: -centerX * 20 * newZoom, y: centerY * 20 * newZoom });
+                setZoom(newZoom);
+            }
+        }
+
         // Switch to select mode so user can see & adjust immediately
         setDrawingMode('select');
     };
@@ -1106,7 +1133,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     };
 
     const handleZoomFit = () => {
-        const allVerts = polygons.flatMap(p => p.vertices);
+        const allVerts = [...polygons.flatMap(p => p.vertices), ...columnPositions];
         if (allVerts.length === 0) {
             setPan({ x: 0, y: 0 });
             setZoom(1);
