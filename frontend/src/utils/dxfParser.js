@@ -17,6 +17,7 @@
 // Both Turkish and English variants are recognised.
 const BOUNDARY_LAYERS = ['JET_ZEMIN', 'JET_BOUNDARY'];   // closed polylines = zemin sınırı
 const COLUMN_LAYERS   = ['JET_KOLON', 'JET_COLUMNS'];    // circles = jet grout kolonları
+const SECTION_LAYERS  = ['JET_KESIT', 'JET_SECTION'];    // open lines = kesit çizgileri
 
 // ── Entry point ────────────────────────────────────────────────────────────────
 export function parseDxf(text) {
@@ -350,7 +351,8 @@ export function dxfExtractCandidates(dxfResult) {
     // ── Detect known convention layers (case-sensitive exact match) ──
     const detectedBoundaryLayer = layerNames.find(n => BOUNDARY_LAYERS.includes(n)) || null;
     const detectedColumnLayer   = layerNames.find(n => COLUMN_LAYERS.includes(n))   || null;
-    const isSmartMode = !!(detectedBoundaryLayer || detectedColumnLayer);
+    const detectedSectionLayer  = layerNames.find(n => SECTION_LAYERS.includes(n))  || null;
+    const isSmartMode = !!(detectedBoundaryLayer || detectedColumnLayer || detectedSectionLayer);
 
     // ── Determine which layers to scan for polylines ──
     const polySourceLayers = detectedBoundaryLayer
@@ -369,24 +371,33 @@ export function dxfExtractCandidates(dxfResult) {
         const ld = allLayers[lname];
         if (!ld) continue;
 
+        const isTaggedBoundary = (lname === detectedBoundaryLayer || BOUNDARY_LAYERS.includes(lname));
+
         for (const poly of ld.polylines) {
-            const normalizedVertices = normalizeClosedVertices(poly.vertices);
-            if ((poly.closed || isEffectivelyClosed(poly.vertices)) && normalizedVertices) {
-                const area = shoelaceArea(normalizedVertices);
-                const bbox = polyBBox(normalizedVertices);
+            let validVertices = poly.vertices;
+            let effectivelyClosed = poly.closed || isEffectivelyClosed(poly.vertices);
+
+            if (effectivelyClosed) {
+                const norm = normalizeClosedVertices(poly.vertices);
+                if (norm) validVertices = norm;
+            }
+
+            if (validVertices && (effectivelyClosed || (isTaggedBoundary && validVertices.length >= 2))) {
+                const area = effectivelyClosed && validVertices.length >= 3 ? shoelaceArea(validVertices) : 0;
+                const bbox = polyBBox(validVertices);
                 polylineCandidates.push({
                     id: polyId++,
-                    vertices: normalizedVertices,
-                    closed: true,
+                    vertices: validVertices,
+                    closed: effectivelyClosed,
                     layer: lname,
                     area,
                     bbox,
-                    vertexCount: normalizedVertices.length,
+                    vertexCount: validVertices.length,
                 });
             }
         }
 
-        if (!polylineCandidates.some(poly => poly.layer === lname)) {
+        if (!polylineCandidates.some(poly => poly.layer === lname && poly.closed)) {
             const reconstructedPolygons = buildClosedPolygonsFromSegments(ld.polylines);
             for (const vertices of reconstructedPolygons) {
                 const area = shoelaceArea(vertices);
@@ -414,6 +425,29 @@ export function dxfExtractCandidates(dxfResult) {
         if (!ld) continue;
         for (const c of ld.circles) {
             allCircles.push({ ...c, layer: lname });
+        }
+    }
+
+    // ── Collect section lines from relevant layers ──
+    const sectionCandidates = [];
+    let secId = 0;
+    const secSourceLayers = detectedSectionLayer ? [detectedSectionLayer] : layerNames;
+    for (const lname of secSourceLayers) {
+        const ld = allLayers[lname];
+        if (!ld) continue;
+
+        const isTaggedSection = (lname === detectedSectionLayer || SECTION_LAYERS.includes(lname));
+        if (isTaggedSection) { 
+            for (const poly of ld.polylines) {
+                if (poly.vertices.length >= 2 && !poly.closed && !isEffectivelyClosed(poly.vertices)) {
+                    sectionCandidates.push({
+                        id: `dxf-sec-${secId++}`,
+                        start: { x: poly.vertices[0].x, y: poly.vertices[0].y },
+                        end: { x: poly.vertices[poly.vertices.length - 1].x, y: poly.vertices[poly.vertices.length - 1].y },
+                        layer: lname,
+                    });
+                }
+            }
         }
     }
 
@@ -449,21 +483,24 @@ export function dxfExtractCandidates(dxfResult) {
         return {
             name,
             polylineCount: ld.polylines.filter(p =>
-                (p.closed || isEffectivelyClosed(p.vertices)) && normalizeClosedVertices(p.vertices)
+                (p.closed || isEffectivelyClosed(p.vertices) || BOUNDARY_LAYERS.includes(name)) && p.vertices.length >= 2
             ).length || reconstructedCount,
             circleCount: ld.circles.length,
+            sectionCount: ld.polylines.filter(p => !p.closed && p.vertices.length >= 2).length,
             entityCount: ld.entityCount,
         };
-    }).filter(l => l.polylineCount > 0 || l.circleCount > 0);
+    }).filter(l => l.polylineCount > 0 || l.circleCount > 0 || l.sectionCount > 0);
 
     return {
         polylineCandidates,
         allCircles,
+        sectionCandidates,
         unit,
         columnDiameter,
         mode: isSmartMode ? 'smart' : 'manual',
         detectedBoundaryLayer,
         detectedColumnLayer,
+        detectedSectionLayer,
         availableLayers,
     };
 }
@@ -603,7 +640,7 @@ function buildClosedPolygonsFromSegments(polylines, eps = 1e-2) {
  */
 export function buildProjectData(candidates, selectedPolyIds = [], options = {}) {
     const { autoCenter = true } = options;
-    const { polylineCandidates, allCircles, unit, columnDiameter } = candidates;
+    const { polylineCandidates, allCircles, sectionCandidates = [], unit, columnDiameter } = candidates;
     const scale = UNIT_SCALES[unit] ?? 1.0;
 
     // ── Build polygons ──
@@ -614,7 +651,7 @@ export function buildProjectData(candidates, selectedPolyIds = [], options = {})
             .map((p, idx) => ({
                 id: `poly-dxf-${Date.now()}-${idx}`,
                 vertices: p.vertices.map(v => ({ x: v.x * scale, y: v.y * scale })),
-                isClosed: true
+                isClosed: p.closed
             }));
     } else if (selectedPolyIds !== null && selectedPolyIds !== undefined && !Array.isArray(selectedPolyIds)) {
         // Fallback for single ID (legacy)
@@ -623,7 +660,7 @@ export function buildProjectData(candidates, selectedPolyIds = [], options = {})
             polygons.push({
                 id: `poly-dxf-${Date.now()}`,
                 vertices: selected.vertices.map(v => ({ x: v.x * scale, y: v.y * scale })),
-                isClosed: true
+                isClosed: selected.closed
             });
         }
     }
@@ -635,9 +672,20 @@ export function buildProjectData(candidates, selectedPolyIds = [], options = {})
         y: c.y * scale,
     }));
 
-    // ── Auto-center around columns or boundary ──
+    // ── Build section lines ──
+    let sectionLines = sectionCandidates.map(sec => ({
+        id: sec.id,
+        start: { x: sec.start.x * scale, y: sec.start.y * scale },
+        end: { x: sec.end.x * scale, y: sec.end.y * scale },
+    }));
+
+    // ── Auto-center around columns, boundary or sections ──
     if (autoCenter) {
-        const allPts = [...polygons.flatMap(p => p.vertices), ...columnPositions];
+        const allPts = [
+            ...polygons.flatMap(p => p.vertices), 
+            ...columnPositions,
+            ...sectionLines.flatMap(s => [s.start, s.end])
+        ];
         if (allPts.length > 0) {
             const c = centroid(allPts);
             polygons = polygons.map(poly => ({
@@ -647,8 +695,20 @@ export function buildProjectData(candidates, selectedPolyIds = [], options = {})
             columnPositions = columnPositions.map(cp => ({
                 ...cp, x: cp.x - c.x, y: cp.y - c.y,
             }));
+            sectionLines = sectionLines.map(sl => ({
+                ...sl,
+                start: { x: sl.start.x - c.x, y: sl.start.y - c.y },
+                end: { x: sl.end.x - c.x, y: sl.end.y - c.y }
+            }));
         }
     }
+
+    // Add labels to section lines
+    const sectionLabel = (index) => {
+        const ch = String.fromCharCode(65 + (index % 26));
+        return `${ch}-${ch}`;
+    };
+    sectionLines = sectionLines.map((sl, idx) => ({ ...sl, label: sl.label || sectionLabel(idx) }));
 
     // Fallback for backward compatibility
     const firstPoly = polygons[0] || { vertices: [], isClosed: false };
@@ -658,6 +718,7 @@ export function buildProjectData(candidates, selectedPolyIds = [], options = {})
         vertices: firstPoly.vertices, 
         isClosed: firstPoly.isClosed, 
         columnPositions, 
+        sectionLines,
         columnDiameter, 
         unit 
     };

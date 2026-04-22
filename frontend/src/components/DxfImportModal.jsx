@@ -18,7 +18,7 @@ const POLY_COLORS = [
 ];
 
 // ── Interactive SVG Preview ────────────────────────────────────────────────────
-function DxfSelectorSvg({ polylineCandidates, allCircles, selectedId, onSelectPoly, unit }) {
+function DxfSelectorSvg({ polylineCandidates, allCircles, sectionCandidates = [], selectedId, onSelectPoly, unit }) {
     // Compute global bounds from all polylines + circles
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of polylineCandidates) {
@@ -34,6 +34,16 @@ function DxfSelectorSvg({ polylineCandidates, allCircles, selectedId, onSelectPo
         if (c.x + c.radius > maxX) maxX = c.x + c.radius;
         if (c.y - c.radius < minY) minY = c.y - c.radius;
         if (c.y + c.radius > maxY) maxY = c.y + c.radius;
+    }
+    for (const sec of sectionCandidates) {
+        if (sec.start.x < minX) minX = sec.start.x;
+        if (sec.start.x > maxX) maxX = sec.start.x;
+        if (sec.start.y < minY) minY = sec.start.y;
+        if (sec.start.y > maxY) maxY = sec.start.y;
+        if (sec.end.x < minX) minX = sec.end.x;
+        if (sec.end.x > maxX) maxX = sec.end.x;
+        if (sec.end.y < minY) minY = sec.end.y;
+        if (sec.end.y > maxY) maxY = sec.end.y;
     }
 
     if (!isFinite(minX)) return null;
@@ -59,6 +69,19 @@ function DxfSelectorSvg({ polylineCandidates, allCircles, selectedId, onSelectPo
         >
             {/* Dark background */}
             <rect x={vbX} y={vbY} width={vbW} height={vbH} fill="rgba(0,0,0,0.4)" />
+
+            {/* Section lines */}
+            {sectionCandidates.map(sec => (
+                <line
+                    key={sec.id}
+                    x1={sec.start.x} y1={-sec.start.y}
+                    x2={sec.end.x} y2={-sec.end.y}
+                    stroke="#4fc3f7"
+                    strokeWidth={strokeW * 1.5}
+                    strokeDasharray={`${strokeW * 5} ${strokeW * 3}`}
+                    strokeLinecap="round"
+                />
+            ))}
 
             {/* Circle dots (columns) — drawn first so polylines are on top */}
             {allCircles.map((c, i) => (
@@ -145,6 +168,14 @@ function LayerGuide({ tr, show, onToggle }) {
                             <code className="dxf-guide-layer-name column">JET_COLUMNS</code>
                             <span>{tr ? 'Jet grout kolon daireleri (EN)' : 'Jet grout column circles (EN)'}</span>
                         </div>
+                        <div className="dxf-guide-layer-item">
+                            <code className="dxf-guide-layer-name section">JET_KESIT</code>
+                            <span>{tr ? 'Kesit ve profil çizgileri (TR)' : 'Section and profile lines (TR)'}</span>
+                        </div>
+                        <div className="dxf-guide-layer-item">
+                            <code className="dxf-guide-layer-name section">JET_SECTION</code>
+                            <span>{tr ? 'Kesit ve profil çizgileri (EN)' : 'Section and profile lines (EN)'}</span>
+                        </div>
                     </div>
                     <p className="dxf-guide-note">{tr
                         ? '💡 İpucu: Katman isimleri büyük/küçük harf duyarlıdır. Tam olarak yukarıdaki gibi yazın.'
@@ -179,6 +210,8 @@ function LayerFilterChips({ availableLayers, visibleLayers, onToggleLayer, tr })
                                 {layer.polylineCount > 0 && `⬡${layer.polylineCount}`}
                                 {layer.polylineCount > 0 && layer.circleCount > 0 && ' '}
                                 {layer.circleCount > 0 && `●${layer.circleCount}`}
+                                {(layer.polylineCount > 0 || layer.circleCount > 0) && layer.sectionCount > 0 && ' '}
+                                {layer.sectionCount > 0 && `➖${layer.sectionCount}`}
                             </span>
                         </button>
                     );
@@ -244,10 +277,10 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                 // Extract candidates (with smart layer detection)
                 const cands = dxfExtractCandidates(dxfResult);
 
-                if (cands.polylineCandidates.length === 0 && cands.allCircles.length === 0) {
+                if (cands.polylineCandidates.length === 0 && cands.allCircles.length === 0 && (!cands.sectionCandidates || cands.sectionCandidates.length === 0)) {
                     setParseError(tr
-                        ? 'Dosyada uygun geometri bulunamadı (kapalı polyline veya daire yok).'
-                        : 'No usable geometry found (no closed polylines or circles).');
+                        ? 'Dosyada uygun geometri bulunamadı (kapalı polyline, kesit çizgisi veya daire yok).'
+                        : 'No usable geometry found (no closed polylines, section lines or circles).');
                     setStatus('error');
                     return;
                 }
@@ -332,7 +365,7 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
     };
 
     // ── Computed info ─────────────────────────────────────────────────────────
-    const canImport = candidates && (candidates.allCircles.length > 0 || selectedPolyIds.length > 0);
+    const canImport = candidates && (candidates.allCircles.length > 0 || selectedPolyIds.length > 0 || (candidates.sectionCandidates && candidates.sectionCandidates.length > 0));
     const isSmartMode = candidates?.mode === 'smart';
 
     // Filter displayed polylines by visible layers (for manual mode)
@@ -426,6 +459,10 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                                                 {candidates.detectedBoundaryLayer && candidates.detectedColumnLayer && ','}
                                                 {candidates.detectedColumnLayer && (
                                                     <> <code>{candidates.detectedColumnLayer}</code> katmanında <strong>{candidates.allCircles.length}</strong> kolon</>
+                                                )}
+                                                {(candidates.detectedBoundaryLayer || candidates.detectedColumnLayer) && candidates.detectedSectionLayer && ','}
+                                                {candidates.detectedSectionLayer && (
+                                                    <> <code>{candidates.detectedSectionLayer}</code> katmanında <strong>{candidates.sectionCandidates.length}</strong> kesit</>
                                                 )} bulundu.
                                             </>
                                         ) : (
@@ -437,6 +474,10 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                                                 {candidates.detectedBoundaryLayer && candidates.detectedColumnLayer && ','}
                                                 {candidates.detectedColumnLayer && (
                                                     <> <strong>{candidates.allCircles.length}</strong> columns in <code>{candidates.detectedColumnLayer}</code></>
+                                                )}
+                                                {(candidates.detectedBoundaryLayer || candidates.detectedColumnLayer) && candidates.detectedSectionLayer && ','}
+                                                {candidates.detectedSectionLayer && (
+                                                    <> <strong>{candidates.sectionCandidates.length}</strong> sections in <code>{candidates.detectedSectionLayer}</code></>
                                                 )}.
                                             </>
                                         )}
@@ -451,11 +492,11 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                                     <div className="dxf-manual-banner-text">
                                         {tr
                                             ? <>
-                                                <code>JET_ZEMIN</code> / <code>JET_KOLON</code> katmanları bulunamadı.
+                                                <code>JET_ZEMIN</code> / <code>JET_KOLON</code> / <code>JET_KESIT</code> katmanları bulunamadı.
                                                 Tüm katmanlardan polyline ve daireler gösteriliyor.
                                               </>
                                             : <>
-                                                <code>JET_ZEMIN</code> / <code>JET_KOLON</code> layers not found.
+                                                <code>JET_ZEMIN</code> / <code>JET_KOLON</code> / <code>JET_KESIT</code> layers not found.
                                                 Showing polylines and circles from all layers.
                                               </>
                                         }
@@ -492,21 +533,22 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                                             ? '✅ Etiketli katmandaki tüm polyline\'lar otomatik seçildi. İstemediğinize tıklayarak seçimi kaldırabilirsiniz.'
                                             : '✅ All polylines from the tagged layer are auto-selected. Click any to deselect.')
                                         : (tr
-                                            ? '📌 Kapalı polyline\'lar listelendi. İstemediğinize tıklayarak seçimi kaldırabilirsiniz.'
-                                            : '📌 Closed polylines listed. Click any to deselect.')
+                                            ? '📌 Polyline\'lar listelendi. İstemediğinize tıklayarak seçimi kaldırabilirsiniz.'
+                                            : '📌 Polylines listed. Click any to deselect.')
                                 ) : (
                                     tr
-                                        ? '📌 Kapalı polyline bulunamadı. Kolonlar (daireler) aktarılacak, sınırı manuel çizebilirsiniz.'
-                                        : '📌 No closed polylines found. Columns (circles) will be imported, you can draw the boundary manually.'
+                                        ? '📌 Uygun polyline bulunamadı. Sadece kolonlar ve kesitler aktarılacak, sınırı manuel çizebilirsiniz.'
+                                        : '📌 No valid polylines found. Only columns and sections will be imported, you can draw the boundary manually.'
                                 )}
                             </div>
 
                             {/* Interactive SVG */}
-                            {(displayedPolys.length > 0 || candidates.allCircles.length > 0) && (
+                            {(displayedPolys.length > 0 || candidates.allCircles.length > 0 || (candidates.sectionCandidates && candidates.sectionCandidates.length > 0)) && (
                                 <div className="dxf-selector-container">
                                     <DxfSelectorSvg
                                         polylineCandidates={displayedPolys}
                                         allCircles={candidates.allCircles}
+                                        sectionCandidates={candidates.sectionCandidates}
                                         selectedId={selectedPolyIds}
                                         onSelectPoly={handleSelectPoly}
                                         unit={candidates.unit}
@@ -518,7 +560,7 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                             {displayedPolys.length > 0 && (
                                 <div className="dxf-poly-list">
                                     <div className="dxf-poly-list-title">
-                                        {tr ? 'Kapalı Polyline\'lar' : 'Closed Polylines'}
+                                        {tr ? 'Sınır Çizgileri' : 'Boundary Polylines'}
                                         <span className="dxf-poly-count">
                                             {selectedPolyIds.filter(id => displayedPolys.some(p => p.id === id)).length}/{displayedPolys.length}
                                         </span>
@@ -576,6 +618,12 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                                     <span>📏</span>
                                     <span>{tr ? 'Birim' : 'Unit'}: {UNIT_LABELS[candidates.unit] || candidates.unit}</span>
                                 </div>
+                                {candidates.sectionCandidates && candidates.sectionCandidates.length > 0 && (
+                                    <div className="dxf-stat-chip">
+                                        <span>➖</span>
+                                        <span>{candidates.sectionCandidates.length} {tr ? 'Kesit' : 'Sections'}</span>
+                                    </div>
+                                )}
                                 {selectedPolyIds.length > 0 && (
                                     <div className="dxf-stat-chip highlight">
                                         <span>⬡</span>
@@ -628,9 +676,9 @@ export default function DxfImportModal({ lang, onImport, onClose }) {
                         >
                             {selectedPolyIds.length > 0
                                 ? (tr
-                                    ? `✓ ${selectedPolyIds.length} Sınır + Kolonları Aktar`
-                                    : `✓ Import ${selectedPolyIds.length} Boundaries + Columns`)
-                                : (tr ? '✓ Sadece Kolonları Aktar' : '✓ Import Columns Only')
+                                    ? `✓ ${selectedPolyIds.length} Sınır + Verileri Aktar`
+                                    : `✓ Import ${selectedPolyIds.length} Boundaries + Data`)
+                                : (tr ? '✓ Sadece Verileri Aktar' : '✓ Import Data Only')
                             }
                         </button>
                     )}

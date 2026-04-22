@@ -191,7 +191,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         if (undoStack.length === 0) return;
         const newStack = [...undoStack];
         const snapshot = newStack.pop();
-        
+
         setRedoStack(r => [...r, {
             polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
             activePolygonId,
@@ -199,7 +199,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
-        
+
         setUndoStack(newStack);
         if (snapshot.polygons) {
             setPolygons(snapshot.polygons);
@@ -220,7 +220,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         if (redoStack.length === 0) return;
         const newStack = [...redoStack];
         const snapshot = newStack.pop();
-        
+
         setUndoStack(u => [...u, {
             polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
             activePolygonId,
@@ -228,7 +228,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
-        
+
         setRedoStack(newStack);
         if (snapshot.polygons) {
             setPolygons(snapshot.polygons);
@@ -1042,9 +1042,9 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
     // ── DXF import handler ──
     const handleDxfImport = (data) => {
-        // data: { polygons, vertices, isClosed, columnPositions, columnDiameter, unit }
+        // data: { polygons, vertices, isClosed, columnPositions, sectionLines, columnDiameter, unit }
         pushUndo();
-        
+
         if (data.polygons && data.polygons.length > 0) {
             setPolygons(data.polygons);
             setActivePolygonId(data.polygons[0].id);
@@ -1061,6 +1061,12 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setSelectedColumn(null);
         setRectStart(null);
         setSectionStart(null);
+
+        if (data.sectionLines && data.sectionLines.length > 0) {
+            setSectionLines(data.sectionLines);
+        } else {
+            setSectionLines([]);
+        }
 
         if (data.columnPositions && data.columnPositions.length > 0) {
             setColumnPositions(data.columnPositions);
@@ -1080,6 +1086,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         if (data.polygons) data.polygons.forEach(p => newVerts.push(...p.vertices));
         if (data.vertices) newVerts.push(...data.vertices);
         if (data.columnPositions) newVerts.push(...data.columnPositions);
+        if (data.sectionLines) data.sectionLines.forEach(sl => newVerts.push(sl.start, sl.end));
 
         if (newVerts.length > 0) {
             const bounds = polygonBounds(newVerts);
@@ -1375,7 +1382,6 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                                         onClick={() => handleDeleteSection(sl.id)}
                                         data-tooltip={tr ? 'Kesiti sil' : 'Delete section'}
                                     >
-                                        ×
                                     </button>
                                 </div>
                             ))}
