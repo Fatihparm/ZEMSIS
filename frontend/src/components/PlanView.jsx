@@ -295,10 +295,17 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         });
 
         const cols = [];
-        const startX = Math.ceil(minX / s) * s;
-        const startY = Math.ceil(minY / s) * s;
-        for (let x = startX; x <= maxX; x += s) {
-            for (let y = startY; y <= maxY; y += s) {
+        
+        // ── Calculate balanced grid start positions ──
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const remX = width % s;
+        const remY = height % s;
+        const startX = minX + (remX / 2);
+        const startY = minY + (remY / 2);
+
+        for (let x = startX; x <= maxX + 0.001; x += s) {
+            for (let y = startY; y <= maxY + 0.001; y += s) {
                 if (closedPolys.some(p => pointInPolygon(x, y, p.vertices))) {
                     cols.push({ x, y });
                 }

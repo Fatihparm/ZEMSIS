@@ -22,7 +22,7 @@ app.use('/api/projects', projectsRouter);
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'Jet-Grout-Calc API is running',
+    message: 'ZEMSIS API is running',
     version: '1.0.0'
   });
 });
@@ -174,7 +174,7 @@ async function start() {
   try {
     await migrate();
     app.listen(PORT, () => {
-      console.log(`🏗️  Jet-Grout-Calc API running at http://localhost:${PORT}`);
+      console.log(`🏗️  ZEMSIS API running at http://localhost:${PORT}`);
       console.log(`📊 Endpoints:`);
       console.log(`   GET  /api/health         - Health check`);
       console.log(`   POST /api/auth/register   - Register`);

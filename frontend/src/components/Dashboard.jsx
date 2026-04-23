@@ -1,17 +1,19 @@
 import './Dashboard.css';
 
-function Dashboard({ lang, user, onNewProject, onGoProjects, onImportDxf }) {
+function Dashboard({ lang, user, onNewProject, onGoProjects, onImportDxf, onImportPdf }) {
     const tr = lang === 'tr';
 
     return (
         <div className="dashboard-home">
             <div className="dashboard-hero">
-                <div className="hero-icon">🏗️</div>
-                <h1>Jet-Grout-Calc</h1>
+                <div className="hero-icon">
+                    <img src="/zemsis-logo.png" alt="ZEMSIS Logo" style={{ width: '64px', height: 'auto' }} />
+                </div>
+                <h1>ZEMSIS</h1>
                 <p className="hero-subtitle">
                     {tr
-                        ? 'Jet Grouting Tasarım ve Analiz Aracı'
-                        : 'Jet Grouting Design & Analysis Tool'}
+                        ? 'Zemin Sistemleri Tasarım ve Analiz Aracı'
+                        : 'Ground Systems Design & Analysis Tool'}
                 </p>
 
                 {user && (
@@ -38,6 +40,10 @@ function Dashboard({ lang, user, onNewProject, onGoProjects, onImportDxf }) {
                     <button className="quick-action-card dxf-action" onClick={onImportDxf}>
                         <span>📐</span>
                         <p>{tr ? 'DXF İçe Aktar' : 'Import DXF'}</p>
+                    </button>
+                    <button className="quick-action-card pdf-action" onClick={onImportPdf}>
+                        <span>📄</span>
+                        <p>{tr ? 'PDF\'ten Aktar' : 'Import PDF'}</p>
                     </button>
                 </div>
             </div>

@@ -49,13 +49,21 @@ function AuthPage({ onLogin, lang }) {
 
   return (
     <div className="auth-page">
-      <div className="auth-bg-pattern" />
+      <video
+        className="auth-bg-video"
+        src="/bg-video.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+      />
+      <div className="auth-bg-overlay" />
 
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="auth-brand-icon">🏗️</span>
-          <h1>Jet-Grout-Calc</h1>
-          <p>{tr ? 'Jet Grouting Tasarım ve Analiz Aracı' : 'Jet Grouting Design & Analysis Tool'}</p>
+          <img src="/zemsis-logo.png" alt="ZEMSIS Logo" className="auth-brand-logo" />
+          <h1>ZEMSIS</h1>
+          <p>{tr ? 'Zemin Sistemleri Tasarım ve Analiz Aracı' : 'Ground Systems Design & Analysis Tool'}</p>
         </div>
 
         {/* Tab Switch */}

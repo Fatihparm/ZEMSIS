@@ -1,6 +1,6 @@
-# 🏗️ Jet-Grout-Calc
+# 🏗️ ZEMSIS
 
-Jet Grouting zemin iyileştirme projeleri için kapsamlı, etkileşimli ve modern web uygulaması. React frontend ve Node.js/PostgreSQL backend mimarisi ile geliştirilmiş tam donanımlı bir mühendislik aracıdır.
+Zemin Sistemleri Tasarım ve Analiz Aracı. React frontend ve Node.js/PostgreSQL backend mimarisi ile geliştirilmiş tam donanımlı bir mühendislik aracıdır.
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)

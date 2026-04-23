@@ -7,14 +7,15 @@ import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
 import ProjectsPage from './components/ProjectsPage';
 import SaveProjectModal from './components/SaveProjectModal';
+import { generatePdfReport, parsePdfReport } from './utils/pdfReport';
 import './App.css';
 
 const API_URL = 'http://localhost:3001/api';
 
 const translations = {
   en: {
-    title: 'Jet-Grout-Calc',
-    subtitle: 'Jet Grouting Design & Analysis Tool',
+    title: 'ZEMSIS',
+    subtitle: 'Ground Systems Design & Analysis Tool',
     geometry: {
       title: 'Column Geometry',
       diameter: 'Column Diameter',
@@ -85,11 +86,11 @@ const translations = {
     calculating: 'Calculating...',
     apiError: 'Cannot connect to API. Is the backend running?',
     calcFailed: 'Calculation failed',
-    footer: 'Jet-Grout-Calc v1.0 © 2026'
+    footer: 'ZEMSIS v1.0 © 2026'
   },
   tr: {
-    title: 'Jet-Grout-Calc',
-    subtitle: 'Jet Grout Tasarim ve Analiz Araci',
+    title: 'ZEMSIS',
+    subtitle: 'Zemin Sistemleri Tasarım ve Analiz Aracı',
     geometry: {
       title: 'Kolon Geometrisi',
       diameter: 'Kolon Capi',
@@ -160,7 +161,7 @@ const translations = {
     calculating: 'Hesaplaniyor...',
     apiError: "API'ye baglanilamiyor. Backend calisiyor mu?",
     calcFailed: 'Hesaplama basarisiz',
-    footer: 'Jet-Grout-Calc v1.0 © 2026'
+    footer: 'ZEMSIS v1.0 © 2026'
   }
 };
 
@@ -178,7 +179,7 @@ const defaultSoilLayers = [
 ];
 
 function App() {
-  const [lang, setLang] = useState('en');
+  const [lang, setLang] = useState('tr');
   const [activePage, setActivePage] = useState('home');
   const [activeTab, setActiveTab] = useState('parameters');
   const [token, setToken] = useState(() => localStorage.getItem('jg_token'));
@@ -199,6 +200,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pendingDxfImport, setPendingDxfImport] = useState(false);
+  const fileInputRef = useRef(null);
 
   const toKPa = (value, unit) => unit === 'MPa' ? value * 1000 : value;
   const t = translations[lang];
@@ -383,6 +385,34 @@ function App() {
     return tr ? 'Jet grout tasarim paneli.' : 'Jet grout design dashboard.';
   })();
 
+  const handleExportPdf = async () => {
+    try {
+      const projectData = getProjectData();
+      await generatePdfReport(projectData, lang);
+    } catch (err) {
+      alert(tr ? 'Rapor olusturulurken hata olustu: ' + err.message : 'Error generating report: ' + err.message);
+    }
+  };
+
+  const handleImportPdfClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const projectData = await parsePdfReport(file);
+      // Give it a transient id to force new save or re-use logic
+      projectData.id = projectData.id || `imported-${Date.now()}`;
+      handleLoadProject(projectData);
+    } catch (err) {
+      alert(tr ? 'Gecersiz PDF. JGC Proje verisi bulunamadi.' : 'Invalid PDF. No JGC Project data found.');
+    } finally {
+      e.target.value = ''; // reset
+    }
+  };
+
   const todayLabel = new Date().toLocaleDateString(tr ? 'tr-TR' : 'en-US', {
     year: 'numeric',
     month: 'long',
@@ -403,10 +433,10 @@ function App() {
   return (
     <div className="dashboard-container">
       <nav className="sidebar">
-        <div className="sidebar-logo" title="Jet-Grout-Calc">
-          <div className="sidebar-logo-mark">JG</div>
+        <div className="sidebar-logo" title="ZEMSIS">
+          <img src="/zemsis-logo-beyaz.png" alt="ZEMSIS Logo Beyaz" className="sidebar-logo-img" style={{ width: "64px", height: "auto" }} />
           <div className="sidebar-logo-text">
-            <strong>Jet-Grout</strong>
+            <strong>ZEMSIS</strong>
             <span>Engineering Suite</span>
           </div>
         </div>
@@ -414,7 +444,7 @@ function App() {
         <div className="user-profile-card">
           <div className="avatar-circle">{userInitials}</div>
           <div className="user-details">
-            <h4>{user?.fullName || 'Jet-Grout User'}</h4>
+            <h4>{user?.fullName || 'ZEMSIS User'}</h4>
             <span>{tr ? 'Aktif oturum' : 'Active session'}</span>
           </div>
         </div>
@@ -472,9 +502,9 @@ function App() {
             <span className="menu-label">{lang === 'en' ? 'Turkce' : 'English'}</span>
           </button>
 
-          <button className="logout-btn" onClick={handleLogout} title={tr ? 'Cikis' : 'Logout'}>
+          <button className="logout-btn" onClick={handleLogout} title={tr ? 'Çıkış' : 'Logout'}>
             <span className="menu-icon">×</span>
-            <span className="menu-label">{tr ? 'Cikis' : 'Logout'}</span>
+            <span className="menu-label">{tr ? 'Çıkış' : 'Logout'}</span>
           </button>
         </div>
       </nav>
@@ -485,8 +515,28 @@ function App() {
             <h2>{currentViewTitle}</h2>
             <p>{currentViewDescription}</p>
           </div>
-          <div className="date-tag">{todayLabel}</div>
+          <div className="top-bar-actions">
+            {activePage === 'workspace' && (
+              <button
+                className="top-bar-btn export-pdf-btn"
+                onClick={handleExportPdf}
+                title={tr ? 'PDF Raporu Olarak İndir (İçeri aktarılabilir)' : 'Download PDF Report (Importable)'}
+              >
+                📄 {tr ? 'Rapor Al' : 'Export PDF'}
+              </button>
+            )}
+            <img src="/btu-logo.png" alt="BTU Logo" style={{ height: "40px", objectFit: "contain", marginRight: "1rem" }} />
+            <div className="date-tag">{todayLabel}</div>
+          </div>
         </div>
+
+        <input
+          type="file"
+          accept=".pdf"
+          style={{ display: 'none' }}
+          ref={fileInputRef}
+          onChange={handleFileChange}
+        />
 
         <div className="content-area">
           <div className={`main-scroll-content ${isLockedWorkspaceView ? 'locked-view' : ''}`}>
@@ -497,6 +547,7 @@ function App() {
                 onNewProject={handleNewProject}
                 onGoProjects={() => setActivePage('projects')}
                 onImportDxf={handleImportDxf}
+                onImportPdf={handleImportPdfClick}
               />
             )}
 
@@ -622,7 +673,7 @@ function App() {
           </div>
 
           <footer className={`global-dashboard-footer ${isLockedWorkspaceView ? 'global-dashboard-footer-compact' : ''}`}>
-            <span className="footer-brand">Jet-Grout / Frontend</span>
+            <span className="footer-brand">ZEMSIS / Frontend</span>
             <span><span className="status-dot" />{tr ? 'Arayuz hazir' : 'Interface ready'}</span>
           </footer>
         </div>
