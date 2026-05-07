@@ -10,7 +10,7 @@ function AuthPage({ onLogin, lang }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const API = 'http://localhost:3001/api/auth';
+  const API = '/api/auth';
 
   const handleSubmit = async (e) => {
     e.preventDefault();

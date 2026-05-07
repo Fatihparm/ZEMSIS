@@ -8,7 +8,7 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState(null);
 
-  const API = 'http://localhost:3001/api/projects';
+  const API = '/api/projects';
 
   const fetchProjects = async () => {
     setLoading(true);

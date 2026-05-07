@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 *.dxf
 *.pdf
+*.zip
 
 
 /backend/test-all-excel-scenarios.js

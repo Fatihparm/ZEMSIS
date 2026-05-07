@@ -9,7 +9,7 @@ function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, proj
   const [error, setError] = useState('');
   const [saveMode, setSaveMode] = useState(currentProjectId ? 'update' : 'new');
 
-  const API = 'http://localhost:3001/api/projects';
+  const API = '/api/projects';
 
   const handleSave = async (e) => {
     e.preventDefault();

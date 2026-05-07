@@ -10,7 +10,7 @@ import SaveProjectModal from './components/SaveProjectModal';
 import { generatePdfReport, parsePdfReport } from './utils/pdfReport';
 import './App.css';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 const translations = {
   en: {
