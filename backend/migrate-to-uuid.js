@@ -26,10 +26,7 @@ async function run() {
     await client.query('DROP TABLE IF EXISTS users CASCADE');
     console.log('🗑️  Old tables dropped');
 
-    // Enable pgcrypto for gen_random_uuid()
-    await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
-
-    // Recreate with UUID keys
+    // Recreate with UUID keys (gen_random_uuid() is built-in since PostgreSQL 13)
     await client.query(`
       CREATE TABLE users (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
