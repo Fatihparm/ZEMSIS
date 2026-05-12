@@ -16,8 +16,11 @@ async function migrate() {
   const client = await pool.connect();
   try {
     await client.query(`
+      -- Enable pgcrypto for gen_random_uuid()
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
       CREATE TABLE IF NOT EXISTS users (
-        id            SERIAL PRIMARY KEY,
+        id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email         VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         full_name     VARCHAR(100) NOT NULL,
@@ -25,8 +28,8 @@ async function migrate() {
       );
 
       CREATE TABLE IF NOT EXISTS projects (
-        id            SERIAL PRIMARY KEY,
-        user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id       UUID REFERENCES users(id) ON DELETE CASCADE,
         name          VARCHAR(255) NOT NULL,
         description   TEXT DEFAULT '',
         parameters    JSONB NOT NULL DEFAULT '{}',

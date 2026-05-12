@@ -207,20 +207,27 @@ function App() {
   const tr = lang === 'tr';
 
   useEffect(() => {
-    if (token) {
+    // user is already hydrated from localStorage — no network request needed.
+    // Only hit /me when a token exists but user info is somehow missing.
+    if (token && !user) {
       fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.json())
         .then(data => {
           if (!data.success) handleLogout();
-          else setUser(data.user);
+          else {
+            setUser(data.user);
+            localStorage.setItem('jg_user', JSON.stringify(data.user));
+          }
         })
         .catch(() => handleLogout());
     }
   }, []);
 
   const handleLogin = (newToken, newUser) => {
+    localStorage.setItem('jg_token', newToken);
+    localStorage.setItem('jg_user', JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
     setActivePage('home');
