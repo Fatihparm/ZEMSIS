@@ -200,6 +200,10 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
     }
     .subtitle { text-align: center; font-size: 13pt; margin-top: 4pt; }
     .doc-info { text-align: center; font-size: 10pt; color: #555; margin-top: 8pt; }
+    .w60 { width: 60%; }
+    .w55 { width: 55%; }
+    .w25 { width: 25%; }
+    .w20 { width: 20%; }
   </style>
 </head>
 <body>
@@ -230,7 +234,7 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
 <!-- ═══════════════ İÇİNDEKİLER ═══════════════ -->
 <h2>İÇİNDEKİLER</h2>
 <table style="border:none;">
-  <tr style="border:none;"><td style="border:none; width:60%;">1. Giriş</td><td style="border:none; text-align:right;">3</td></tr>
+  <tr style="border:none;"><td class="w60" style="border:none;">1. Giriş</td><td style="border:none; text-align:right;">3</td></tr>
   <tr style="border:none;"><td style="border:none;">2. İnceleme Alanı Hakkında Bilgiler</td><td style="border:none; text-align:right;">3</td></tr>
   <tr style="border:none;"><td style="border:none;">3. Yapı Hakkında Bilgiler</td><td style="border:none; text-align:right;">4</td></tr>
   <tr style="border:none;"><td style="border:none;">4. Mevcut Zemin Araştırmaları</td><td style="border:none; text-align:right;">4</td></tr>
@@ -271,9 +275,9 @@ ${sections.soilProfile || '<p><em>[Bu alan kullanıcı tarafından doldurulacakt
 </div>
 <table>
   <tr>
-    <th style="width:55%;">Parametre</th>
-    <th style="width:25%;">Değer</th>
-    <th style="width:20%;">Birim</th>
+    <th class="w55">Parametre</th>
+    <th class="w25">Değer</th>
+    <th class="w20">Birim</th>
   </tr>
   ${paramTableRows}
 </table>
@@ -387,9 +391,9 @@ function buildResultSections(results) {
 <h3>${esc(label)}</h3>
 <table>
   <tr>
-    <th style="width:55%;">Parametre</th>
-    <th style="width:25%;">Değer</th>
-    <th style="width:20%;">Birim</th>
+    <th class="w55">Parametre</th>
+    <th class="w25">Değer</th>
+    <th class="w20">Birim</th>
   </tr>
   ${rows}
 </table>`;
