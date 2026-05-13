@@ -96,7 +96,14 @@ router.post('/generate/:projectId', async (req, res) => {
     const sections = draftResult.rows.length > 0 ? draftResult.rows[0].sections : {};
 
     // 3. HTML raporu oluştur (kilitli veriler doğrudan DB'den)
-    const html = buildReportHTML({ project, lockedParams, lockedResults, sections });
+    let html = buildReportHTML({ project, lockedParams, lockedResults, sections });
+
+    // TEMİZLİK: MS Word'den kopyala-yapıştır yapıldığında gelen geçersiz namespace'leri temizle
+    // (html-to-docx xmlbuilder2 hatasını önlemek için: "Invalid XML name: @w")
+    html = html.replace(/\s+xmlns:[a-zA-Z0-9_-]+="[^"]*"/gi, '');
+    html = html.replace(/\s+[owvm]:[a-zA-Z0-9_-]+="[^"]*"/gi, '');
+    html = html.replace(/<\/?(?:o|w|v|m):[^>]*>/gi, '');
+    html = html.replace(/@w/g, 'w'); // Ekstra güvenlik
 
     // 4. HTML → DOCX dönüşümü
     const docxBuffer = await HTMLtoDOCX(html, null, {
