@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import './RichTextEditor.css';
@@ -7,12 +8,16 @@ import './RichTextEditor.css';
  * Yalnızca "sarı alan" — kullanıcının serbestçe düzenlediği bölümler için kullanılır.
  */
 function RichTextEditor({ value, onChange, placeholder = 'Buraya yazın...' }) {
+  // CKEditor's `data` prop should only be set initially.
+  // Constantly changing it causes the cursor to jump or the editor to lose focus.
+  const [initialData] = useState(value || '');
+
   return (
     <div className="rich-editor-wrapper">
       <div className="rich-editor-badge">✏️ Düzenlenebilir Alan</div>
       <CKEditor
         editor={ClassicEditor}
-        data={value || ''}
+        data={initialData}
         config={{
           placeholder,
           language: 'tr',
