@@ -1,46 +1,51 @@
-import { useState } from 'react';
-import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { useEffect, useRef } from 'react';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 import './RichTextEditor.css';
 
 /**
- * CKEditor 5 tabanlı zengin metin editörü.
+ * Quill tabanlı zengin metin editörü.
  * Yalnızca "sarı alan" — kullanıcının serbestçe düzenlediği bölümler için kullanılır.
  */
 function RichTextEditor({ value, onChange, placeholder = 'Buraya yazın...' }) {
-  // CKEditor's `data` prop should only be set initially.
-  // Constantly changing it causes the cursor to jump or the editor to lose focus.
-  const [initialData] = useState(value || '');
+  const editorRef = useRef(null);
+  const quillRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current && !quillRef.current) {
+      // Init Quill
+      quillRef.current = new Quill(editorRef.current, {
+        theme: 'snow',
+        placeholder: placeholder,
+        modules: {
+          toolbar: [
+            [{ 'header': [3, 4, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'indent': '-1'}, { 'indent': '+1' }],
+            ['blockquote', 'link'],
+            ['clean']
+          ]
+        }
+      });
+
+      // Set initial HTML content safely
+      if (value) {
+        const delta = quillRef.current.clipboard.convert({ html: value });
+        quillRef.current.setContents(delta, 'silent');
+      }
+
+      // Listen for text changes
+      quillRef.current.on('text-change', () => {
+        onChange(quillRef.current.root.innerHTML);
+      });
+    }
+  }, []); // Run once on mount
 
   return (
     <div className="rich-editor-wrapper">
       <div className="rich-editor-badge">✏️ Düzenlenebilir Alan</div>
-      <CKEditor
-        editor={ClassicEditor}
-        data={initialData}
-        config={{
-          placeholder,
-          language: 'tr',
-          toolbar: [
-            'heading', '|',
-            'bold', 'italic', 'underline', '|',
-            'bulletedList', 'numberedList', '|',
-            'outdent', 'indent', '|',
-            'blockQuote', 'link', '|',
-            'undo', 'redo',
-          ],
-          heading: {
-            options: [
-              { model: 'paragraph', title: 'Paragraf', class: 'ck-heading_paragraph' },
-              { model: 'heading3', view: 'h3', title: 'Alt Başlık', class: 'ck-heading_heading3' },
-              { model: 'heading4', view: 'h4', title: 'Küçük Başlık', class: 'ck-heading_heading4' },
-            ],
-          },
-        }}
-        onChange={(_event, editor) => {
-          onChange(editor.getData());
-        }}
-      />
+      <div ref={editorRef} className="quill-container" />
     </div>
   );
 }
