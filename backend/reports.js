@@ -118,7 +118,7 @@ router.post('/generate/:projectId', async (req, res) => {
       title: project.name || 'Geoteknik Rapor',
       orientation: 'portrait',
       pageSize: { width: 12240, height: 15840 }, // A4
-      margins: { top: 1440, right: 1440, bottom: 1440, left: 1800 },
+      margins: { top: 1440, right: 1440, bottom: 1440, left: 1800, header: 720, footer: 720, gutter: 0 },
       font: 'Times New Roman',
       fontSize: 24, // 12pt (half-points)
       complexScriptFontSize: 24,
