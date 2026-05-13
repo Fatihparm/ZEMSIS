@@ -1,0 +1,46 @@
+.rich-editor-wrapper {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #f59e0b;
+  background: #fffbeb;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.08);
+}
+
+.rich-editor-badge {
+  background: #f59e0b;
+  color: #1a1400;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* CKEditor içsel stiller */
+.rich-editor-wrapper .ck-editor__top .ck-toolbar {
+  background: #fef3c7;
+  border: none;
+  border-bottom: 1px solid #fbbf24;
+  padding: 4px 8px;
+}
+
+.rich-editor-wrapper .ck-editor__editable {
+  min-height: 160px;
+  background: #fffbeb;
+  border: none !important;
+  box-shadow: none !important;
+  color: #1c1917;
+  font-family: 'Times New Roman', serif;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 12px 16px;
+}
+
+.rich-editor-wrapper .ck-editor__editable:focus {
+  outline: none;
+}
+
+.rich-editor-wrapper .ck.ck-toolbar__separator {
+  background: #fbbf24;
+}

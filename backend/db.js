@@ -40,6 +40,19 @@ async function migrate() {
 
       -- Index for fast user-based lookups
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+
+      -- ── Report drafts (kullanıcı metin taslakları) ──────────
+      CREATE TABLE IF NOT EXISTS report_drafts (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id  UUID REFERENCES projects(id) ON DELETE CASCADE,
+        user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+        sections    JSONB NOT NULL DEFAULT '{}',
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(project_id, user_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_report_drafts_project ON report_drafts(project_id);
     `);
     console.log('✅ Database tables ready');
   } catch (err) {

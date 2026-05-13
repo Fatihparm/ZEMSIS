@@ -1,0 +1,148 @@
+.locked-data-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Banner ── */
+.locked-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, #1e1a0e 0%, #2a2010 100%);
+  border: 1px solid #b45309;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.locked-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.locked-banner strong {
+  display: block;
+  color: #fbbf24;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: 0.03em;
+}
+
+.locked-banner p {
+  color: #a8956a;
+  font-size: 0.75rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Section ── */
+.locked-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.locked-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.locked-chip {
+  background: #b45309;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+/* ── Table ── */
+.locked-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.locked-table thead tr {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.locked-table th {
+  padding: 7px 12px;
+  text-align: left;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.locked-table th:nth-child(2),
+.locked-table th:nth-child(3) {
+  text-align: right;
+}
+
+.locked-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s;
+}
+
+.locked-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.locked-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.locked-table td {
+  padding: 7px 12px;
+  color: #cbd5e1;
+}
+
+.locked-val {
+  text-align: right !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #a78bfa !important;
+  font-weight: 600;
+}
+
+.locked-unit {
+  text-align: right !important;
+  color: #64748b !important;
+  font-size: 0.72rem;
+  width: 60px;
+}
+
+/* ── Empty State ── */
+.locked-empty {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px dashed #b45309;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.locked-empty p {
+  color: #a8956a;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  margin: 0;
+}

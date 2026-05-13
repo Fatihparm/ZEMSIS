@@ -6,6 +6,7 @@ const calculations = require('./calculations');
 const { migrate } = require('./db');
 const { router: authRouter } = require('./auth');
 const projectsRouter = require('./projects');
+const reportsRouter = require('./reports');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,9 +15,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// ── Auth & Project routes ───────────────────────────────────
+// ── Auth & Project & Report routes ───────────────────────────
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/reports', reportsRouter);
 
 // ── Health check ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

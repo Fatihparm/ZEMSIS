@@ -8,6 +8,7 @@ import AuthPage from './components/AuthPage';
 import ProjectsPage from './components/ProjectsPage';
 import SaveProjectModal from './components/SaveProjectModal';
 import { generatePdfReport, parsePdfReport } from './utils/pdfReport';
+import ReportEditorPage from './components/ReportEditorPage';
 import './App.css';
 
 const API_URL = '/api';
@@ -370,10 +371,11 @@ function App() {
   ];
 
   const workspaceTabs = [
-    { key: 'parameters', icon: '◫', label: tr ? 'Parametreler' : 'Parameters' },
+    { key: 'parameters', icon: '▫', label: tr ? 'Parametreler' : 'Parameters' },
     { key: 'soilSection', icon: '▤', label: tr ? 'Zemin ve Kesit' : 'Soil & Section' },
     { key: 'planView', icon: '✎', label: tr ? 'Cizim' : 'Drawing' },
     { key: 'results', icon: '◌', label: tr ? 'Sonuclar' : 'Results' },
+    { key: 'report', icon: '📄', label: tr ? 'Rapor' : 'Report' },
   ];
 
   const currentViewTitle = (() => {
@@ -435,7 +437,7 @@ function App() {
     .toUpperCase();
 
   const isLockedWorkspaceView =
-    activePage === 'workspace' && (activeTab === 'soilSection' || activeTab === 'planView');
+    activePage === 'workspace' && (activeTab === 'soilSection' || activeTab === 'planView' || activeTab === 'report');
 
   return (
     <div className="dashboard-container">
@@ -673,6 +675,19 @@ function App() {
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'report' && (
+                  <div className="page-container page-container-full" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <ReportEditorPage
+                      projectId={currentProjectId}
+                      projectName={currentProjectName}
+                      parameters={parameters}
+                      results={results}
+                      token={token}
+                      lang={lang}
+                    />
                   </div>
                 )}
               </>
