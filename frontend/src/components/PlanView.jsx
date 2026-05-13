@@ -110,6 +110,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         initialDrawingData?.sectionLines || []
     );
     const [sectionStart, setSectionStart] = useState(null); // temp start point while drawing
+    const [sectionEnd, setSectionEnd] = useState(null);     // temp end point — waiting for view direction click
     const [activeSectionId, setActiveSectionId] = useState(null);
 
     // DXF import modal
@@ -143,7 +144,8 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     id: sl.id,
                     start: { x: sl.start.x, y: sl.start.y },
                     end: { x: sl.end.x, y: sl.end.y },
-                    label: sl.label
+                    label: sl.label,
+                    viewSide: sl.viewSide ?? 1
                 })),
                 columnPositions: columnPositions.map(c => ({ id: c.id, x: c.x, y: c.y })),
                 columnsAutoSync,
@@ -180,7 +182,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setUndoStack(prev => [...prev, {
             polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
             activePolygonId,
-            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end }, viewSide: sl.viewSide ?? 1 })),
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
@@ -195,7 +197,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setRedoStack(r => [...r, {
             polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
             activePolygonId,
-            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end }, viewSide: sl.viewSide ?? 1 })),
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
@@ -224,7 +226,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setUndoStack(u => [...u, {
             polygons: polygons.map(p => ({ ...p, vertices: p.vertices.map(v => ({ ...v })) })),
             activePolygonId,
-            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end } })),
+            sectionLines: sectionLines.map(sl => ({ ...sl, start: { ...sl.start }, end: { ...sl.end }, viewSide: sl.viewSide ?? 1 })),
             columnPositions: columnPositions.map(c => ({ ...c })),
             columnsAutoSync,
         }]);
@@ -555,8 +557,9 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             const isActive = sl.id === activeSectionId;
             const pStart = worldToScreen(sl.start.x, sl.start.y, metrics);
             const pEnd = worldToScreen(sl.end.x, sl.end.y, metrics);
+            const viewSide = sl.viewSide ?? 1;
 
-            // Line
+            // Dashed line
             ctx.strokeStyle = color;
             ctx.lineWidth = isActive ? 3 : 2;
             ctx.setLineDash([10, 5]);
@@ -566,31 +569,33 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Arrow heads perpendicular to line direction
+            // Direction vectors
             const dx = pEnd.x - pStart.x;
             const dy = pEnd.y - pStart.y;
             const len = Math.hypot(dx, dy);
             if (len < 1) return;
             const ux = dx / len;
             const uy = dy / len;
-            const nx = -uy;
-            const ny = ux;
-            const arrowLen = 12;
+            // Normal: nx=-uy, ny=ux is +1 (left of travel), viewSide scales it
+            const nx = -uy * viewSide;
+            const ny = ux * viewSide;
+            const arrowLen = 14;
+            const arrowHalf = 6;
 
-            // Start arrow (perpendicular)
+            // Arrow at start — points in view direction (nx, ny)
             ctx.fillStyle = color;
             ctx.beginPath();
-            ctx.moveTo(pStart.x + nx * arrowLen, pStart.y + ny * arrowLen);
-            ctx.lineTo(pStart.x - nx * arrowLen, pStart.y - ny * arrowLen);
-            ctx.lineTo(pStart.x - ux * 6, pStart.y - uy * 6);
+            ctx.moveTo(pStart.x + nx * arrowLen, pStart.y + ny * arrowLen);          // tip
+            ctx.lineTo(pStart.x + ux * arrowHalf, pStart.y + uy * arrowHalf);        // tail right
+            ctx.lineTo(pStart.x - ux * arrowHalf, pStart.y - uy * arrowHalf);        // tail left
             ctx.closePath();
             ctx.fill();
 
-            // End arrow (perpendicular)
+            // Arrow at end — points in view direction
             ctx.beginPath();
-            ctx.moveTo(pEnd.x + nx * arrowLen, pEnd.y + ny * arrowLen);
-            ctx.lineTo(pEnd.x - nx * arrowLen, pEnd.y - ny * arrowLen);
-            ctx.lineTo(pEnd.x + ux * 6, pEnd.y + uy * 6);
+            ctx.moveTo(pEnd.x + nx * arrowLen, pEnd.y + ny * arrowLen);              // tip
+            ctx.lineTo(pEnd.x + ux * arrowHalf, pEnd.y + uy * arrowHalf);            // tail right
+            ctx.lineTo(pEnd.x - ux * arrowHalf, pEnd.y - uy * arrowHalf);            // tail left
             ctx.closePath();
             ctx.fill();
 
@@ -600,7 +605,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ctx.textBaseline = 'middle';
 
             const labelOffset = 22;
-            // Start label
+            // Start label (behind start)
             const slx = pStart.x - ux * labelOffset;
             const sly = pStart.y - uy * labelOffset;
             ctx.fillStyle = 'rgba(0,0,0,0.75)';
@@ -613,7 +618,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ctx.fillStyle = color;
             ctx.fillText(sl.label.split('-')[0], slx, sly);
 
-            // End label
+            // End label (beyond end)
             const elx = pEnd.x + ux * labelOffset;
             const ely = pEnd.y + uy * labelOffset;
             ctx.fillStyle = 'rgba(0,0,0,0.75)';
@@ -625,10 +630,40 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ctx.stroke();
             ctx.fillStyle = color;
             ctx.fillText(sl.label.split('-')[1], elx, ely);
+
+            // Red rings on columns that are intersected by this section line
+            if (columnPositions.length > 0) {
+                const slDx = sl.end.x - sl.start.x;
+                const slDy = sl.end.y - sl.start.y;
+                const slLen = Math.hypot(slDx, slDy);
+                if (slLen > 0.01) {
+                    const slUx = slDx / slLen;
+                    const slUy = slDy / slLen;
+                    const slNx = -slUy;
+                    const slNy = slUx;
+                    const halfD = D / 2;
+                    const colRpx = Math.max(halfD * ppm, 8);
+                    columnPositions.forEach(col => {
+                        const cx = col.x - sl.start.x;
+                        const cy = col.y - sl.start.y;
+                        const perpDist = cx * slNx + cy * slNy;
+                        if (Math.abs(perpDist) <= halfD + 0.01) {
+                            const p = worldToScreen(col.x, col.y, metrics);
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, colRpx + 4, 0, Math.PI * 2);
+                            ctx.strokeStyle = color;
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([3, 2]);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+                    });
+                }
+            }
         });
 
-        // ── Section preview line (while drawing) ──
-        if (drawingMode === 'section' && sectionStart) {
+        // ── Section preview line (while drawing — tık 1 → 2) ──
+        if (drawingMode === 'section' && sectionStart && !sectionEnd) {
             const pS = worldToScreen(sectionStart.x, sectionStart.y, metrics);
             const pM = worldToScreen(mouseWorld.x, mouseWorld.y, metrics);
             ctx.strokeStyle = 'rgba(79, 195, 247, 0.6)';
@@ -647,6 +682,84 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             ctx.fillText(nextLabel, (pS.x + pM.x) / 2, Math.min(pS.y, pM.y) - 8);
+        }
+
+        // ── View direction preview (tık 2 → 3: fare hangi tarafa bakıyor) ──
+        if (drawingMode === 'section' && sectionStart && sectionEnd) {
+            const pS = worldToScreen(sectionStart.x, sectionStart.y, metrics);
+            const pE = worldToScreen(sectionEnd.x, sectionEnd.y, metrics);
+
+            // Draw fixed line
+            ctx.strokeStyle = 'rgba(79, 195, 247, 0.9)';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([10, 4]);
+            ctx.beginPath();
+            ctx.moveTo(pS.x, pS.y);
+            ctx.lineTo(pE.x, pE.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Compute which side mouse is on
+            const lineDx = pE.x - pS.x;
+            const lineDy = pE.y - pS.y;
+            const lineLen = Math.hypot(lineDx, lineDy);
+            if (lineLen > 1) {
+                const lUx = lineDx / lineLen;
+                const lUy = lineDy / lineLen;
+                // normal (left of travel = +1)
+                const lNx = -lUy;
+                const lNy = lUx;
+
+                // mouse relative to line start
+                const pM = worldToScreen(mouseWorld.x, mouseWorld.y, metrics);
+                const mx = pM.x - pS.x;
+                const my = pM.y - pS.y;
+                const perpMouse = mx * lNx + my * lNy;
+                const side = perpMouse >= 0 ? 1 : -1;
+                const dirNx = lNx * side;
+                const dirNy = lNy * side;
+
+                // Draw preview arrows showing view direction at midpoint
+                const midX = (pS.x + pE.x) / 2;
+                const midY = (pS.y + pE.y) / 2;
+                const arrowL = 30;
+                ctx.fillStyle = 'rgba(79, 195, 247, 0.9)';
+                ctx.strokeStyle = 'rgba(79, 195, 247, 0.9)';
+                ctx.lineWidth = 2;
+                // shaft
+                ctx.beginPath();
+                ctx.moveTo(midX, midY);
+                ctx.lineTo(midX + dirNx * arrowL, midY + dirNy * arrowL);
+                ctx.stroke();
+                // arrowhead
+                ctx.beginPath();
+                ctx.moveTo(midX + dirNx * arrowL, midY + dirNy * arrowL);
+                ctx.lineTo(midX + dirNx * (arrowL - 10) + lUx * 5, midY + dirNy * (arrowL - 10) + lUy * 5);
+                ctx.lineTo(midX + dirNx * (arrowL - 10) - lUx * 5, midY + dirNy * (arrowL - 10) - lUy * 5);
+                ctx.closePath();
+                ctx.fill();
+
+                // also draw at start and end
+                [pS, pE].forEach(pt => {
+                    ctx.beginPath();
+                    ctx.moveTo(pt.x + dirNx * 8, pt.y + dirNy * 8);
+                    ctx.lineTo(pt.x + dirNx * 22, pt.y + dirNy * 22);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(pt.x + dirNx * 22, pt.y + dirNy * 22);
+                    ctx.lineTo(pt.x + dirNx * 14 + lUx * 4, pt.y + dirNy * 14 + lUy * 4);
+                    ctx.lineTo(pt.x + dirNx * 14 - lUx * 4, pt.y + dirNy * 14 - lUy * 4);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+
+                // Label hint
+                ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+                ctx.fillStyle = '#4fc3f7';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(tr ? 'Bakış yönünü seç' : 'Click view direction', midX + dirNx * 45, midY + dirNy * 45);
+            }
         }
 
         // ── Edge dimension labels ──
@@ -708,7 +821,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             }
         });
 
-    }, [polygons, activePolygonId, vertices, isClosed, activePolygon, drawingMode, mouseWorld, hoveredVertex, selectedVertex, zoom, pan, D, s, rectStart, sectionLines, sectionStart, activeSectionId, columnPositions, selectedColumn, hoveredColumn, getCanvasMetrics, screenToWorld, worldToScreen]);
+    }, [polygons, activePolygonId, vertices, isClosed, activePolygon, drawingMode, mouseWorld, hoveredVertex, selectedVertex, zoom, pan, D, s, rectStart, sectionLines, sectionStart, sectionEnd, activeSectionId, columnPositions, selectedColumn, hoveredColumn, tr, getCanvasMetrics, screenToWorld, worldToScreen]);
 
     // ── Resize observer ──
     useEffect(() => {
@@ -785,11 +898,16 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             return;
         }
 
-        // Right click -> undo last point (draw/section mode only)
+        // Right click -> cancel current section drawing step
         if (e.button === 2) {
             e.preventDefault();
-            if (drawingMode === 'section' && sectionStart) {
-                setSectionStart(null);
+            if (drawingMode === 'section') {
+                if (sectionEnd) {
+                    // Cancel direction pick, go back to waiting for end
+                    setSectionEnd(null);
+                } else if (sectionStart) {
+                    setSectionStart(null);
+                }
             } else if (!isClosed && vertices.length > 0 && drawingMode === 'draw') {
                 pushUndo();
                 setPolygons(prev => prev.map(p => p.id === activePolygonId ? { ...p, vertices: p.vertices.slice(0, -1) } : p));
@@ -880,27 +998,49 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                 const world = screenToWorld(sx, sy, metrics);
                 const wx = snapToGrid(world.x);
                 const wy = snapToGrid(world.y);
+
                 if (!sectionStart) {
+                    // Tık 1: Başlangıç noktası
                     setSectionStart({ x: wx, y: wy });
-                } else {
-                    // Complete the section line
+                } else if (!sectionEnd) {
+                    // Tık 2: Bitiş noktası
                     const dist = Math.hypot(wx - sectionStart.x, wy - sectionStart.y);
                     if (dist > 0.1) {
-                        pushUndo();
-                        const newSection = {
-                            id: `section-${Date.now()}`,
-                            start: sectionStart,
-                            end: { x: wx, y: wy },
-                            label: sectionLabel(sectionLines.length)
-                        };
-                        setSectionLines(prev => [...prev, newSection]);
-                        setActiveSectionId(newSection.id);
+                        setSectionEnd({ x: wx, y: wy });
                     }
+                } else {
+                    // Tık 3: Bakış yönü — farenin hangi tarafında olduğunu hesapla
+                    const lineDx = sectionEnd.x - sectionStart.x;
+                    const lineDy = sectionEnd.y - sectionStart.y;
+                    const lineLen = Math.hypot(lineDx, lineDy);
+                    let viewSide = 1;
+                    if (lineLen > 0.001) {
+                        const lUx = lineDx / lineLen;
+                        const lUy = lineDy / lineLen;
+                        const lNx = -lUy;  // normal (left = +1)
+                        const lNy = lUx;
+                        const mouseWorld2 = screenToWorld(sx, sy, metrics);
+                        const cx = mouseWorld2.x - sectionStart.x;
+                        const cy = mouseWorld2.y - sectionStart.y;
+                        const perpMouse = cx * lNx + cy * lNy;
+                        viewSide = perpMouse >= 0 ? 1 : -1;
+                    }
+                    pushUndo();
+                    const newSection = {
+                        id: `section-${Date.now()}`,
+                        start: sectionStart,
+                        end: sectionEnd,
+                        label: sectionLabel(sectionLines.length),
+                        viewSide
+                    };
+                    setSectionLines(prev => [...prev, newSection]);
+                    setActiveSectionId(newSection.id);
                     setSectionStart(null);
+                    setSectionEnd(null);
                 }
             }
         }
-    }, [drawingMode, isClosed, vertices, activePolygon, activePolygonId, polygons, pan, rectStart, sectionStart, sectionLines, findVertex, findColumn, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
+    }, [drawingMode, isClosed, vertices, activePolygon, activePolygonId, polygons, pan, rectStart, sectionStart, sectionEnd, sectionLines, findVertex, findColumn, findSectionLine, getCanvasMetrics, screenToWorld, snapToGrid, worldToScreen, pushUndo]);
 
     const handleMouseMove = useCallback((e) => {
         const canvas = canvasRef.current;
@@ -1068,6 +1208,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setSelectedColumn(null);
         setRectStart(null);
         setSectionStart(null);
+        setSectionEnd(null);
 
         if (data.sectionLines && data.sectionLines.length > 0) {
             setSectionLines(data.sectionLines);
@@ -1362,8 +1503,8 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     {/* Section cut button */}
                     <button
                         className={`toolbar-btn section-cut-action-btn ${drawingMode === 'section' ? 'active' : ''}`}
-                        onClick={() => { setDrawingMode('section'); setRectStart(null); setSectionStart(null); }}
-                        data-tooltip={tr ? 'Kesit Al — 2 tıkla kesit çizgisi tanımla' : 'Section Cut — 2 clicks to define section line'}
+                        onClick={() => { setDrawingMode('section'); setRectStart(null); setSectionStart(null); setSectionEnd(null); }}
+                        data-tooltip={tr ? 'Kesit Al — 3 tıkla: baş, bitiş, bakış yönü' : 'Section Cut — 3 clicks: start, end, view direction'}
                         disabled={!polygons.some(p => p.isClosed && p.vertices.length >= 3)}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg>
@@ -1445,19 +1586,20 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         </div>
                     )}
 
-                    {/* Section mode hint */}
+                    {/* Section mode hint — 3 aşama */}
                     {drawingMode === 'section' && !sectionStart && (
                         <div className="plan-section-hint">
-                            {tr
-                                ? 'Kesit başlangıç noktasını tıklayın'
-                                : 'Click to set section start point'}
+                            {tr ? '① Kesit başlangıç noktasını tıklayın' : '① Click to set section start point'}
                         </div>
                     )}
-                    {drawingMode === 'section' && sectionStart && (
+                    {drawingMode === 'section' && sectionStart && !sectionEnd && (
                         <div className="plan-section-hint">
-                            {tr
-                                ? 'Kesit bitiş noktasını tıklayın (sağ tık: iptal)'
-                                : 'Click to set section end point (right-click: cancel)'}
+                            {tr ? '② Kesit bitiş noktasını tıklayın (sağ tık: iptal)' : '② Click to set section end point (right-click: cancel)'}
+                        </div>
+                    )}
+                    {drawingMode === 'section' && sectionStart && sectionEnd && (
+                        <div className="plan-section-hint" style={{ background: 'rgba(79,195,247,0.18)', borderColor: '#4fc3f7', color: '#4fc3f7' }}>
+                            {tr ? '③ Bakış yönünü tıklayın (sağ tık: geri al)' : '③ Click to set view direction (right-click: go back)'}
                         </div>
                     )}
                 </div>

@@ -16,13 +16,17 @@ const soilNames = {
 };
 
 /**
- * Compute which columns are intersected by the section line.
- * Returns columns sorted by their projection distance along the line.
- * Each result contains { x, y, t, perpDist } where:
- *   t = projection distance from P1 (metres)
- *   perpDist = perpendicular offset from line (metres, signed)
+ * Compute which columns are visible from the section's view direction.
+ * Returns all columns on the viewSide of the line, sorted by projection distance (t).
+ * Each result: { x, y, t, perpDist, intersects }
+ *   t          = projection along line from start (metres) — used as X axis
+ *   perpDist   = signed perpendicular offset (positive = left of start→end)
+ *   intersects = true when |perpDist| <= D/2 + tolerance (drawn red)
+ *
+ * viewSide: +1 = left side of travel (perpDist > 0),
+ *           -1 = right side (perpDist < 0)
  */
-function computeSectionColumns(sectionLine, allColumns, D) {
+function computeSectionColumns(sectionLine, allColumns, D, viewSide = 1) {
     const { start, end } = sectionLine;
     const dx = end.x - start.x;
     const dy = end.y - start.y;
@@ -31,7 +35,7 @@ function computeSectionColumns(sectionLine, allColumns, D) {
 
     const ux = dx / len;
     const uy = dy / len;
-    const nx = -uy;
+    const nx = -uy;   // left normal (+1 side)
     const ny = ux;
     const halfD = D / 2;
 
@@ -40,9 +44,17 @@ function computeSectionColumns(sectionLine, allColumns, D) {
         const cx = col.x - start.x;
         const cy = col.y - start.y;
         const t = cx * ux + cy * uy;           // projection along line
-        const perpDist = cx * nx + cy * ny;     // perpendicular distance
-        if (Math.abs(perpDist) <= halfD + 0.01) {
-            result.push({ x: col.x, y: col.y, t, perpDist });
+        const perpDist = cx * nx + cy * ny;     // signed perpendicular distance
+        // Show columns on the viewSide (perpDist * viewSide >= 0)
+        // Also include those very close to the line (intersect zone)
+        if (perpDist * viewSide >= -(halfD + 0.01)) {
+            result.push({
+                x: col.x,
+                y: col.y,
+                t,
+                perpDist,
+                intersects: Math.abs(perpDist) <= halfD + 0.01
+            });
         }
     });
 
@@ -148,13 +160,14 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
     const foundationT = parseFloat(extraParams?.foundationThickness) || 0;
     const fillH = parseFloat(extraParams?.fillHeight) || 0;
     const tr = lang === 'tr';
+    const viewSide = sectionLine?.viewSide ?? 1;
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || !sectionLine) return;
 
-        // Compute section columns
-        const sectionCols = computeSectionColumns(sectionLine, columns, D);
+        // Compute section columns (viewSide-aware)
+        const sectionCols = computeSectionColumns(sectionLine, columns, D, viewSide);
 
         // Total section length
         const lineLen = Math.sqrt(
@@ -347,6 +360,7 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
             const colHalfW = wScale(D) / 2;
             const colLeft = colCenterX - colHalfW;
             const colW = colHalfW * 2;
+            const isIntersect = col.intersects;
 
             // Shadow
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -354,21 +368,30 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
 
             // Column gradient
             const grad = ctx.createLinearGradient(colLeft, colTopY, colLeft + colW, colTopY);
-            grad.addColorStop(0, 'rgba(100, 181, 246, 0.7)');
-            grad.addColorStop(0.3, 'rgba(144, 202, 249, 0.85)');
-            grad.addColorStop(0.7, 'rgba(144, 202, 249, 0.85)');
-            grad.addColorStop(1, 'rgba(100, 181, 246, 0.7)');
+            if (isIntersect) {
+                // Red: column directly cut by the section plane
+                grad.addColorStop(0, 'rgba(239, 83, 80, 0.75)');
+                grad.addColorStop(0.3, 'rgba(255, 120, 118, 0.90)');
+                grad.addColorStop(0.7, 'rgba(255, 120, 118, 0.90)');
+                grad.addColorStop(1, 'rgba(239, 83, 80, 0.75)');
+            } else {
+                // Blue: column visible but not cut
+                grad.addColorStop(0, 'rgba(100, 181, 246, 0.55)');
+                grad.addColorStop(0.3, 'rgba(144, 202, 249, 0.70)');
+                grad.addColorStop(0.7, 'rgba(144, 202, 249, 0.70)');
+                grad.addColorStop(1, 'rgba(100, 181, 246, 0.55)');
+            }
 
             ctx.fillStyle = grad;
             ctx.fillRect(colLeft, colTopY, colW, colHeight);
 
             // Column border
-            ctx.strokeStyle = '#42a5f5';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = isIntersect ? '#ef5350' : '#42a5f5';
+            ctx.lineWidth = isIntersect ? 2 : 1.5;
             ctx.strokeRect(colLeft, colTopY, colW, colHeight);
 
             // Column bottom line
-            ctx.strokeStyle = '#1e88e5';
+            ctx.strokeStyle = isIntersect ? '#c62828' : '#1e88e5';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(colLeft, colTopY + colHeight);
@@ -376,7 +399,7 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
             ctx.stroke();
 
             // Cross-hatch pattern (concrete)
-            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.strokeStyle = isIntersect ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.12)';
             ctx.lineWidth = 0.5;
             const step = 8;
             for (let py = colTopY; py < colTopY + colHeight; py += step) {
@@ -490,24 +513,34 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
 
-            // Jet Grout legend
-            ctx.fillStyle = 'rgba(144, 202, 249, 0.7)';
+            // Legend
+            ctx.fillStyle = 'rgba(100, 181, 246, 0.55)';
             ctx.fillRect(offsetX, legendY, 14, 10);
             ctx.strokeStyle = '#42a5f5';
             ctx.lineWidth = 1;
             ctx.strokeRect(offsetX, legendY, 14, 10);
             ctx.fillStyle = '#e0e0e0';
-            ctx.fillText('Jet Grout', offsetX + 20, legendY + 5);
+            ctx.fillText(tr ? 'Jet Grout (görünür)' : 'Jet Grout (visible)', offsetX + 20, legendY + 5);
+
+            // Intersect legend
+            ctx.fillStyle = 'rgba(239, 83, 80, 0.75)';
+            ctx.fillRect(offsetX + 130, legendY, 14, 10);
+            ctx.strokeStyle = '#ef5350';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(offsetX + 130, legendY, 14, 10);
+            ctx.fillStyle = '#ef9a9a';
+            ctx.fillText(tr ? 'Kesit üzerinde' : 'On section plane', offsetX + 150, legendY + 5);
 
             // Column count
+            const intersectCount = sectionCols.filter(c => c.intersects).length;
             const colText = tr
-                ? `${sectionCols.length} kolon kesiliyor`
-                : `${sectionCols.length} columns intersected`;
+                ? `${sectionCols.length} görünür kolon (${intersectCount} kesitte)`
+                : `${sectionCols.length} visible (${intersectCount} on section)`;
             ctx.fillStyle = '#90caf9';
-            ctx.fillText(colText, offsetX + 100, legendY + 5);
+            ctx.fillText(colText, offsetX + 290, legendY + 5);
         }
 
-    }, [sectionLine, columns, parameters, soilLayers, lang, D, H, tr, foundationT, fillH]);
+    }, [sectionLine, columns, parameters, soilLayers, lang, D, H, tr, foundationT, fillH, viewSide]);
 
     // Resize observer
     useEffect(() => {
@@ -532,7 +565,7 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
         );
     }
 
-    const sectionCols = computeSectionColumns(sectionLine, columns, D);
+    const sectionCols = computeSectionColumns(sectionLine, columns, D, viewSide);
     const lineLen = Math.sqrt(
         (sectionLine.end.x - sectionLine.start.x) ** 2 +
         (sectionLine.end.y - sectionLine.start.y) ** 2
