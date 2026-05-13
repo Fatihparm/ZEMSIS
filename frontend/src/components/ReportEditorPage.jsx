@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import RichTextEditor from './RichTextEditor';
 import LockedDataTable from './LockedDataTable';
 import './ReportEditorPage.css';
@@ -20,56 +20,96 @@ const SECTIONS = [
   {
     key: 'intro',
     icon: '1',
-    label: '1. Giriş ve Kapsam',
+    label: '1. Giriş',
     type: 'wysiwyg',
     placeholder: 'Projenin amacı, kapsamı ve genel bilgiler...',
     description: 'Projenin genel tanımı ve çalışmanın kapsamı',
   },
   {
-    key: 'fieldwork',
+    key: 'areaInfo',
     icon: '2',
-    label: '2. Arazi ve Lab Çalışmaları',
+    label: '2. İnceleme Alanı Hakkında Bilgiler',
     type: 'wysiwyg',
-    placeholder: 'Gerçekleştirilen arazi ve laboratuvar çalışmalarının açıklaması...',
-    description: 'Sondaj, SPT, presiyometre vb. çalışmalar',
+    placeholder: 'İnceleme alanının konumu vb...',
+    description: 'İnceleme alanı bilgileri',
+  },
+  {
+    key: 'structureInfo',
+    icon: '3',
+    label: '3. Yapı Hakkında Bilgiler',
+    type: 'wysiwyg',
+    placeholder: 'Yapının kullanım sınıfı vb...',
+    description: 'BKS, BYS ve I katsayıları vb.',
+  },
+  {
+    key: 'existingResearch',
+    icon: '4',
+    label: '4. Mevcut Zemin Araştırmaları',
+    type: 'wysiwyg',
+    placeholder: 'Arazi ve Laboratuvar çalışmaları...',
+    description: 'Sondaj ve lab sonuçları',
+  },
+  {
+    key: 'additionalResearch',
+    icon: '5',
+    label: '5. İlave Zemin Araştırmaları',
+    type: 'wysiwyg',
+    placeholder: 'İlave bir zemin araştırması yapılmamıştır...',
+    description: 'Varsa ilave araştırmalar',
   },
   {
     key: 'soilProfile',
-    icon: '3',
-    label: '3. Zemin Profili',
+    icon: '6',
+    label: '6. İdealize Zemin Profili',
     type: 'wysiwyg',
-    placeholder: 'Zemin profili ve mühendislik özelliklerinin değerlendirilmesi...',
-    description: 'Zemin tabakaları ve geoteknik özellikleri',
+    placeholder: 'Zemin tabakaları, YASS...',
+    description: 'İdealize Zemin Profili ve Yer Altı Suyu Durumu',
   },
   {
     key: '_params',
-    icon: '4',
-    label: '4. JG Parametreleri',
+    icon: '7',
+    label: '7. Geoteknik Tasarım Parametreleri',
     type: 'locked',
-    description: 'Sistem tarafından hesaplanan tasarım parametreleri',
+    description: 'Sistem tarafından hesaplanan tasarım parametreleri (Öncesine ve sonrasına ek notlar eklenebilir)',
+  },
+  {
+    key: 'seismicity',
+    icon: '8',
+    label: '8. Depremsellik',
+    type: 'wysiwyg',
+    placeholder: 'Deprem tehlike haritası bilgileri...',
+    description: 'Yerel zemin sınıfları ve depremsellik',
   },
   {
     key: '_results',
-    icon: '5',
-    label: '5. Hesap Sonuçları',
+    icon: '9',
+    label: '9. Zemin İyileştirme Alternatifleri',
     type: 'locked',
-    description: 'Sistem tarafından hesaplanan analiz sonuçları',
+    description: 'Sistem tarafından hesaplanan iyileştirme analiz sonuçları',
+  },
+  {
+    key: 'foundationSystem',
+    icon: '10',
+    label: '10. Önerilen Temel Sistemi',
+    type: 'wysiwyg',
+    placeholder: 'Radye temel vs...',
+    description: 'Önerilen temel',
   },
   {
     key: 'conclusions',
-    icon: '6',
-    label: '6. Değerlendirme ve Öneriler',
+    icon: '11',
+    label: '11. Sonuç ve Öneriler',
     type: 'wysiwyg',
-    placeholder: 'Hesaplama sonuçlarının değerlendirilmesi ve mühendislik önerileri...',
+    placeholder: 'Hesaplama sonuçlarının değerlendirilmesi...',
     description: 'Sonuçların yorumu ve öneriler',
   },
   {
-    key: 'additionalNotes',
-    icon: '7',
-    label: '7. Ek Notlar',
+    key: 'references',
+    icon: '12',
+    label: '12. Yararlanılan Kaynaklar',
     type: 'wysiwyg',
-    placeholder: 'Varsa eklemek istediğiniz ek notlar, referanslar...',
-    description: 'İsteğe bağlı ek bilgiler',
+    placeholder: 'Kaynaklar...',
+    description: 'Referanslar',
   },
 ];
 
@@ -89,7 +129,7 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
   const [sections, setSections] = useState({});
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [generating, setGenerating] = useState(false);
-  const [autoSaveTimer, setAutoSaveTimer] = useState(null);
+  const autoSaveTimerRef = useRef(null);
 
   // ── Taslağı yükle ────────────────────────────────────────────
   useEffect(() => {
@@ -112,15 +152,14 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
     setSaveStatus('idle');
 
     // Otomatik kayıt (2 sn sonra)
-    if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    const t = setTimeout(() => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
       setSections(current => {
         saveDraft(current);
         return current;
       });
     }, 2000);
-    setAutoSaveTimer(t);
-  }, [autoSaveTimer]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Taslak kaydet ─────────────────────────────────────────────
   const saveDraft = async (data) => {
@@ -223,6 +262,7 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
         <div className="wysiwyg-section">
           <p className="section-desc">{sec.description}</p>
           <RichTextEditor
+            key={sec.key}
             value={sections[sec.key] || ''}
             onChange={val => updateSection(sec.key, val)}
             placeholder={sec.placeholder}

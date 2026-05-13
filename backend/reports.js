@@ -215,31 +215,41 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
 <!-- ═══════════════ İÇİNDEKİLER ═══════════════ -->
 <h2>İÇİNDEKİLER</h2>
 <table style="border:none;">
-  <tr style="border:none;"><td style="border:none; width:60%;">1. Giriş ve Kapsam</td><td style="border:none; text-align:right;">3</td></tr>
-  <tr style="border:none;"><td style="border:none;">2. Arazi ve Laboratuvar Çalışmaları</td><td style="border:none; text-align:right;">3</td></tr>
-  <tr style="border:none;"><td style="border:none;">3. Zemin Profili ve Mühendislik Özellikleri</td><td style="border:none; text-align:right;">4</td></tr>
-  <tr style="border:none;"><td style="border:none;">4. Jet Grout Tasarım Parametreleri</td><td style="border:none; text-align:right;">5</td></tr>
-  <tr style="border:none;"><td style="border:none;">5. Hesaplama Sonuçları</td><td style="border:none; text-align:right;">6</td></tr>
-  <tr style="border:none;"><td style="border:none;">6. Değerlendirme ve Öneriler</td><td style="border:none; text-align:right;">8</td></tr>
-  <tr style="border:none;"><td style="border:none;">7. Sonuç</td><td style="border:none; text-align:right;">9</td></tr>
+  <tr style="border:none;"><td style="border:none; width:60%;">1. Giriş</td><td style="border:none; text-align:right;">3</td></tr>
+  <tr style="border:none;"><td style="border:none;">2. İnceleme Alanı Hakkında Bilgiler</td><td style="border:none; text-align:right;">3</td></tr>
+  <tr style="border:none;"><td style="border:none;">3. Yapı Hakkında Bilgiler</td><td style="border:none; text-align:right;">4</td></tr>
+  <tr style="border:none;"><td style="border:none;">4. Mevcut Zemin Araştırmaları</td><td style="border:none; text-align:right;">4</td></tr>
+  <tr style="border:none;"><td style="border:none;">5. İlave Zemin Araştırmaları</td><td style="border:none; text-align:right;">5</td></tr>
+  <tr style="border:none;"><td style="border:none;">6. İdealize Zemin Profili</td><td style="border:none; text-align:right;">5</td></tr>
+  <tr style="border:none;"><td style="border:none;">7. Geoteknik Tasarım Parametreleri</td><td style="border:none; text-align:right;">6</td></tr>
+  <tr style="border:none;"><td style="border:none;">8. Depremsellik</td><td style="border:none; text-align:right;">7</td></tr>
+  <tr style="border:none;"><td style="border:none;">9. Zemin İyileştirme Alternatifleri</td><td style="border:none; text-align:right;">8</td></tr>
+  <tr style="border:none;"><td style="border:none;">10. Önerilen Temel Sistemi</td><td style="border:none; text-align:right;">10</td></tr>
+  <tr style="border:none;"><td style="border:none;">11. Sonuç ve Öneriler</td><td style="border:none; text-align:right;">10</td></tr>
+  <tr style="border:none;"><td style="border:none;">12. Yararlanılan Kaynaklar</td><td style="border:none; text-align:right;">11</td></tr>
 </table>
 
 <div class="page-break"></div>
 
-<!-- ═══════════════ 1. GİRİŞ ═══════════════ -->
-<h2>1. GİRİŞ VE KAPSAM</h2>
+<h2>1. GİRİŞ</h2>
 ${sections.intro || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
 
-<!-- ═══════════════ 2. ARAZİ ÇALIŞMALARI ═══════════════ -->
-<h2>2. ARAZİ VE LABORATUVAR ÇALIŞMALARI</h2>
-${sections.fieldwork || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
+<h2>2. İNCELEME ALANI HAKKINDA BİLGİLER</h2>
+${sections.areaInfo || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
 
-<!-- ═══════════════ 3. ZEMİN PROFİLİ ═══════════════ -->
-<h2>3. ZEMİN PROFİLİ VE MÜHENDİSLİK ÖZELLİKLERİ</h2>
+<h2>3. YAPI HAKKINDA BİLGİLER</h2>
+${sections.structureInfo || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
+
+<h2>4. MEVCUT ZEMİN ARAŞTIRMALARI</h2>
+${sections.existingResearch || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
+
+<h2>5. İLAVE ZEMİN ARAŞTIRMALARI</h2>
+${sections.additionalResearch || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
+
+<h2>6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU</h2>
 ${sections.soilProfile || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
 
-<!-- ═══════════════ 4. JET GROUT PARAMETRELERİ (KİLİTLİ) ═══════════════ -->
-<h2>4. JET GROUT TASARIM PARAMETRELERİ</h2>
+<h2>7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ</h2>
 <div class="locked-notice">
   ⚠ Aşağıdaki değerler ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.
   Bu değerler kullanıcı tarafından değiştirilemez.
@@ -253,27 +263,24 @@ ${sections.soilProfile || '<p><em>[Bu alan kullanıcı tarafından doldurulacakt
   ${paramTableRows}
 </table>
 
-<!-- ═══════════════ 5. HESAPLAMA SONUÇLARI (KİLİTLİ) ═══════════════ -->
-<h2>5. HESAPLAMA SONUÇLARI</h2>
+<h2>8. DEPREMSELLİK</h2>
+${sections.seismicity || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
+
+<h2>9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ</h2>
 <div class="locked-notice">
   ⚠ Aşağıdaki sonuçlar ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.
   Bu değerler kullanıcı tarafından değiştirilemez.
 </div>
 ${resultSections}
 
-<!-- ═══════════════ 6. DEĞERLENDİRME ═══════════════ -->
-<h2>6. DEĞERLENDİRME VE ÖNERİLER</h2>
+<h2>10. ÖNERİLEN TEMEL SİSTEMİ</h2>
+${sections.foundationSystem || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
+
+<h2>11. SONUÇ VE ÖNERİLER</h2>
 ${sections.conclusions || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
 
-<!-- ═══════════════ 7. SONUÇ ═══════════════ -->
-<h2>7. SONUÇ</h2>
-<p>
-  Bu rapor, ZEMSIS Geoteknik Mühendislik Yazılımı (v1.0) kullanılarak
-  ${date} tarihinde hazırlanmıştır. Sunulan hesaplama sonuçları, girdi
-  parametrelerine bağlı olup uygulama aşamasında yetkili bir geoteknik mühendisi
-  tarafından yerinde koşullar göz önünde bulundurularak gözden geçirilmesi tavsiye edilir.
-</p>
-${sections.additionalNotes ? `<h3>Ek Notlar</h3>${sections.additionalNotes}` : ''}
+<h2>12. YARARLANILAN KAYNAKLAR</h2>
+${sections.references || '<p><em>[Bu alan kullanıcı tarafından doldurulacaktır.]</em></p>'}
 
 <hr class="divider">
 <p style="font-size:9pt; text-align:center; color:#555; margin-top:20pt;">
