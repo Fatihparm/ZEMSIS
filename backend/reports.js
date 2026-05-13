@@ -100,10 +100,18 @@ router.post('/generate/:projectId', async (req, res) => {
 
     // TEMİZLİK: MS Word'den kopyala-yapıştır yapıldığında gelen geçersiz namespace'leri temizle
     // (html-to-docx xmlbuilder2 hatasını önlemek için: "Invalid XML name: @w")
-    html = html.replace(/\s+xmlns:[a-zA-Z0-9_-]+="[^"]*"/gi, '');
-    html = html.replace(/\s+[owvm]:[a-zA-Z0-9_-]+="[^"]*"/gi, '');
-    html = html.replace(/<\/?(?:o|w|v|m):[^>]*>/gi, '');
-    html = html.replace(/@w/g, 'w'); // Ekstra güvenlik
+    html = html.replace(/<!--[\s\S]*?-->/g, ''); // Tüm yorum satırlarını sil (MS Word XML'leri dahil)
+    html = html.replace(/<[^>]+>/g, (tag) => {
+      // Namespace'li etiketleri toptan sil (Örn: <w:worddocument>)
+      if (/^<\/?(?:[a-zA-Z0-9_-]+):/.test(tag)) {
+        return '';
+      }
+      // Etiket içindeki namespace'li özellikleri sil (Örn: xmlns:w="..." veya w:st="on")
+      let cleaned = tag.replace(/\s+[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+(?:=(?:'[^']*'|"[^"]*"|[^\s>]+))?/gi, '');
+      // @ ile başlayan geçersiz özellikleri sil (Örn: @w="...")
+      cleaned = cleaned.replace(/\s+@[a-zA-Z0-9_-]+(?:=(?:'[^']*'|"[^"]*"|[^\s>]+))?/gi, '');
+      return cleaned;
+    });
 
     // 4. HTML → DOCX dönüşümü
     const docxBuffer = await HTMLtoDOCX(html, null, {
