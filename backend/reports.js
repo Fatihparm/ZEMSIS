@@ -282,11 +282,10 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
       line-height: 1.2;
     }
     h2 {
-      font-size: 13pt;
+      font-size: 14pt;
       font-weight: bold;
       margin: 18pt 0 8pt;
       padding-bottom: 3pt;
-      border-bottom: 1.5px solid #000;
     }
     h3 {
       font-size: 12pt;
@@ -323,42 +322,41 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
     .page-break {
       page-break-after: always;
     }
-    .title-block {
+    .cover-page {
       text-align: center;
-      border: 2px solid #000;
-      padding: 20pt 24pt;
-      margin: 10pt 0 16pt;
+      margin-top: 40pt;
     }
-    .cover-kicker {
-      font-size: 11pt;
-      letter-spacing: 2px;
-      margin: 0;
+    .cover-location {
+      font-size: 14pt;
+      font-weight: bold;
+      background-color: yellow;
+      display: inline-block;
+      margin-bottom: 40pt;
+      padding: 5px;
     }
-    .cover-project {
-      font-size: 13pt;
-      margin: 8pt 0 0;
+    .cover-title {
+      font-size: 18pt;
+      font-weight: bold;
+      line-height: 1.5;
+      margin-bottom: 80pt;
+    }
+    .cover-prepared-by {
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 20pt;
     }
     .cover-author {
-      font-size: 11pt;
-      margin: 12pt 0 0;
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 10pt;
     }
     .cover-org {
-      font-size: 11pt;
-      margin: 0;
+      font-size: 12pt;
+      margin-bottom: 5pt;
     }
-    .cover-meta {
-      margin: 14pt auto 0;
-      width: 86%;
-      border: 1px solid #000;
-      border-collapse: collapse;
-    }
-    .cover-meta td {
-      border: 1px solid #ccc;
-      padding: 6pt 10pt;
-    }
-    .cover-label {
-      font-weight: bold;
-      width: 36%;
+    .cover-date-no {
+      margin-top: 60pt;
+      font-size: 12pt;
     }
     .toc-list, .catalog-list {
       width: 100%;
@@ -404,28 +402,26 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
 </head>
 <body>
 
-<div class="title-block">
-  <p class="cover-kicker">${topLocation}</p>
-  <h1>JET GROUT ZEMİN İYİLEŞTİRMESİ<br>GEOTEKNİK HESAP RAPORU</h1>
-  <p class="cover-project">${projectTitle}</p>
-  <p class="cover-author">${authorLine}</p>
-  <p class="cover-org">${esc(preparedBy)}</p>
-  ${engineer ? `<p class="cover-org">${esc(engineer)}</p>` : ''}
-  ${employer ? `<p class="cover-org">${esc(employer)}</p>` : ''}
-  <p class="cover-org">${esc(date)}</p>
-  <p class="cover-org">${reportNoLine}</p>
+<div class="cover-page">
+  <div style="margin-bottom: 40pt;"></div>
+  <div>
+    <span class="cover-location">${topLocation}</span>
+  </div>
+  <div class="cover-title">
+    ${projectTitle}<br>ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU
+  </div>
+  
+  <div class="cover-prepared-by">HAZIRLAYAN</div>
+  
+  <div class="cover-author">${authorLine}</div>
+  <div class="cover-org">${esc(preparedBy)}</div>
+  ${employer ? `<div class="cover-org">İşveren: ${esc(employer)}</div>` : ''}
+  
+  <div class="cover-date-no">
+    <div>${esc(date)}</div>
+    <div>${reportNoLine}</div>
+  </div>
 </div>
-
-<table class="cover-meta">
-  <tr><td class="cover-label">Proje Adı</td><td>${projectTitle}</td></tr>
-  <tr><td class="cover-label">İşveren / İdare</td><td>${esc(employer)}</td></tr>
-  <tr><td class="cover-label">Proje Yeri / İl</td><td>${esc(projectLocation)}</td></tr>
-  <tr><td class="cover-label">Hazırlayan Kuruluş</td><td>${esc(preparedBy)}</td></tr>
-  <tr><td class="cover-label">Sorumlu Mühendis</td><td>${esc(engineer)}</td></tr>
-  <tr><td class="cover-label">Rapor Tarihi</td><td>${esc(date)}</td></tr>
-  <tr><td class="cover-label">Revizyon No</td><td>${esc(revision)}</td></tr>
-  <tr><td class="cover-label">Belge No</td><td>${esc(reportNumber)}</td></tr>
-</table>
 
 <div class="page-break"></div>
 
