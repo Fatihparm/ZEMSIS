@@ -275,16 +275,16 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
     return items.map(item => {
       const label = typeof item === 'string' ? item : item.label;
       const page = typeof item === 'string' ? '' : (item.page || '');
-      const indentStyle = item.indent ? 'padding-left: 20pt; font-weight: normal;' : 'font-weight: bold;';
+      const indentClass = item.indent ? 'toc-label-indent' : 'toc-label-bold';
       
       return `
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 4pt; font-size: 11pt;">
+      <table class="toc-table">
         <tr>
-          <td style="white-space: nowrap; border-top: none; border-left: none; border-right: none; border-bottom: none; padding: 0 5pt 0 0; ${indentStyle}">
+          <td class="toc-label ${indentClass}">
             ${esc(label)}
           </td>
-          <td style="width: 100%; border-top: none; border-left: none; border-right: none; border-bottom: 1px dotted black; padding: 0;">&nbsp;</td>
-          <td style="white-space: nowrap; border-top: none; border-left: none; border-right: none; border-bottom: none; padding: 0 0 0 5pt; font-weight: bold;">
+          <td class="toc-leader-cell"><span class="toc-dot"></span></td>
+          <td class="toc-page">
             ${esc(page)}
           </td>
         </tr>
@@ -377,25 +377,42 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
       text-align: right;
       margin-top: 20pt;
     }
-    .toc-list, .catalog-list {
+    .toc-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 8pt 0 12pt;
+      margin-bottom: 4pt;
+      font-size: 11pt;
     }
-    .toc-list td, .catalog-list td {
+    .toc-table td {
       border: none;
-      padding: 2pt 0;
+      vertical-align: bottom;
     }
-    .toc-page {
-      text-align: right;
+    .toc-label {
       white-space: nowrap;
-      width: 18%;
+      padding: 0 5pt 0 0;
+    }
+    .toc-label-bold {
+      font-weight: bold;
+    }
+    .toc-label-indent {
+      padding-left: 20pt;
+      font-weight: normal;
+    }
+    .toc-leader-cell {
+      width: 100%;
+      padding: 0;
     }
     .toc-dot {
-      border-bottom: 1px dotted #666;
+      border-bottom: 1px dotted #000;
       width: 100%;
       display: inline-block;
       transform: translateY(-2px);
+    }
+    .toc-page {
+      white-space: nowrap;
+      padding: 0 0 0 5pt;
+      font-weight: bold;
+      text-align: right;
     }
     .locked-notice {
       background: #fff8e1;
