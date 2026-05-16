@@ -405,6 +405,7 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
     if (!sec) return null;
 
     if (sec.type === 'cover') {
+      const coverLogo = sections.coverLogo || null;
       return (
         <div className="cover-form">
           <p className="section-desc">
@@ -423,7 +424,54 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
                   onChange={e => updateSection(f.key, e.target.value)}
                 />
               </div>
-            ))}
+              ))}
+          </div>
+
+          <div className="cover-logo-box">
+            <div>
+              <p className="cover-logo-title">Logo</p>
+              <p className="cover-logo-note">
+                Yüklenen logo kapakta ve raporun tüm sayfalarındaki footer alanında gösterilir.
+              </p>
+            </div>
+            <div className="cover-logo-actions">
+              {coverLogo?.dataUrl ? (
+                <div className="cover-logo-preview">
+                  <img src={coverLogo.dataUrl} alt={coverLogo.name || 'Logo'} />
+                </div>
+              ) : (
+                <div className="cover-logo-placeholder">Logo yüklenmedi</div>
+              )}
+              <div className="cover-logo-buttons">
+                <label className="image-upload-button">
+                  Logo Yükle
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const image = await loadImageFromFile(file);
+                        updateSection('coverLogo', image);
+                      } catch (err) {
+                        alert(err.message || 'Logo yüklenemedi.');
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {coverLogo?.dataUrl && (
+                  <button
+                    type="button"
+                    className="image-remove-btn"
+                    onClick={() => updateSection('coverLogo', null)}
+                  >
+                    Logoyu Kaldır
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       );

@@ -439,6 +439,67 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+.cover-logo-box {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cover-logo-title {
+  margin: 0 0 4px 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cover-logo-note {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.cover-logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cover-logo-preview,
+.cover-logo-placeholder {
+  min-height: 120px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cover-logo-preview img {
+  display: block;
+  max-width: 220px;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+.cover-logo-placeholder {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.cover-logo-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 /* ── WYSIWYG section ── */
 .wysiwyg-section {
   /* Full width, no max-width so editor fills space */

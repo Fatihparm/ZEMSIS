@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('./db');
 const { authMiddleware } = require('./auth');
 const {
@@ -207,7 +209,7 @@ function createDataTable(dataRows, headers = ["Parametre", "Değer", "Birim"]) {
   });
 }
 
-function createListParagraphs(items, isFigure = false) {
+function createListParagraphs(items) {
   return items.map(item => {
     return new Paragraph({
       children: [
@@ -219,6 +221,219 @@ function createListParagraphs(items, isFigure = false) {
       spacing: { after: 60 }
     });
   });
+}
+
+const PAGE_MARGINS = { top: 1440, right: 1440, bottom: 1800, left: 1800 };
+const DEFAULT_LOGO_PATH = path.join(__dirname, '..', 'frontend', 'public', 'zemsis-logo.png');
+let defaultLogoBuffer = null;
+
+function loadDefaultLogoBuffer() {
+  if (defaultLogoBuffer) return defaultLogoBuffer;
+  if (!fs.existsSync(DEFAULT_LOGO_PATH)) return null;
+  defaultLogoBuffer = fs.readFileSync(DEFAULT_LOGO_PATH);
+  return defaultLogoBuffer;
+}
+
+function parseImageInput(image) {
+  if (!image || typeof image !== 'object' || typeof image.dataUrl !== 'string') return null;
+  const match = /^data:([^;]+);base64,(.+)$/i.exec(image.dataUrl);
+  if (!match) return null;
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], 'base64'),
+    width: Number(image.width) || 0,
+    height: Number(image.height) || 0,
+  };
+}
+
+function getLogoAsset(sections) {
+  const uploaded = parseImageInput(sections && sections.coverLogo);
+  if (uploaded) return uploaded;
+
+  const fallback = loadDefaultLogoBuffer();
+  if (!fallback) return null;
+  return {
+    mimeType: 'image/png',
+    buffer: fallback,
+    width: 512,
+    height: 512,
+  };
+}
+
+function createLogoRun(logoAsset, targetWidth) {
+  if (!logoAsset || !logoAsset.buffer) return null;
+  const width = targetWidth;
+  const height = logoAsset.width && logoAsset.height
+    ? Math.max(1, Math.round((logoAsset.height / logoAsset.width) * targetWidth))
+    : targetWidth;
+
+  return new ImageRun({
+    data: logoAsset.buffer,
+    transformation: { width, height },
+  });
+}
+
+function createCoverLogoParagraph(logoAsset) {
+  const logoRun = createLogoRun(logoAsset, 130);
+  if (!logoRun) return null;
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 220 },
+    children: [logoRun],
+  });
+}
+
+function createFooterTable(logoAsset, dateStr) {
+  const logoRun = createLogoRun(logoAsset, 28);
+  const logoParagraph = logoRun
+    ? new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 0 },
+        children: [logoRun],
+      })
+    : new Paragraph({ text: '', spacing: { before: 0, after: 0 } });
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 18, type: WidthType.PERCENTAGE },
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            },
+            children: [logoParagraph],
+            verticalAlign: VerticalAlign.CENTER,
+          }),
+          new TableCell({
+            width: { size: 82, type: WidthType.PERCENTAGE },
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({ text: `ZEMSIS © ${new Date().getFullYear()} - Tarih: ${dateStr}`, size: 16, color: '555555' }),
+                ],
+              }),
+            ],
+            verticalAlign: VerticalAlign.CENTER,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+const TABLE_CATALOG = [
+  { section: 'structureInfo', label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page: '8' },
+  { section: 'structureInfo', label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page: '8' },
+  { section: 'existingResearch', label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page: '10' },
+  { section: 'existingResearch', label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: '11' },
+  { section: 'params', label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', page: '13', condition: rows => rows.length > 0 },
+  { section: 'seismicity', label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page: '19' },
+  { section: 'seismicity', label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page: '20' },
+  { section: 'seismicity', label: 'Tablo 8.3. Yerel Zemin Katsayıları', page: '20' },
+  { section: 'seismicity', label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page: '20' },
+  { section: 'seismicity', label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page: '20' },
+  { section: 'seismicity', label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: '21' },
+  { section: 'seismicity', label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: '21' },
+];
+
+const FIGURE_CATALOG = [
+  { section: 'areaInfo', label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası', page: '6' },
+  { section: 'structureInfo', label: 'Şekil 3.1. Vaziyet Planı', page: '7' },
+  { section: 'soilProfile', label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler', page: '12' },
+  { section: 'soilProfile', label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti', page: '12' },
+  { section: 'seismicity', label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları', page: '14' },
+  { section: 'seismicity', label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası', page: '16' },
+  { section: 'seismicity', label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)', page: '16' },
+  { section: 'seismicity', label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası', page: '17' },
+  { section: 'seismicity', label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)', page: '17' },
+  { section: 'seismicity', label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)', page: '18' },
+  { section: 'seismicity', label: 'Şekil 8.7. PGA (En büyük yer ivmesi)', page: '18' },
+  { section: 'seismicity', label: 'Şekil 8.8. PGV (En büyük yer hızı)', page: '19' },
+  { section: 'seismicity', label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu', page: '22' },
+  { section: 'seismicity', label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu', page: '22' },
+];
+
+function hasSectionContent(sections, key) {
+  const value = sections && sections[key];
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function buildTableRows({ sections, pRows, resCategories }) {
+  const rows = TABLE_CATALOG.filter(item => {
+    if (item.condition) return item.condition(pRows || []);
+    return hasSectionContent(sections, item.section);
+  }).map(({ label, page }) => ({ label, page }));
+
+  if (Array.isArray(resCategories) && resCategories.length > 0) {
+    resCategories.forEach((cat, index) => {
+      rows.push({
+        label: `Tablo 9.${index + 1}. ${cat.title}`,
+        page: '21',
+      });
+    });
+  }
+
+  return rows;
+}
+
+function buildFigureRows({ sections }) {
+  const rows = FIGURE_CATALOG
+    .filter(item => hasSectionContent(sections, item.section))
+    .map(({ label, page }) => ({ label, page }));
+
+  const fallbackPages = {
+    intro: '5',
+    areaInfo: '6',
+    structureInfo: '7',
+    existingResearch: '10',
+    additionalResearch: '11',
+    soilProfile: '12',
+    seismicity: '14',
+    foundationSystem: '23',
+    conclusions: '24',
+    references: '25',
+  };
+
+  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
+
+  for (const sectionKey of sectionOrder) {
+    const images = getSectionImages(sections, sectionKey);
+    if (!images.length) continue;
+
+    const sectionNumber = getSectionNumber(sectionKey);
+    const fallbackPage = FIGURE_CATALOG.find(item => item.section === sectionKey)?.page || fallbackPages[sectionKey] || '';
+    images.forEach((img, index) => {
+      const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+      const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Ek görsel';
+      rows.push({
+        label: `Şekil ${figureNumber}. ${caption}`,
+        page: fallbackPage,
+      });
+    });
+  }
+
+  return rows;
 }
 
 const REPORT_SECTION_NUMBERS = {
@@ -319,6 +534,8 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const dateObj = new Date();
   const dateStr = dateObj.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
   const coverDate = dateObj.toLocaleDateString('tr-TR', { month: 'long' }).toUpperCase() + ", " + dateObj.getFullYear();
+  const logoAsset = getLogoAsset(sections);
+  const coverLogoParagraph = createCoverLogoParagraph(logoAsset);
 
   const projectName = (sections && sections.projectName) || (project && project.name) || 'Zemin İyileştirme Projesi';
   const parcelName = (sections && sections.parcelName) || (sections && sections.location) || (project && project.description) || '[Parsel adı]';
@@ -329,38 +546,6 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const engineer = (sections && sections.engineer) || 'Prof. Dr. Eyübhan AVCI';
   const employer = (sections && sections.employer) || parcelOwner;
   const reportDefaults = buildReportSectionDefaults({ parcelName, parcelOwner, dateStr });
-
-  const tableRows = [
-    { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page: '8' },
-    { label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page: '8' },
-    { label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page: '10' },
-    { label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: '11' },
-    { label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', page: '13' },
-    { label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page: '19' },
-    { label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page: '20' },
-    { label: 'Tablo 8.3. Yerel Zemin Katsayıları', page: '20' },
-    { label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page: '20' },
-    { label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page: '20' },
-    { label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: '21' },
-    { label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: '21' }
-  ];
-
-  const figureRows = [
-    { label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası', page: '6' },
-    { label: 'Şekil 3.1. Vaziyet Planı', page: '7' },
-    { label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler', page: '12' },
-    { label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti', page: '12' },
-    { label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları', page: '14' },
-    { label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası', page: '16' },
-    { label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)', page: '16' },
-    { label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası', page: '17' },
-    { label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)', page: '17' },
-    { label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)', page: '18' },
-    { label: 'Şekil 8.7. PGA (En büyük yer ivmesi)', page: '18' },
-    { label: 'Şekil 8.8. PGV (En büyük yer hızı)', page: '19' },
-    { label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu', page: '22' },
-    { label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu', page: '22' }
-  ];
 
   const paramDefs = [
     { label: 'Kolon Çapı (D)', key: 'D', unit: 'm' },
@@ -412,17 +597,17 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
       paragraphStyles: [
         {
           id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal",
-          run: { font: "Arial", size: 28, bold: true },
+          run: { font: "Times New Roman", size: 24, bold: true },
           paragraph: { spacing: { before: 240, after: 120 } }
         },
         {
           id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal",
-          run: { font: "Arial", size: 24, bold: true },
+          run: { font: "Times New Roman", size: 24, bold: true },
           paragraph: { spacing: { before: 240, after: 120 } }
         },
         {
           id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal",
-          run: { font: "Arial", size: 24 },
+          run: { font: "Times New Roman", size: 24, bold: true },
           paragraph: { spacing: { before: 120, after: 120 } }
         }
       ]
@@ -431,9 +616,10 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
       // Kapak Sayfası
       {
         properties: {
-          page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1800 } }
+          page: { margin: PAGE_MARGINS }
         },
         children: [
+          ...(coverLogoParagraph ? [coverLogoParagraph] : []),
           new Paragraph({ text: (projectLocation + " " + projectName).toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { before: 1000, after: 1000 } }),
           ...(employer ? [new Paragraph({ text: employer.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 1000 } })] : []),
           new Paragraph({ text: "ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 32, bold: true }, spacing: { after: 1500 } }),
@@ -452,39 +638,32 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
       // İçindekiler, Tablolar ve Şekiller Listesi
       {
         properties: {
-          page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1800 } }
+          page: { margin: PAGE_MARGINS }
         },
         children: [
-          new Paragraph({ text: "İÇİNDEKİLER", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "İÇİNDEKİLER", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
           new TableOfContents("İÇİNDEKİLER", {
             hyperlink: true,
             headingStyleRange: "1-2",
           }),
           new Paragraph({ children: [new PageBreak()] }),
           
-          new Paragraph({ text: "TABLOLAR LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
-          ...createListParagraphs(tableRows),
+          new Paragraph({ text: "TABLOLAR LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
+          ...createListParagraphs(buildTableRows({ sections, pRows, resCategories })),
           new Paragraph({ children: [new PageBreak()] }),
           
-          new Paragraph({ text: "ŞEKİLLER LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
-          ...createListParagraphs(figureRows)
+          new Paragraph({ text: "ŞEKİLLER LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
+          ...createListParagraphs(buildFigureRows({ sections }))
         ]
       },
       // Ana Metin
       {
         properties: {
-          page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1800 } }
+          page: { margin: PAGE_MARGINS }
         },
         footers: {
           default: new Footer({
-            children: [
-              new Paragraph({
-                text: `ZEMSIS © ${new Date().getFullYear()} - Proje ID: ${project.id} - Tarih: ${dateStr}`,
-                alignment: AlignmentType.CENTER,
-                style: "Normal",
-                run: { size: 18, color: "555555" }
-              })
-            ]
+            children: [createFooterTable(logoAsset, dateStr)]
           })
         },
         children: [
