@@ -1,129 +1,4 @@
-const express = require('express');
-const { pool } = require('./db');
-const { authMiddleware } = require('./auth');
-const {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  Table,
-  TableRow,
-  TableCell,
-  HeadingLevel,
-  AlignmentType,
-  WidthType,
-  BorderStyle,
-  PageBreak,
-  TableOfContents,
-  VerticalAlign,
-  TextDirection,
-  Header,
-  Footer
-} = require('docx');
-
-const router = express.Router();
-
-router.use(authMiddleware);
-
-router.get('/draft/:projectId', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT sections FROM report_drafts WHERE project_id = $1 AND user_id = $2`,
-      [req.params.projectId, req.userId]
-    );
-    if (result.rows.length === 0) {
-      return res.json({ success: true, sections: null });
-    }
-    res.json({ success: true, sections: result.rows[0].sections });
-  } catch (err) {
-    console.error('Get draft error:', err);
-    res.status(500).json({ success: false, error: 'Taslak getirilemedi' });
-  }
-});
-
-router.put('/draft/:projectId', async (req, res) => {
-  try {
-    const { sections } = req.body;
-
-    if (!sections || typeof sections !== 'object') {
-      return res.status(400).json({ success: false, error: 'Geçersiz sections verisi' });
-    }
-
-    const check = await pool.query(
-      'SELECT id FROM projects WHERE id = $1 AND user_id = $2',
-      [req.params.projectId, req.userId]
-    );
-    if (check.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Proje bulunamadı' });
-    }
-
-    await pool.query(
-      `INSERT INTO report_drafts (project_id, user_id, sections)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (project_id, user_id)
-       DO UPDATE SET sections = $3, updated_at = CURRENT_TIMESTAMP`,
-      [req.params.projectId, req.userId, JSON.stringify(sections)]
-    );
-
-    res.json({ success: true, message: 'Taslak kaydedildi' });
-  } catch (err) {
-    console.error('Save draft error:', err);
-    res.status(500).json({ success: false, error: 'Taslak kaydedilemedi' });
-  }
-});
-
-router.post('/generate/:projectId', async (req, res) => {
-  try {
-    const projectResult = await pool.query(
-      `SELECT id, name, description, parameters, soil_layers, results
-       FROM projects WHERE id = $1 AND user_id = $2`,
-      [req.params.projectId, req.userId]
-    );
-
-    if (projectResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Proje bulunamadı' });
-    }
-
-    const project = projectResult.rows[0];
-    const lockedParams = project.parameters || {};
-    const lockedResults = project.results || null;
-
-    if (!lockedResults) {
-      return res.status(400).json({
-        success: false,
-        error: 'Hesaplama sonuçları bulunamadı. Lütfen önce hesaplama yapın.',
-      });
-    }
-
-    const draftResult = await pool.query(
-      `SELECT sections FROM report_drafts WHERE project_id = $1 AND user_id = $2`,
-      [req.params.projectId, req.userId]
-    );
-    const sections = draftResult.rows.length > 0 ? draftResult.rows[0].sections : {};
-
-    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections });
-
-    const docxBuffer = await Packer.toBuffer(doc);
-
-    const safeName = (project.name || 'rapor')
-    .replace(/[^a-zA-Z0-9\u00C0-\u024F\s\-_]/g, '')
-      .trim()
-      .replace(/\s+/g, '_');
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}_JG_Raporu.docx`
-    );
-    res.send(docxBuffer);
-  } catch (err) {
-    console.error('Generate report error:', err);
-    res.status(500).json({ success: false, error: 'Rapor oluşturulamadı: ' + err.message });
-  }
-});
+const { Packer, Document, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, AlignmentType, WidthType, BorderStyle, PageBreak, TableOfContents, VerticalAlign, TextDirection, Header, Footer } = require('docx');
 
 function getSec(sections, key, fallback) {
   const v = sections && sections[key];
@@ -197,7 +72,8 @@ function createListParagraphs(items, isFigure = false) {
 function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const dateObj = new Date();
   const dateStr = dateObj.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
-  const coverDate = dateObj.toLocaleDateString('tr-TR', { month: 'long' }).toUpperCase() + ", " + dateObj.getFullYear();
+  const monthNames = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+  const coverDate = `${monthNames[dateObj.getMonth()]}, ${dateObj.getFullYear()}`;
 
   const projectName = (sections && sections.projectName) || (project && project.name) || 'Zemin İyileştirme Projesi';
   const projectLocation = (sections && sections.location) || (project && project.description) || 'PROJE ALANI';
@@ -441,4 +317,14 @@ TBDY-2018'e göre deprem tasarım sınıfı tayin edilmiştir.`;
   return doc;
 }
 
-module.exports = router;
+const project = { id: 1, name: 'Test Projesi' };
+const lockedParams = { D: 0.6, s: 1.5 };
+const lockedResults = { geometry: { totalArea: { value: 100, label: 'Alan' } } };
+const sections = {};
+
+const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections });
+Packer.toBuffer(doc).then(buffer => {
+  console.log("Success! Buffer size:", buffer.length);
+}).catch(err => {
+  console.error("Packer error:", err);
+});
