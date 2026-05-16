@@ -14,99 +14,124 @@ const SECTIONS = [
     icon: '📋',
     label: 'Kapak Bilgileri',
     type: 'cover',
+    allowImages: false,
     description: 'Proje adı, işveren, yer ve belge bilgileri',
   },
   {
     key: 'intro',
     icon: '1',
+    number: '1',
     label: '1. Giriş',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Projenin amacı, kapsamı ve genel bilgiler...',
     description: 'Projenin genel tanımı ve çalışmanın kapsamı',
   },
   {
     key: 'areaInfo',
     icon: '2',
+    number: '2',
     label: '2. İnceleme Alanı Hakkında Bilgiler',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'İnceleme alanının konumu vb...',
     description: 'İnceleme alanı bilgileri',
   },
   {
     key: 'structureInfo',
     icon: '3',
+    number: '3',
     label: '3. Yapı Hakkında Bilgiler',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Yapının kullanım sınıfı vb...',
     description: 'BKS, BYS ve I katsayıları vb.',
   },
   {
     key: 'existingResearch',
     icon: '4',
+    number: '4',
     label: '4. Mevcut Zemin Araştırmaları',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Arazi ve Laboratuvar çalışmaları...',
     description: 'Sondaj ve lab sonuçları',
   },
   {
     key: 'additionalResearch',
     icon: '5',
+    number: '5',
     label: '5. İlave Zemin Araştırmaları',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'İlave bir zemin araştırması yapılmamıştır...',
     description: 'Varsa ilave araştırmalar',
   },
   {
     key: 'soilProfile',
     icon: '6',
+    number: '6',
     label: '6. İdealize Zemin Profili',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Zemin tabakaları, YASS...',
     description: 'İdealize Zemin Profili ve Yer Altı Suyu Durumu',
   },
   {
     key: '_params',
     icon: '7',
+    number: '7',
     label: '7. Geoteknik Tasarım Parametreleri',
     type: 'locked',
+    allowImages: false,
     description: 'Sistem tarafından hesaplanan tasarım parametreleri (Öncesine ve sonrasına ek notlar eklenebilir)',
   },
   {
     key: 'seismicity',
     icon: '8',
+    number: '8',
     label: '8. Depremsellik',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Deprem tehlike haritası bilgileri...',
     description: 'Yerel zemin sınıfları ve depremsellik',
   },
   {
     key: '_results',
     icon: '9',
+    number: '9',
     label: '9. Zemin İyileştirme Alternatifleri',
     type: 'locked',
+    allowImages: true,
     description: 'Sistem tarafından hesaplanan iyileştirme analiz sonuçları',
   },
   {
     key: 'foundationSystem',
     icon: '10',
+    number: '10',
     label: '10. Önerilen Temel Sistemi',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Radye temel vs...',
     description: 'Önerilen temel',
   },
   {
     key: 'conclusions',
     icon: '11',
+    number: '11',
     label: '11. Sonuç ve Öneriler',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Hesaplama sonuçlarının değerlendirilmesi...',
     description: 'Sonuçların yorumu ve öneriler',
   },
   {
     key: 'references',
     icon: '12',
+    number: '12',
     label: '12. Yararlanılan Kaynaklar',
     type: 'wysiwyg',
+    allowImages: true,
     placeholder: 'Kaynaklar...',
     description: 'Referanslar',
   },
@@ -162,6 +187,68 @@ function buildReportFieldDefaults(sections = {}, projectName = '') {
   };
 }
 
+const MAX_IMAGE_DIMENSION = 1600;
+const MAX_IMAGE_COUNT_PER_SECTION = 12;
+
+function getSectionImageKey(sectionKey) {
+  return `${sectionKey}Images`;
+}
+
+function getSectionNumber(sectionKey) {
+  const section = SECTIONS.find(s => s.key === sectionKey);
+  return section?.number || '';
+}
+
+function getImageCaptionNumber(sectionKey, index) {
+  const sectionNumber = getSectionNumber(sectionKey);
+  return sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Görsel okunamadı.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Görsel yüklenemedi.'));
+      img.onload = () => {
+        const ratio = Math.min(
+          1,
+          MAX_IMAGE_DIMENSION / img.width,
+          MAX_IMAGE_DIMENSION / img.height
+        );
+        const width = Math.max(1, Math.round(img.width * ratio));
+        const height = Math.max(1, Math.round(img.height * ratio));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Görsel işlenemedi.'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const outputMime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const quality = outputMime === 'image/jpeg' ? 0.9 : undefined;
+        const dataUrl = canvas.toDataURL(outputMime, quality);
+        resolve({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          name: file.name,
+          caption: '',
+          dataUrl,
+          width,
+          height,
+          mimeType: outputMime,
+        });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function ReportEditorPage({ projectId, projectName, parameters, results, token, lang }) {
   const tr = lang === 'tr';
   const [activeSection, setActiveSection] = useState('cover');
@@ -170,6 +257,51 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
   const [generating, setGenerating] = useState(false);
   const autoSaveTimerRef = useRef(null);
   const sectionDefaults = buildReportFieldDefaults(sections, projectName);
+
+  const updateSectionImages = useCallback((sectionKey, updater) => {
+    setSections(prev => {
+      const current = Array.isArray(prev[getSectionImageKey(sectionKey)])
+        ? prev[getSectionImageKey(sectionKey)]
+        : [];
+      const nextImages = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [getSectionImageKey(sectionKey)]: nextImages };
+    });
+    setSaveStatus('idle');
+  }, []);
+
+  const handleImageFiles = async (sectionKey, files) => {
+    if (!files?.length) return;
+    const section = SECTIONS.find(s => s.key === sectionKey);
+    if (!section?.allowImages) return;
+
+    const existingImages = Array.isArray(sections[getSectionImageKey(sectionKey)])
+      ? sections[getSectionImageKey(sectionKey)]
+      : [];
+
+    const remainingSlots = Math.max(0, MAX_IMAGE_COUNT_PER_SECTION - existingImages.length);
+    const selectedFiles = Array.from(files).slice(0, remainingSlots);
+    if (!selectedFiles.length) {
+      alert(`Bu bölüm için en fazla ${MAX_IMAGE_COUNT_PER_SECTION} görsel eklenebilir.`);
+      return;
+    }
+
+    try {
+      const images = await Promise.all(selectedFiles.map(loadImageFromFile));
+      updateSectionImages(sectionKey, prev => [...prev, ...images]);
+    } catch (err) {
+      alert(err.message || 'Görsel yüklenemedi.');
+    }
+  };
+
+  const handleUpdateImageCaption = (sectionKey, imageId, caption) => {
+    updateSectionImages(sectionKey, prev =>
+      prev.map(img => (img.id === imageId ? { ...img, caption } : img))
+    );
+  };
+
+  const handleRemoveImage = (sectionKey, imageId) => {
+    updateSectionImages(sectionKey, prev => prev.filter(img => img.id !== imageId));
+  };
 
   // ── Taslağı yükle ────────────────────────────────────────────
   useEffect(() => {
@@ -298,6 +430,9 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
     }
 
     if (sec.type === 'wysiwyg') {
+      const images = Array.isArray(sections[getSectionImageKey(sec.key)])
+        ? sections[getSectionImageKey(sec.key)]
+        : [];
       return (
         <div className="wysiwyg-section">
           <p className="section-desc">{sec.description}</p>
@@ -308,11 +443,71 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
             onChange={e => updateSection(sec.key, e.target.value)}
             placeholder={sec.placeholder}
           />
+          {sec.allowImages && (
+            <div className="section-image-tools">
+              <div className="section-image-tools__header">
+                <div>
+                  <p className="section-image-tools__title">Görseller</p>
+                  <p className="section-image-tools__note">
+                    Maksimum {MAX_IMAGE_DIMENSION}px kenar uzunluğu. Görseller raporda ortalanır ve
+                    Şekil {getSectionNumber(sec.key)}.1 formatında numaralanır.
+                  </p>
+                </div>
+                <label className="image-upload-button">
+                  Görsel Ekle
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={e => {
+                      handleImageFiles(sec.key, e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {images.length > 0 && (
+                <div className="image-list">
+                  {images.map((img, idx) => (
+                    <div className="image-card" key={img.id}>
+                      <div className="image-card__preview">
+                        <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+                      </div>
+                      <div className="image-card__body">
+                        <div className="image-card__meta">
+                          <span className="image-card__number">
+                            Şekil {getImageCaptionNumber(sec.key, idx)}
+                          </span>
+                          <button
+                            type="button"
+                            className="image-remove-btn"
+                            onClick={() => handleRemoveImage(sec.key, img.id)}
+                          >
+                            Kaldır
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          className="image-caption-input"
+                          value={img.caption || ''}
+                          onChange={e => handleUpdateImageCaption(sec.key, img.id, e.target.value)}
+                          placeholder="Resim açıklaması"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
 
     if (sec.type === 'locked') {
+      const images = Array.isArray(sections[getSectionImageKey(sec.key)])
+        ? sections[getSectionImageKey(sec.key)]
+        : [];
       return (
         <div className="locked-section-wrap">
           <p className="section-desc">{sec.description}</p>
@@ -320,6 +515,63 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
             parameters={sec.key === '_params' ? parameters : undefined}
             results={sec.key === '_results' ? results : undefined}
           />
+          {sec.allowImages && (
+            <div className="section-image-tools section-image-tools--locked">
+              <div className="section-image-tools__header">
+                <div>
+                  <p className="section-image-tools__title">Görseller</p>
+                  <p className="section-image-tools__note">
+                    Bu bölümdeki görseller Şekil {getSectionNumber(sec.key)}.1, {getSectionNumber(sec.key)}.2 ...
+                    şeklinde numaralanır.
+                  </p>
+                </div>
+                <label className="image-upload-button">
+                  Görsel Ekle
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={e => {
+                      handleImageFiles(sec.key, e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {images.length > 0 && (
+                <div className="image-list">
+                  {images.map((img, idx) => (
+                    <div className="image-card" key={img.id}>
+                      <div className="image-card__preview">
+                        <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+                      </div>
+                      <div className="image-card__body">
+                        <div className="image-card__meta">
+                          <span className="image-card__number">
+                            Şekil {getImageCaptionNumber(sec.key, idx)}
+                          </span>
+                          <button
+                            type="button"
+                            className="image-remove-btn"
+                            onClick={() => handleRemoveImage(sec.key, img.id)}
+                          >
+                            Kaldır
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          className="image-caption-input"
+                          value={img.caption || ''}
+                          onChange={e => handleUpdateImageCaption(sec.key, img.id, e.target.value)}
+                          placeholder="Resim açıklaması"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }

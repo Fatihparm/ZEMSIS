@@ -9,6 +9,7 @@ const {
   Table,
   TableRow,
   TableCell,
+  ImageRun,
   HeadingLevel,
   AlignmentType,
   WidthType,
@@ -220,6 +221,100 @@ function createListParagraphs(items, isFigure = false) {
   });
 }
 
+const REPORT_SECTION_NUMBERS = {
+  intro: '1',
+  areaInfo: '2',
+  structureInfo: '3',
+  existingResearch: '4',
+  additionalResearch: '5',
+  soilProfile: '6',
+  _params: '7',
+  seismicity: '8',
+  _results: '9',
+  foundationSystem: '10',
+  conclusions: '11',
+  references: '12',
+};
+
+function getSectionNumber(sectionKey) {
+  return REPORT_SECTION_NUMBERS[sectionKey] || '';
+}
+
+function getSectionImages(sections, sectionKey) {
+  const images = sections && sections[`${sectionKey}Images`];
+  return Array.isArray(images) ? images.filter(img => img && typeof img === 'object') : [];
+}
+
+function parseDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') return null;
+  const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl);
+  if (!match) return null;
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], 'base64'),
+  };
+}
+
+function scaleToFit(width, height, maxWidth, maxHeight) {
+  const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
+  return {
+    width: Math.max(1, Math.round(width * ratio)),
+    height: Math.max(1, Math.round(height * ratio)),
+  };
+}
+
+function createImageBlocks(sectionKey, images) {
+  if (!images || !images.length) return [];
+  const sectionNumber = getSectionNumber(sectionKey);
+  const maxWidth = 520;
+  const maxHeight = 380;
+
+  return images.flatMap((img, index) => {
+    const parsed = parseDataUrl(img.dataUrl);
+    if (!parsed) return [];
+
+    const width = Number(img.width) || maxWidth;
+    const height = Number(img.height) || maxHeight;
+    const scaled = scaleToFit(width, height, maxWidth, maxHeight);
+    const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+    const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Görsel';
+
+    return [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 160, after: 80 },
+        children: [
+          new ImageRun({
+            data: parsed.buffer,
+            transformation: {
+              width: scaled.width,
+              height: scaled.height,
+            },
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+        children: [
+          new TextRun({
+            text: `Şekil ${figureNumber}. ${caption}`,
+            italics: true,
+          }),
+        ],
+      }),
+    ];
+  });
+}
+
+function createSectionBlocks(sectionKey, title, text, images = []) {
+  return [
+    new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }),
+    ...createParagraphs(text),
+    ...createImageBlocks(sectionKey, images),
+  ];
+}
+
 function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const dateObj = new Date();
   const dateStr = dateObj.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -393,30 +488,23 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           })
         },
         children: [
-          new Paragraph({ text: "1. GİRİŞ", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'intro', reportDefaults.intro)),
+          ...createSectionBlocks('intro', "1. GİRİŞ", getSec(sections, 'intro', reportDefaults.intro), getSectionImages(sections, 'intro')),
           
-          new Paragraph({ text: "2. İNCELEME ALANI HAKKINDA BİLGİLER", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'areaInfo', reportDefaults.areaInfo)),
+          ...createSectionBlocks('areaInfo', "2. İNCELEME ALANI HAKKINDA BİLGİLER", getSec(sections, 'areaInfo', reportDefaults.areaInfo), getSectionImages(sections, 'areaInfo')),
           
-          new Paragraph({ text: "3. YAPI HAKKINDA BİLGİLER", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'structureInfo', reportDefaults.structureInfo)),
+          ...createSectionBlocks('structureInfo', "3. YAPI HAKKINDA BİLGİLER", getSec(sections, 'structureInfo', reportDefaults.structureInfo), getSectionImages(sections, 'structureInfo')),
           
-          new Paragraph({ text: "4. MEVCUT ZEMİN ARAŞTIRMALARI", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'existingResearch', reportDefaults.existingResearch)),
+          ...createSectionBlocks('existingResearch', "4. MEVCUT ZEMİN ARAŞTIRMALARI", getSec(sections, 'existingResearch', reportDefaults.existingResearch), getSectionImages(sections, 'existingResearch')),
           
-          new Paragraph({ text: "5. İLAVE ZEMİN ARAŞTIRMALARI", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'additionalResearch', reportDefaults.additionalResearch)),
+          ...createSectionBlocks('additionalResearch', "5. İLAVE ZEMİN ARAŞTIRMALARI", getSec(sections, 'additionalResearch', reportDefaults.additionalResearch), getSectionImages(sections, 'additionalResearch')),
           
-          new Paragraph({ text: "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'soilProfile', reportDefaults.soilProfile)),
+          ...createSectionBlocks('soilProfile', "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", getSec(sections, 'soilProfile', reportDefaults.soilProfile), getSectionImages(sections, 'soilProfile')),
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki değerler sistem tarafından hesaplanmış ve veritabanına kilitlenmiştir. Bu değerler kullanıcı tarafından değiştirilemez.", italics: true }),
           createDataTable(pRows),
           
-          new Paragraph({ text: "8. DEPREMSELLİK", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'seismicity', reportDefaults.seismicity)),
+          ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity')),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki sonuçlar ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.", italics: true }),
@@ -426,15 +514,13 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
               createDataTable(cat.rows)
             ];
           }).flat(),
+          ...createImageBlocks('_results', getSectionImages(sections, '_results')),
           
-          new Paragraph({ text: "10. ÖNERİLEN TEMEL SİSTEMİ", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'foundationSystem', reportDefaults.foundationSystem)),
+          ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSec(sections, 'foundationSystem', reportDefaults.foundationSystem), getSectionImages(sections, 'foundationSystem')),
           
-          new Paragraph({ text: "11. SONUÇ VE ÖNERİLER", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'conclusions', reportDefaults.conclusions)),
+          ...createSectionBlocks('conclusions', "11. SONUÇ VE ÖNERİLER", getSec(sections, 'conclusions', reportDefaults.conclusions), getSectionImages(sections, 'conclusions')),
           
-          new Paragraph({ text: "12. YARARLANILAN KAYNAKLAR", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'references', reportDefaults.references)),
+          ...createSectionBlocks('references', "12. YARARLANILAN KAYNAKLAR", getSec(sections, 'references', reportDefaults.references), getSectionImages(sections, 'references')),
         ]
       }
     ]
