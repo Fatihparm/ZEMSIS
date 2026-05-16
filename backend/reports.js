@@ -280,11 +280,11 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
       return `
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 4pt; font-size: 11pt;">
         <tr>
-          <td style="white-space: nowrap; border: none; padding: 0 5pt 0 0; vertical-align: bottom; ${indentStyle}">
+          <td style="white-space: nowrap; border-top: none; border-left: none; border-right: none; border-bottom: none; padding: 0 5pt 0 0; ${indentStyle}">
             ${esc(label)}
           </td>
-          <td style="width: 100%; border: none; border-bottom: 1.5pt dotted #000; vertical-align: bottom; padding: 0;">&nbsp;</td>
-          <td style="white-space: nowrap; border: none; padding: 0 0 0 5pt; vertical-align: bottom; font-weight: bold;">
+          <td style="width: 100%; border-top: none; border-left: none; border-right: none; border-bottom: 1px dotted black; padding: 0;">&nbsp;</td>
+          <td style="white-space: nowrap; border-top: none; border-left: none; border-right: none; border-bottom: none; padding: 0 0 0 5pt; font-weight: bold;">
             ${esc(page)}
           </td>
         </tr>
