@@ -130,6 +130,32 @@ function getSec(sections, key, fallback) {
   return typeof v === 'string' && v.trim() ? v : fallback;
 }
 
+function buildReportSectionDefaults({ parcelName, parcelOwner, dateStr }) {
+  return {
+    intro: `Söz konusu rapor, ${parcelName} parselde, inşası düşünülen, ${parcelOwner} ait taşınmazın Zemin İyileştirme Projesi Hesap Raporunu içermektedir.
+
+Yukarıda bilgileri verilen yapının Zemin İyileştirme Projesinin tarafımdan hazırlanması talebinde bulunulmuştur. İlgili yapının Zemin İyileştirme Projesi ve Hesap Raporu ${dateStr} tarihinde tarafımdan hazırlanmıştır.
+
+Zemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019’da yürürlülüğe giren Türkiye Bina Deprem Yönetmeliği (TBDY-2018), 9 Mart 2019’da yürürlüğe giren Çevre ve Şehircilik Bakanlığı Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı’ ve 2018’de yürürlülüğe giren Çevre ve Şehircilik Bakanlığı Kazı Çukurlarının Desteklenmesi ile İlgili Uyulacak Esaslar Genelgesine (2018) uyulmuştur.`,
+    areaInfo: `İnceleme alanı ${parcelName} parsel üzerinde yer almaktadır. İnceleme alanı koordinatları: E= 40.4285°, B= 29.1767°’dir (Şekil 2.1).`,
+    structureInfo: `${parcelName} parselde, ${parcelOwner} ait parselde 3 bloklu konut amaçlı betonarme yapı yapılması planlanmaktadır. Parsel toplam alanı 562,32 m² alana sahip arsa içerisinde; bodrum, zemin ve iki normal kattan oluşan 3 bloklu betonarme yapı yapılacaktır.
+
+Yapılması planlanan yapıya ait (TBDY-2018) Bina kullanım sınıfı (BKS), Bina önem katsayısı (I) ve Bina yükseklik sınıfı (BYS) belirlenmiştir. Tablo 3.1.'den BKS değeri 3, I değeri 1 olarak alınmıştır. Tablo 3.2'den BYS ise 6 olarak belirlenmiştir. Yapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
+    existingResearch: `İnşaat yapılacak alanda, ABM MÜHENDİSLİK tarafından 1 adet 24,50 metre ve 3 adet 20 metre derinliğinde sondaj yapılmıştır. Ayrıca arazide 4 adet temel sondaj kuyusu açılmış ve 17 adet örselenmiş (SPT), 2 adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde PUSULA LAB. HİZ. LTD. ŞTİ. laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
+    additionalResearch: 'İlave bir zemin araştırması yapılmamıştır.',
+    soilProfile: `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). Zemin profili incelendiğinde 0,00-0,50 metre arasında Dolgu tabaka, 0,50-7,50 metre arasında Siltli Kil tabaka, 7,50-12,00 metre arasında Siltli Kum tabaka ve 12,00-20,00 metre arasında Siltli Kil tabaka yer almaktadır. İnceleme alanında 3.50 m’de yeraltı suyuna rastlanmıştır.`,
+    seismicity: `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken, zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.
+
+İnceleme alanı için deprem parametreleri olarak DD-2 deprem yer hareketi düzeyi, ZE yerel zemin sınıfı ve koordinatlar E=40.4285°, B=29.1767° dikkate alınmıştır.
+
+Elde edilen spektral ivme katsayıları ışığında kısa periyot ve 1.0 saniye periyot için Yerel Zemin Etki Katsayıları TBDY-2018 Tablo 2.1 ve Tablo 2.2'den seçilmiş; tasarım spektrumları buna göre değerlendirilmiştir.`,
+    foundationSystem: 'Yapılan değerlendirmeler sonucunda temel sistemi olarak radye temel sisteminin uygun olduğu görülmüştür.',
+    conclusions: 'İnceleme alanı kapsamında yapılan analiz ve değerlendirmeler sonucunda, zemin iyileştirme ihtiyacı ve uygulanacak yöntem belirlenmiştir.',
+    references: `TBDY-2018, Türkiye Bina Deprem Yönetmeliği, 2018.
+Çevre ve Şehircilik Bakanlığı, Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı, Mart 2019.`,
+  };
+}
+
 function createParagraphs(text) {
   if (!text) return [];
   return text.split('\n').filter(line => line.trim().length > 0).map(line => {
@@ -200,38 +226,14 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const coverDate = dateObj.toLocaleDateString('tr-TR', { month: 'long' }).toUpperCase() + ", " + dateObj.getFullYear();
 
   const projectName = (sections && sections.projectName) || (project && project.name) || 'Zemin İyileştirme Projesi';
-  const projectLocation = (sections && sections.location) || (project && project.description) || 'PROJE ALANI';
+  const parcelName = (sections && sections.parcelName) || (sections && sections.location) || (project && project.description) || '[Parsel adı]';
+  const parcelOwner = (sections && sections.parcelOwner) || (sections && sections.employer) || '[Parsel sahibi]';
+  const projectLocation = parcelName;
   const reportNumber = (sections && sections.docNumber) || '';
   const preparedBy = (sections && sections.preparedBy) || 'Bursa Teknik Üniversitesi';
   const engineer = (sections && sections.engineer) || 'Prof. Dr. Eyübhan AVCI';
-  const employer = (sections && sections.employer) || '';
-
-  const defaultIntro = `Söz konusu rapor, ${projectLocation} kapsamında hazırlanan ${projectName} hesap raporunu içermektedir.
-Yukarıda bilgileri verilen yapının zemin iyileştirme projesinin hazırlanması talebinde bulunulmuştur. İlgili yapının zemin iyileştirme projesi ve hesap raporu ${dateStr} tarihinde hazırlanmıştır.
-Zemin iyileştirme projesi ve hesap raporu hazırlanırken Türkiye Bina Deprem Yönetmeliği (TBDY-2018), Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı ile ilgili yürürlükteki hükümler dikkate alınmıştır.`;
-
-  const defaultAreaInfo = `İnceleme alanı ${projectLocation} üzerinde yer almaktadır. İnceleme alanına ait genel uydu haritası ve vaziyet bilgileri ilgili şekillerde verilmiştir.`;
-  const defaultStructureInfo = `İnceleme alanı üzerinde, ${projectName} kapsamında değerlendirilen yapının kullanım amacına göre bina kullanım sınıfı, bina önem katsayısı ve bina yükseklik sınıfı belirlenmiştir.`;
-  const defaultExistingResearch = `İnşaat yapılacak alanda gerçekleştirilen sondaj çalışmaları ve laboratuvar deneyleri kapsamında elde edilen veriler değerlendirilmiştir.`;
-  const defaultAdditionalResearch = 'İlave bir zemin araştırması yapılmamıştır.';
-  const defaultSoilProfile = 'Yapının yapılacağı temel altı zemini için sondaj verileri ve mevcut sismik veriler kullanılarak idealize zemin profili oluşturulmuştur.';
-  const defaultSeismicity = `01/01/2019 tarihinde yürürlüğe giren TBDY-2018 hükümleri doğrultusunda geoteknik ve yapı tasarımında ilgili deprem parametreleri dikkate alınmaktadır.
-
-8.1. Yerel Zemin Sınıflarının Belirlenmesi
-Yerel zemin sınıfı, yapılan etüt ve incelemeler sonucunda belirlenmiştir.
-
-8.2. Deprem Yer Hareketi Düzeylerinin Belirlenmesi
-Proje sahası için AFAD verileri dikkate alınarak deprem düzeyleri tespit edilmiştir.
-
-8.3. Bina Kullanım Sınıfları ve Bina Önem Katsayılarının Belirlenmesi
-Yapının amacı doğrultusunda Bina Kullanım Sınıfı ve Önem Katsayısı seçilmiştir.
-
-8.4. Deprem Tasarım Sınıfları
-TBDY-2018'e göre deprem tasarım sınıfı tayin edilmiştir.`;
-  const defaultFoundationSystem = 'Yapılan değerlendirmeler sonucunda temel sistemi olarak radye temel sisteminin uygun olduğu görülmüştür.';
-  const defaultConclusions = 'İnceleme alanı kapsamında yapılan analiz ve değerlendirmeler sonucunda, zemin iyileştirme ihtiyacı ve uygulanacak yöntem belirlenmiştir.';
-  const defaultReferences = `TBDY-2018, Türkiye Bina Deprem Yönetmeliği, 2018.
-Çevre ve Şehircilik Bakanlığı, Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı, Mart 2019.`;
+  const employer = (sections && sections.employer) || parcelOwner;
+  const reportDefaults = buildReportSectionDefaults({ parcelName, parcelOwner, dateStr });
 
   const tableRows = [
     { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page: '8' },
@@ -392,29 +394,29 @@ TBDY-2018'e göre deprem tasarım sınıfı tayin edilmiştir.`;
         },
         children: [
           new Paragraph({ text: "1. GİRİŞ", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'intro', defaultIntro)),
+          ...createParagraphs(getSec(sections, 'intro', reportDefaults.intro)),
           
           new Paragraph({ text: "2. İNCELEME ALANI HAKKINDA BİLGİLER", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'areaInfo', defaultAreaInfo)),
+          ...createParagraphs(getSec(sections, 'areaInfo', reportDefaults.areaInfo)),
           
           new Paragraph({ text: "3. YAPI HAKKINDA BİLGİLER", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'structureInfo', defaultStructureInfo)),
+          ...createParagraphs(getSec(sections, 'structureInfo', reportDefaults.structureInfo)),
           
           new Paragraph({ text: "4. MEVCUT ZEMİN ARAŞTIRMALARI", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'existingResearch', defaultExistingResearch)),
+          ...createParagraphs(getSec(sections, 'existingResearch', reportDefaults.existingResearch)),
           
           new Paragraph({ text: "5. İLAVE ZEMİN ARAŞTIRMALARI", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'additionalResearch', defaultAdditionalResearch)),
+          ...createParagraphs(getSec(sections, 'additionalResearch', reportDefaults.additionalResearch)),
           
           new Paragraph({ text: "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'soilProfile', defaultSoilProfile)),
+          ...createParagraphs(getSec(sections, 'soilProfile', reportDefaults.soilProfile)),
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki değerler sistem tarafından hesaplanmış ve veritabanına kilitlenmiştir. Bu değerler kullanıcı tarafından değiştirilemez.", italics: true }),
           createDataTable(pRows),
           
           new Paragraph({ text: "8. DEPREMSELLİK", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'seismicity', defaultSeismicity)),
+          ...createParagraphs(getSec(sections, 'seismicity', reportDefaults.seismicity)),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki sonuçlar ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.", italics: true }),
@@ -426,13 +428,13 @@ TBDY-2018'e göre deprem tasarım sınıfı tayin edilmiştir.`;
           }).flat(),
           
           new Paragraph({ text: "10. ÖNERİLEN TEMEL SİSTEMİ", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'foundationSystem', defaultFoundationSystem)),
+          ...createParagraphs(getSec(sections, 'foundationSystem', reportDefaults.foundationSystem)),
           
           new Paragraph({ text: "11. SONUÇ VE ÖNERİLER", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'conclusions', defaultConclusions)),
+          ...createParagraphs(getSec(sections, 'conclusions', reportDefaults.conclusions)),
           
           new Paragraph({ text: "12. YARARLANILAN KAYNAKLAR", heading: HeadingLevel.HEADING_1 }),
-          ...createParagraphs(getSec(sections, 'references', defaultReferences)),
+          ...createParagraphs(getSec(sections, 'references', reportDefaults.references)),
         ]
       }
     ]
