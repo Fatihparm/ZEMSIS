@@ -144,11 +144,17 @@ router.post('/generate/:projectId', async (req, res) => {
 
 // HTML Rapor Oluşturma
 function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
-  const date = new Date().toLocaleDateString('tr-TR', {
+  const dateObj = new Date();
+  const date = dateObj.toLocaleDateString('tr-TR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+  const monthNames = [
+    "OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
+    "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"
+  ];
+  const coverDate = `${monthNames[dateObj.getMonth()]}, ${dateObj.getFullYear()}`;
 
   const getSection = (key, fallback = '') => {
     const value = sections?.[key];
@@ -158,7 +164,7 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
   const projectName = sections?.projectName || project?.name || 'Jet Grout Zemin İyileştirme Projesi';
   const projectLocation = sections?.location || project?.description || '';
   const reportNumber = sections?.docNumber || '';
-  const preparedBy = sections?.preparedBy || 'ZEMSIS Mühendislik Yazılımı';
+  const preparedBy = sections?.preparedBy || 'Bursa Teknik Üniversitesi';
   const engineer = sections?.engineer || '';
   const employer = sections?.employer || '';
   const revision = sections?.revision || '0';
@@ -212,7 +218,7 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
   const topLocation = projectLocation ? esc(projectLocation) : 'PROJE ALANI';
   const projectTitle = esc(projectName);
   const reportNoLine = reportNumber ? `Rapor No: ${esc(reportNumber)}` : `Rapor No: ${esc(project.id || 'N/A')}`;
-  const authorLine = engineer ? esc(engineer) : esc(preparedBy);
+  const authorLine = engineer ? esc(engineer) : 'Prof. Dr. Eyübhan AVCI';
 
   const section7Intro = `
     <p>Geoteknik analizler kapsamında kullanılacak zemin parametreleri belirlenirken zemin etüt raporu, arazi verileri ve güncel literatür bilgileri birlikte değerlendirilmiştir.</p>
@@ -220,43 +226,71 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
   `;
 
   const tocRows = [
-    ['1. GİRİŞ', '3'],
-    ['2. İNCELEME ALANI HAKKINDA BİLGİLER', '3'],
-    ['3. YAPI HAKKINDA BİLGİLER', '4'],
-    ['4. MEVCUT ZEMİN ARAŞTIRMALARI', '4'],
-    ['5. İLAVE ZEMİN ARAŞTIRMALARI', '5'],
-    ['6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU', '5'],
-    ['7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ', '6'],
-    ['8. DEPREMSELLİK', '7'],
-    ['9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ', '8'],
-    ['10. ÖNERİLEN TEMEL SİSTEMİ', '10'],
-    ['11. SONUÇ VE ÖNERİLER', '10'],
-    ['12. YARARLANILAN KAYNAKLAR', '11'],
+    { label: 'İÇİNDEKİLER', page: '2', indent: false },
+    { label: 'TABLOLAR LİSTESİ', page: '3', indent: false },
+    { label: 'ŞEKİLLER LİSTESİ', page: '4', indent: true },
+    { label: '1. GİRİŞ', page: '6', indent: false },
+    { label: '2. İNCELEME ALANI HAKKINDA BİLGİLER', page: '6', indent: false },
+    { label: '3. YAPI HAKKINDA BİLGİLER', page: '7', indent: false },
+    { label: '4. MEVCUT ZEMİN ARAŞTIRMALARI', page: '11', indent: false },
+    { label: '5. İLAVE ZEMİN ARAŞTIRMALARI', page: '11', indent: false },
+    { label: '6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU', page: '12', indent: false },
+    { label: '7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ', page: '13', indent: false },
+    { label: '8. DEPREMSELLİK', page: '13', indent: false },
+    { label: '8.1. Yerel Zemin Sınıflarının Belirlenmesi', page: '19', indent: true },
+    { label: '8.2. Deprem Yer Hareketi Düzeylerinin Belirlenmesi', page: '19', indent: true },
+    { label: '8.3. Bina Kullanım Sınıfları ve Bina Önem Katsayılarının Belirlenmesi', page: '21', indent: true },
+    { label: '8.4. Deprem Tasarım Sınıfları', page: '21', indent: true },
+    { label: '9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ', page: '22', indent: false },
+    { label: '10. ÖNERİLEN TEMEL SİSTEMİ', page: '44', indent: false },
+    { label: '11. SONUÇ VE ÖNERİLER', page: '44', indent: false },
+    { label: '12. YARARLANILAN KAYNAKLAR', page: '46', indent: false },
   ];
 
   const tableRows = [
-    'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları',
-    'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıfları',
-    'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve düzeltilmiş SPT değerleri',
-    'Tablo 4.2. Laboratuvar toplu deney sonuçları',
-    'Tablo 7.1. Geoteknik hesaplarında kullanılması önerilen geoteknik parametreler',
-    'Tablo 8.1. Yerel zemin sınıfı',
-    'Tablo 8.2. İnceleme alanı deprem parametreleri',
-    'Tablo 8.3. Yerel zemin katsayıları',
-    'Tablo 8.4. Kısa periyot bölgesi için yerel zemin etki katsayıları',
-    'Tablo 8.5. 1.0 saniye periyot için yerel zemin etki katsayıları',
-    'Tablo 8.6. Elde edilen yatay ve düşey elastik tasarım spektrumu',
-    'Tablo 8.7. Deprem tasarım sınıfları',
+    { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları', page: '7', indent: false },
+    { label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıfları', page: '8', indent: false },
+    { label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve düzeltilmiş SPT değerleri', page: '11', indent: false },
+    { label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: '11', indent: false },
+    { label: 'Tablo 7.1. Geoteknik hesaplarında kullanılması önerilen geoteknik parametreler', page: '13', indent: false },
+    { label: 'Tablo 8.1. Yerel zemin sınıfı', page: '19', indent: false },
+    { label: 'Tablo 8.2. İnceleme alanı deprem parametreleri', page: '19', indent: false },
+    { label: 'Tablo 8.3. Yerel zemin katsayıları', page: '20', indent: false },
+    { label: 'Tablo 8.4. Kısa periyot bölgesi için yerel zemin etki katsayıları', page: '20', indent: false },
+    { label: 'Tablo 8.5. 1.0 saniye periyot için yerel zemin etki katsayıları', page: '20', indent: false },
+    { label: 'Tablo 8.6. Elde edilen yatay ve düşey elastik tasarım spektrumu', page: '21', indent: false },
+    { label: 'Tablo 8.7. Deprem tasarım sınıfları', page: '21', indent: false },
   ];
 
   const figureRows = [
-    'Şekil 2.1. İnceleme alanına ait genel uydu haritası',
-    'Şekil 3.1. Vaziyet planı',
-    'Şekil 6.1. İdealize zemin profilinde alınan kesitler',
-    'Şekil 6.2. İdealize zemin profilinin çıkarılması',
-    'Şekil 8.1. Türkiye deprem tehlike haritası',
-    'Şekil 9.1. Düzce depremi ivme kayıtları',
+    { label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası', page: '6', indent: false },
+    { label: 'Şekil 3.1. Vaziyet planı', page: '7', indent: false },
+    { label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler', page: '12', indent: false },
+    { label: 'Şekil 6.2. İdealize zemin profilinin çıkarılması', page: '12', indent: false },
+    { label: 'Şekil 8.1. Türkiye deprem tehlike haritası', page: '19', indent: false },
+    { label: 'Şekil 9.1. Düzce depremi ivme kayıtları', page: '23', indent: false },
   ];
+
+  const renderListWithLeaders = (items) => {
+    return items.map(item => {
+      const label = typeof item === 'string' ? item : item.label;
+      const page = typeof item === 'string' ? '' : (item.page || '');
+      const indentStyle = item.indent ? 'padding-left: 20pt; font-weight: normal;' : 'font-weight: bold;';
+      
+      return `
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 4pt; font-size: 11pt;">
+        <tr>
+          <td style="white-space: nowrap; border: none; padding: 0 5pt 0 0; vertical-align: bottom; ${indentStyle}">
+            ${esc(label)}
+          </td>
+          <td style="width: 100%; border: none; border-bottom: 1.5pt dotted #000; vertical-align: bottom; padding: 0;">&nbsp;</td>
+          <td style="white-space: nowrap; border: none; padding: 0 0 0 5pt; vertical-align: bottom; font-weight: bold;">
+            ${esc(page)}
+          </td>
+        </tr>
+      </table>`;
+    }).join('');
+  };
 
   const paramTableRows = buildParamRows(lockedParams);
   const resultSections = buildResultSections(lockedResults);
@@ -327,36 +361,21 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
       margin-top: 40pt;
     }
     .cover-location {
-      font-size: 14pt;
-      font-weight: bold;
-      background-color: yellow;
-      display: inline-block;
-      margin-bottom: 40pt;
-      padding: 5px;
-    }
-    .cover-title {
-      font-size: 18pt;
-      font-weight: bold;
-      line-height: 1.5;
       margin-bottom: 80pt;
     }
-    .cover-prepared-by {
-      font-size: 14pt;
-      font-weight: bold;
-      margin-bottom: 20pt;
+    .cover-title-block {
+      margin-bottom: 80pt;
     }
-    .cover-author {
-      font-size: 14pt;
-      font-weight: bold;
-      margin-bottom: 10pt;
+    .cover-prepared-by-block {
+      margin-bottom: 60pt;
     }
-    .cover-org {
-      font-size: 12pt;
-      margin-bottom: 5pt;
-    }
-    .cover-date-no {
+    .cover-date-block {
       margin-top: 60pt;
-      font-size: 12pt;
+      text-align: center;
+    }
+    .cover-no-block {
+      text-align: right;
+      margin-top: 20pt;
     }
     .toc-list, .catalog-list {
       width: 100%;
@@ -403,42 +422,59 @@ function buildReportHTML({ project, lockedParams, lockedResults, sections }) {
 <body>
 
 <div class="cover-page">
-  <div style="margin-bottom: 40pt;"></div>
-  <div>
-    <span class="cover-location">${topLocation}</span>
-  </div>
-  <div class="cover-title">
-    ${projectTitle}<br>ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU
+  <div class="cover-location">
+    <span class="highlight-text" style="font-size: 14pt; font-weight: bold; text-transform: uppercase;">${topLocation}</span>
   </div>
   
-  <div class="cover-prepared-by">HAZIRLAYAN</div>
+  <div class="cover-title-block">
+    <div style="margin-bottom: 12pt;">
+      <span class="highlight-text" style="font-size: 16pt; font-weight: bold; text-transform: uppercase;">${projectTitle}</span>
+    </div>
+    <div style="margin-bottom: 12pt;">
+      <span class="highlight-text" style="font-size: 16pt; font-weight: bold;">ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU</span>
+    </div>
+  </div>
   
-  <div class="cover-author">${authorLine}</div>
-  <div class="cover-org">${esc(preparedBy)}</div>
-  ${employer ? `<div class="cover-org">İşveren: ${esc(employer)}</div>` : ''}
+  <div class="cover-prepared-by-block">
+    <div style="font-size: 14pt; font-weight: bold; text-decoration: underline; margin-bottom: 16pt;">HAZIRLAYAN</div>
+    
+    <div style="margin-bottom: 4pt;">
+      <span class="highlight-text" style="font-size: 14pt; font-weight: bold;">${authorLine}</span>
+    </div>
+    <div style="margin-bottom: 4pt;">
+      <span class="highlight-text" style="font-size: 12pt; font-style: italic;">${esc(preparedBy)}</span>
+    </div>
+    <div style="margin-bottom: 4pt;">
+      <span class="highlight-text" style="font-size: 12pt; font-style: italic;">Mühendislik ve Doğa Bilimleri Fakültesi</span>
+    </div>
+    <div style="margin-bottom: 4pt;">
+      <span class="highlight-text" style="font-size: 12pt; font-style: italic;">İnşaat Mühendisliği Bölümü</span>
+    </div>
+    <div style="margin-bottom: 4pt;">
+      <span class="highlight-text" style="font-size: 12pt; font-style: italic;">Geoteknik Anabilim Dalı Başkanı</span>
+    </div>
+    ${employer ? `<div style="margin-top: 10pt;"><span class="highlight-text" style="font-size: 12pt;">İşveren: ${esc(employer)}</span></div>` : ''}
+  </div>
   
-  <div class="cover-date-no">
-    <div>${esc(date)}</div>
-    <div>${reportNoLine}</div>
+  <div class="cover-date-block">
+    <span class="highlight-text" style="font-size: 12pt; font-weight: bold;">${coverDate}</span>
+  </div>
+  
+  <div class="cover-no-block">
+    <span class="highlight-text" style="font-size: 12pt;">${reportNoLine}</span>
   </div>
 </div>
 
 <div class="page-break"></div>
 
-<h2>İÇİNDEKİLER</h2>
-<table class="toc-list">
-  ${tocRows.map(([label, page]) => `<tr><td>${esc(label)}</td><td class="toc-page">${esc(page)}</td></tr>`).join('')}
-</table>
+<h2 style="text-align: center; margin-bottom: 20pt;">İÇİNDEKİLER</h2>
+${renderListWithLeaders(tocRows)}
 
-<h2>TABLOLAR LİSTESİ</h2>
-<table class="catalog-list">
-  ${tableRows.map((row) => `<tr><td>${esc(row)}</td><td class="toc-page"><span class="toc-dot"></span></td></tr>`).join('')}
-</table>
+<h2 style="text-align: center; margin-top: 20pt; margin-bottom: 20pt;">TABLOLAR LİSTESİ</h2>
+${renderListWithLeaders(tableRows)}
 
-<h2>ŞEKİLLER LİSTESİ</h2>
-<table class="catalog-list">
-  ${figureRows.map((row) => `<tr><td>${esc(row)}</td><td class="toc-page"><span class="toc-dot"></span></td></tr>`).join('')}
-</table>
+<h2 style="text-align: center; margin-top: 20pt; margin-bottom: 20pt;">ŞEKİLLER LİSTESİ</h2>
+${renderListWithLeaders(figureRows)}
 
 <div class="page-break"></div>
 
