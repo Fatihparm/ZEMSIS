@@ -187,6 +187,75 @@ function buildReportFieldDefaults(sections = {}, projectName = '') {
   };
 }
 
+const PREVIEW_TABLE_ITEMS = [
+  { section: 'structureInfo', label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)' },
+  { section: 'structureInfo', label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)' },
+  { section: 'existingResearch', label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri' },
+  { section: 'existingResearch', label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları' },
+  { section: '_params', label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler' },
+  { section: 'seismicity', label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)' },
+  { section: 'seismicity', label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri' },
+  { section: 'seismicity', label: 'Tablo 8.3. Yerel Zemin Katsayıları' },
+  { section: 'seismicity', label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)' },
+  { section: 'seismicity', label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)' },
+  { section: 'seismicity', label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu' },
+  { section: 'seismicity', label: 'Tablo 8.7. Deprem Tasarım Sınıfları' },
+];
+
+const PREVIEW_FIGURE_ITEMS = [
+  { section: 'areaInfo', label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası' },
+  { section: 'structureInfo', label: 'Şekil 3.1. Vaziyet Planı' },
+  { section: 'soilProfile', label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler' },
+  { section: 'soilProfile', label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti' },
+  { section: 'seismicity', label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları' },
+  { section: 'seismicity', label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası' },
+  { section: 'seismicity', label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)' },
+  { section: 'seismicity', label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası' },
+  { section: 'seismicity', label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)' },
+  { section: 'seismicity', label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)' },
+  { section: 'seismicity', label: 'Şekil 8.7. PGA (En büyük yer ivmesi)' },
+  { section: 'seismicity', label: 'Şekil 8.8. PGV (En büyük yer hızı)' },
+  { section: 'seismicity', label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu' },
+  { section: 'seismicity', label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu' },
+];
+
+function splitPreviewParagraphs(text) {
+  if (!text) return [];
+  return String(text)
+    .split(/\n\s*\n/)
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
+function getPreviewImages(sections, sectionKey) {
+  const value = sections?.[getSectionImageKey(sectionKey)];
+  return Array.isArray(value) ? value.filter(img => img?.dataUrl) : [];
+}
+
+function getPreviewLogoSrc(sections) {
+  return sections?.coverLogo?.dataUrl || '/zemsis-logo.png';
+}
+
+function PreviewPage({ title, subtitle, logoSrc, dateStr, children, className = '' }) {
+  return (
+    <section className={`preview-page ${className}`}>
+      <div className="preview-page__inner">
+        {title && (
+          <header className="preview-page__header">
+            {subtitle ? <p className="preview-page__subtitle">{subtitle}</p> : null}
+            <h4 className="preview-page__title">{title}</h4>
+          </header>
+        )}
+        <div className="preview-page__body">{children}</div>
+        <footer className="preview-page__footer">
+          <img src={logoSrc} alt="Logo" className="preview-page__footer-logo" />
+          <span>ZEMSIS © {new Date().getFullYear()} - Tarih: {dateStr}</span>
+        </footer>
+      </div>
+    </section>
+  );
+}
+
 const MAX_IMAGE_DIMENSION = 1600;
 const MAX_IMAGE_COUNT_PER_SECTION = 12;
 
@@ -255,8 +324,34 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
   const [sections, setSections] = useState({});
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [generating, setGenerating] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const autoSaveTimerRef = useRef(null);
   const sectionDefaults = buildReportFieldDefaults(sections, projectName);
+  const previewDateStr = new Date().toLocaleDateString('tr-TR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const previewLogoSrc = getPreviewLogoSrc(sections);
+
+  useEffect(() => {
+    if (!previewOpen) return undefined;
+
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        setPreviewOpen(false);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [previewOpen]);
 
   const updateSectionImages = useCallback((sectionKey, updater) => {
     setSections(prev => {
@@ -400,6 +495,89 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
   };
 
   // ── Aktif bölümü render et ────────────────────────────────────
+  const previewSectionEntries = SECTIONS.filter(sec => sec.type !== 'cover').map(sec => ({
+    ...sec,
+    text: (sections[sec.key] ?? sectionDefaults[sec.key] ?? '').toString(),
+    images: getPreviewImages(sections, sec.key),
+  }));
+
+  const previewTableRows = PREVIEW_TABLE_ITEMS.filter(item => {
+    if (item.section === '_params') return Boolean(parameters);
+    if (item.section === '_results') return Boolean(results);
+    return Boolean((sections[item.section] ?? sectionDefaults[item.section] ?? '').toString().trim());
+  });
+
+  const previewFigureRows = PREVIEW_FIGURE_ITEMS.filter(item => {
+    if (item.section === '_params' || item.section === '_results') return false;
+    return Boolean(
+      (sections[item.section] ?? sectionDefaults[item.section] ?? '').toString().trim() ||
+      getPreviewImages(sections, item.section).length > 0
+    );
+  });
+
+  const renderPreviewSectionBody = (sec, text, images) => {
+    if (sec.type === 'locked') {
+      return (
+        <>
+          <p className="preview-paragraph">{sec.description}</p>
+          <div className="preview-locked-wrap">
+            <LockedDataTable
+              parameters={sec.key === '_params' ? parameters : undefined}
+              results={sec.key === '_results' ? results : undefined}
+            />
+          </div>
+          {images.length > 0 && (
+            <div className="preview-image-grid">
+              {images.map((img, idx) => (
+                <figure className="preview-image-card" key={img.id}>
+                  <div className="preview-image-card__frame">
+                    <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+                  </div>
+                  <figcaption>
+                    <strong>Şekil {getImageCaptionNumber(sec.key, idx)}</strong>
+                    <span>{img.caption || img.name || 'Açıklama girilmedi'}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+        </>
+      );
+    }
+
+    const paragraphs = splitPreviewParagraphs(text);
+    return (
+      <>
+        {paragraphs.length > 0 ? (
+          paragraphs.map((paragraph, idx) => (
+            <p className="preview-paragraph" key={`${sec.key}-p-${idx}`}>
+              {paragraph}
+            </p>
+          ))
+        ) : (
+          <p className="preview-paragraph preview-paragraph--empty">
+            Bu bölüm için henüz içerik girilmedi.
+          </p>
+        )}
+        {sec.allowImages && images.length > 0 && (
+          <div className="preview-image-grid">
+            {images.map((img, idx) => (
+              <figure className="preview-image-card" key={img.id}>
+                <div className="preview-image-card__frame">
+                  <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+                </div>
+                <figcaption>
+                  <strong>Şekil {getImageCaptionNumber(sec.key, idx)}</strong>
+                  <span>{img.caption || img.name || 'Açıklama girilmedi'}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
+
   const renderSectionContent = () => {
     const sec = SECTIONS.find(s => s.key === activeSection);
     if (!sec) return null;
@@ -660,6 +838,13 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
             💾 Taslak Kaydet
           </button>
           <button
+            className="btn-preview"
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+          >
+            👁️ Önizleme
+          </button>
+          <button
             className="btn-generate"
             onClick={handleGenerateReport}
             disabled={noProject || noResults || generating}
@@ -673,6 +858,118 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
           </button>
         </div>
       </div>
+
+      {previewOpen && (
+        <div className="preview-modal-backdrop" onClick={() => setPreviewOpen(false)}>
+          <div className="preview-modal" onClick={e => e.stopPropagation()}>
+            <div className="preview-modal__toolbar">
+              <div>
+                <p className="preview-modal__eyebrow">HTML tabanlı rapor önizlemesi</p>
+                <h3>Word dosyası oluşturmadan raporu görüntüle</h3>
+              </div>
+              <button
+                type="button"
+                className="preview-modal__close"
+                onClick={() => setPreviewOpen(false)}
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="preview-modal__content">
+              <PreviewPage
+                className="preview-page--cover"
+                title="Kapak Önizleme"
+                subtitle="Rapor başlangıç sayfası"
+                logoSrc={previewLogoSrc}
+                dateStr={previewDateStr}
+              >
+                <div className="preview-cover">
+                  <div className="preview-cover__logo">
+                    <img src={previewLogoSrc} alt="Logo" />
+                  </div>
+                  <div className="preview-cover__content">
+                    <p className="preview-cover__eyebrow">PROJE RAPORU</p>
+                    <h2>{sectionDefaults.projectName}</h2>
+                    <dl className="preview-cover__grid">
+                      {COVER_FIELDS.map(field => (
+                        <div key={field.key}>
+                          <dt>{field.label}</dt>
+                          <dd>{String(sections[field.key] ?? sectionDefaults[field.key] ?? '—').trim() || '—'}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                </div>
+              </PreviewPage>
+
+              <PreviewPage
+                title="İçindekiler"
+                subtitle="Rapor bölüm sıralaması"
+                logoSrc={previewLogoSrc}
+                dateStr={previewDateStr}
+              >
+                <ul className="preview-list">
+                  {SECTIONS.filter(sec => sec.key !== 'cover').map(sec => (
+                    <li key={sec.key}>
+                      <span>{sec.label}</span>
+                      <span>{sec.type === 'locked' ? 'Sistem verisi' : 'Düzenlenebilir metin'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </PreviewPage>
+
+              <PreviewPage
+                title="Tablolar Listesi"
+                subtitle="Oluşturulan tablo başlıkları"
+                logoSrc={previewLogoSrc}
+                dateStr={previewDateStr}
+              >
+                <div className="preview-catalog">
+                  {previewTableRows.length > 0 ? previewTableRows.map(item => (
+                    <div className="preview-catalog__item" key={`${item.section}-${item.label}`}>
+                      <span>{item.label}</span>
+                      <small>{SECTIONS.find(sec => sec.key === item.section)?.label || item.section}</small>
+                    </div>
+                  )) : (
+                    <p className="preview-paragraph preview-paragraph--empty">Bu önizlemede tablo yok.</p>
+                  )}
+                </div>
+              </PreviewPage>
+
+              <PreviewPage
+                title="Şekiller Listesi"
+                subtitle="Görsel ve çizim başlıkları"
+                logoSrc={previewLogoSrc}
+                dateStr={previewDateStr}
+              >
+                <div className="preview-catalog">
+                  {previewFigureRows.length > 0 ? previewFigureRows.map(item => (
+                    <div className="preview-catalog__item" key={`${item.section}-${item.label}`}>
+                      <span>{item.label}</span>
+                      <small>{SECTIONS.find(sec => sec.key === item.section)?.label || item.section}</small>
+                    </div>
+                  )) : (
+                    <p className="preview-paragraph preview-paragraph--empty">Bu önizlemede şekil yok.</p>
+                  )}
+                </div>
+              </PreviewPage>
+
+              {previewSectionEntries.map(sec => (
+                <PreviewPage
+                  key={sec.key}
+                  title={sec.label}
+                  subtitle={`Bölüm ${sec.number || ''}`.trim()}
+                  logoSrc={previewLogoSrc}
+                  dateStr={previewDateStr}
+                >
+                  {renderPreviewSectionBody(sec, sec.text, sec.images)}
+                </PreviewPage>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Uyarılar ── */}
       {noProject && (
