@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import RichTextEditor from './RichTextEditor';
 import LockedDataTable from './LockedDataTable';
 import './ReportEditorPage.css';
 
@@ -261,10 +260,11 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
       return (
         <div className="wysiwyg-section">
           <p className="section-desc">{sec.description}</p>
-          <RichTextEditor
+          <textarea
             key={sec.key}
+            className="plain-text-editor"
             value={sections[sec.key] || ''}
-            onChange={val => updateSection(sec.key, val)}
+            onChange={e => updateSection(sec.key, e.target.value)}
             placeholder={sec.placeholder}
           />
         </div>

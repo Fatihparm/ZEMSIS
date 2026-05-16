@@ -444,6 +444,28 @@
   /* Full width, no max-width so editor fills space */
 }
 
+/* ── Plain Text Editor ── */
+.plain-text-editor {
+  width: 100%;
+  min-height: 400px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 16px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #1e293b;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.plain-text-editor:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
 /* ── Locked Section ── */
 .locked-section-wrap {
   /* container for the locked data table */
