@@ -29,6 +29,7 @@ function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, proj
         soilLayers: projectData.soilLayers,
         results: projectData.results,
         drawingData: projectData.drawingData,
+        extraParams: projectData.extraParams,
         units: projectData.units,
       };
 

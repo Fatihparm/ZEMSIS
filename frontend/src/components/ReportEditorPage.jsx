@@ -149,15 +149,16 @@ const COVER_FIELDS = [
   { key: 'revision', label: 'Revizyon No', placeholder: '0' },
 ];
 
-function buildReportFieldDefaults(sections = {}, projectName = '') {
+function buildReportFieldDefaults(sections = {}, projectName = '', soilLayers = [], extraParams = {}) {
   const parcelName = sections.parcelName?.trim()
     || sections.location?.trim()
     || '[Parsel adı]';
   const parcelOwner = sections.parcelOwner?.trim()
     || sections.employer?.trim()
     || '[Parsel sahibi]';
-  const preparedBy = sections.preparedBy?.trim() || 'Bursa Teknik \u00dcniversitesi';
-  const engineer = sections.engineer?.trim() || 'Prof. Dr. Ey\u00fcbhan AVCI';
+  const preparedBy = sections.preparedBy?.trim() || 'Bursa Teknik Üniversitesi';
+  const engineer = sections.engineer?.trim() || 'Prof. Dr. Eyübhan AVCI';
+  const soilProfile = buildAutoSoilProfileText(soilLayers, extraParams);
   const dateStr = new Date().toLocaleDateString('tr-TR', {
     year: 'numeric',
     month: 'long',
@@ -165,7 +166,7 @@ function buildReportFieldDefaults(sections = {}, projectName = '') {
   });
 
   return {
-    projectName: sections.projectName?.trim() || projectName || 'Zemin \u0130yile\u015ftirme Projesi',
+    projectName: sections.projectName?.trim() || projectName || 'Zemin İyileştirme Projesi',
     parcelName: sections.parcelName?.trim() || '',
     parcelOwner: sections.parcelOwner?.trim() || '',
     employer: sections.employer?.trim() || '',
@@ -174,16 +175,16 @@ function buildReportFieldDefaults(sections = {}, projectName = '') {
     engineer,
     docNumber: sections.docNumber?.trim() || '',
     revision: sections.revision?.trim() || '',
-    intro: `S\u00f6z konusu rapor, ${parcelName} parselde, in\u015fas\u0131 d\u00fc\u015f\u00fcn\u00fclen, ${parcelOwner} ait ta\u015f\u0131nmaz\u0131n Zemin \u0130yile\u015ftirme Projesi Hesap Raporunu i\u00e7ermektedir.\n\nYukar\u0131da bilgileri verilen yap\u0131n\u0131n Zemin \u0130yile\u015ftirme Projesinin taraf\u0131mdan haz\u0131rlanmas\u0131 talebinde bulunulmu\u015ftur. \u0130lgili yap\u0131n\u0131n Zemin \u0130yile\u015ftirme Projesi ve Hesap Raporu ${dateStr} tarihinde taraf\u0131mdan haz\u0131rlanm\u0131\u015ft\u0131r.\n\nZemin \u0130yile\u015ftirme Projesi ve Hesap Raporu haz\u0131rlan\u0131rken 1 Ocak 2019\u2019da y\u00fcr\u00fcrl\u00fc\u011fe giren T\u00fcrkiye Bina Deprem Y\u00f6netmeli\u011fi (TBDY-2018), 9 Mart 2019\u2019da y\u00fcr\u00fcrl\u00fc\u011fe giren \u00c7evre ve \u015eehircilik Bakanl\u0131\u011f\u0131 Zemin ve Temel Et\u00fcd\u00fc Uygulama Esaslar\u0131 ve Rapor Format\u0131 ve 2018\u2019de y\u00fcr\u00fcrl\u00fc\u011fe giren \u00c7evre ve \u015eehircilik Bakanl\u0131\u011f\u0131 Kaz\u0131 \u00c7ukurlar\u0131n\u0131n Desteklenmesi ile \u0130lgili Uyulacak Esaslar Genelgesine (2018) uyulmu\u015ftur.`,
-    areaInfo: `\u0130nceleme alan\u0131 ${parcelName} parsel \u00fczerinde yer almaktad\u0131r. \u0130nceleme alan\u0131 koordinatlar\u0131: E= 40.4285\u00b0, B= 29.1767\u00b0'dir (\u015eekil 2.1).`,
-    structureInfo: `${parcelName} parselde, ${parcelOwner} ait parselde 3 bloklu konut ama\u00e7l\u0131 betonarme yap\u0131 yap\u0131lmas\u0131 planlanmaktad\u0131r. Parsel toplam alan\u0131 562,32 m\u00b2 alana sahip arsa i\u00e7erisinde; bodrum, zemin ve iki normal kattan olu\u015fan 3 bloklu betonarme yap\u0131 yap\u0131lacakt\u0131r.\n\nYap\u0131lmas\u0131 planlanan yap\u0131ya ait (TBDY-2018) Bina kullan\u0131m s\u0131n\u0131f\u0131 (BKS), Bina \u00f6nem katsay\u0131s\u0131 (I) ve Bina y\u00fckseklik s\u0131n\u0131f\u0131 (BYS) belirlenmi\u015ftir. Tablo 3.1.'den BKS de\u011feri 3, I de\u011feri 1 olarak al\u0131nm\u0131\u015ft\u0131r. Tablo 3.2'den BYS ise 6 olarak belirlenmi\u015ftir. Yap\u0131lara ait vaziyet plan\u0131 \u015eekil 3.1'de verilmi\u015ftir.`,
-    existingResearch: `\u0130n\u015faat yap\u0131lacak alanda, ABM M\u00dcHEND\u0130SL\u0130K taraf\u0131ndan 1 adet 24,50 metre ve 3 adet 20 metre derinli\u011finde sondaj yap\u0131lm\u0131\u015ft\u0131r. Ayr\u0131ca arazide 4 adet temel sondaj kuyusu a\u00e7\u0131lm\u0131\u015f ve 17 adet \u00f6rselenmi\u015f (SPT), 2 adet \u00f6rselenmemi\u015f (UD) numune al\u0131nm\u0131\u015ft\u0131r. Al\u0131nan numuneler \u00fczerinde PUSULA LAB. H\u0130Z. LTD. \u015eT\u0130. laboratuvarlar\u0131nda zeminlerin fiziksel ve mekanik \u00f6zelliklerinin belirlenmesi amac\u0131yla \u00f6rselenmi\u015f ve \u00f6rselenmemi\u015f numuneler \u00fczerinde laboratuvar deneyleri yap\u0131lm\u0131\u015ft\u0131r.`,
-    additionalResearch: '\u0130lave bir zemin ara\u015ft\u0131rmas\u0131 yap\u0131lmam\u0131\u015ft\u0131r.',
-    soilProfile: `Yap\u0131n\u0131n yap\u0131laca\u011f\u0131 temel alt\u0131 zemini i\u00e7in sondaj verileri ve sismik veriler kullan\u0131larak idealize zemin profilleri (A-A Kesiti) \u00e7\u0131kart\u0131lm\u0131\u015ft\u0131r (\u015eekil 6.1. ve \u015eekil 6.2). Zemin profili incelendi\u011finde 0,00-0,50 metre aras\u0131nda Dolgu tabaka, 0,50-7,50 metre aras\u0131nda Siltli Kil tabaka, 7,50-12,00 metre aras\u0131nda Siltli Kum tabaka ve 12,00-20,00 metre aras\u0131nda Siltli Kil tabaka yer almaktad\u0131r. \u0130nceleme alan\u0131nda 3.50 m'de yeralt\u0131 suyuna rastlanm\u0131\u015ft\u0131r.`,
-    seismicity: `Geoteknik analizler kapsam\u0131nda kullan\u0131lacak olan zemin parametreleri belirlenirken, zemin et\u00fct raporu, g\u00fcncel literat\u00fcr bilgileri ve TBDY-2018 esas al\u0131nm\u0131\u015ft\u0131r.\n\n\u0130nceleme alan\u0131 i\u00e7in deprem parametreleri olarak DD-2 deprem yer hareketi d\u00fczeyi, ZE yerel zemin s\u0131n\u0131f\u0131 ve koordinatlar E=40.4285\u00b0, B=29.1767\u00b0 dikkate al\u0131nm\u0131\u015ft\u0131r.\n\nElde edilen spektral ivme katsay\u0131lar\u0131 \u0131\u015f\u0131\u011f\u0131nda k\u0131sa periyot ve 1.0 saniye periyot i\u00e7in Yerel Zemin Etki Katsay\u0131lar\u0131 TBDY-2018 Tablo 2.1 ve Tablo 2.2'den se\u00e7ilmi\u015f; tasar\u0131m spektrumlar\u0131 buna g\u00f6re de\u011ferlendirilmi\u015ftir.`,
-    foundationSystem: 'Yap\u0131lan de\u011ferlendirmeler sonucunda temel sistemi olarak radye temel sisteminin uygun oldu\u011fu g\u00f6r\u00fclm\u00fc\u015ft\u00fcr.',
-    conclusions: '\u0130nceleme alan\u0131 kapsam\u0131nda yap\u0131lan analiz ve de\u011ferlendirmeler sonucunda, zemin iyile\u015ftirme ihtiyac\u0131 ve uygulanacak y\u00f6ntem belirlenmi\u015ftir.',
-    references: `TBDY-2018, T\u00fcrkiye Bina Deprem Y\u00f6netmeli\u011fi, 2018.\n\u00c7evre ve \u015eehircilik Bakanl\u0131\u011f\u0131, Zemin ve Temel Et\u00fcd\u00fc Uygulama Esaslar\u0131 ve Rapor Format\u0131, Mart 2019.`,
+    intro: `Söz konusu rapor, ${parcelName} parselde, inşası düşünülen, ${parcelOwner} ait taşınmazın Zemin İyileştirme Projesi Hesap Raporunu içermektedir.\n\nYukarıda bilgileri verilen yapının Zemin İyileştirme Projesinin tarafımdan hazırlanması talebinde bulunulmuştur. İlgili yapının Zemin İyileştirme Projesi ve Hesap Raporu ${dateStr} tarihinde tarafımdan hazırlanmıştır.\n\nZemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019’da yürürlüğe giren Türkiye Bina Deprem Yönetmeliği (TBDY-2018), 9 Mart 2019’da yürürlüğe giren Çevre ve Şehircilik Bakanlığı Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı ve 2018’de yürürlüğe giren Çevre ve Şehircilik Bakanlığı Kazı Çukurlarının Desteklenmesi ile İlgili Uyulacak Esaslar Genelgesine (2018) uyulmuştur.`,
+    areaInfo: `İnceleme alanı ${parcelName} parsel üzerinde yer almaktadır. İnceleme alanı koordinatları: E= 40.4285°, B= 29.1767°'dir (Şekil 2.1).`,
+    structureInfo: `${parcelName} parselde, ${parcelOwner} ait parselde 3 bloklu konut amaçlı betonarme yapı yapılması planlanmaktadır. Parsel toplam alanı 562,32 m² alana sahip arsa içerisinde; bodrum, zemin ve iki normal kattan oluşan 3 bloklu betonarme yapı yapılacaktır.\n\nYapılması planlanan yapıya ait (TBDY-2018) Bina kullanım sınıfı (BKS), Bina önem katsayısı (I) ve Bina yükseklik sınıfı (BYS) belirlenmiştir. Tablo 3.1.'den BKS değeri 3, I değeri 1 olarak alınmıştır. Tablo 3.2'den BYS ise 6 olarak belirlenmiştir. Yapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
+    existingResearch: `İnşaat yapılacak alanda, ABM MÜHENDİSLİK tarafından 1 adet 24,50 metre ve 3 adet 20 metre derinliğinde sondaj yapılmıştır. Ayrıca arazide 4 adet temel sondaj kuyusu açılmış ve 17 adet örselenmiş (SPT), 2 adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde PUSULA LAB. HİZ. LTD. ŞTİ. laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
+    additionalResearch: 'İlave bir zemin araştırması yapılmamıştır.',
+    soilProfile,
+    seismicity: `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken, zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.\n\nİnceleme alanı için deprem parametreleri olarak DD-2 deprem yer hareketi düzeyi, ZE yerel zemin sınıfı ve koordinatlar E=40.4285°, B=29.1767° dikkate alınmıştır.\n\nElde edilen spektral ivme katsayıları ışığında kısa periyot ve 1.0 saniye periyot için Yerel Zemin Etki Katsayıları TBDY-2018 Tablo 2.1 ve Tablo 2.2'den seçilmiş; tasarım spektrumları buna göre değerlendirilmiştir.`,
+    foundationSystem: 'Yapılan değerlendirmeler sonucunda temel sistemi olarak radye temel sisteminin uygun olduğu görülmüştür.',
+    conclusions: 'İnceleme alanı kapsamında yapılan analiz ve değerlendirmeler sonucunda, zemin iyileştirme ihtiyacı ve uygulanacak yöntem belirlenmiştir.',
+    references: `TBDY-2018, Türkiye Bina Deprem Yönetmeliği, 2018.\nÇevre ve Şehircilik Bakanlığı, Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı, Mart 2019.`,
   };
 }
 
@@ -234,6 +235,67 @@ function getPreviewImages(sections, sectionKey) {
 
 function getPreviewLogoSrc(sections) {
   return sections?.coverLogo?.dataUrl || '/zemsis-logo.png';
+}
+
+function formatDepthTR(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return num.toFixed(2).replace('.', ',');
+}
+
+function prettifySoilType(soilType) {
+  const raw = String(soilType || '').trim();
+  if (!raw) return 'Zemin';
+
+  const map = {
+    kum: 'Kum',
+    kil: 'Kil',
+    silt: 'Silt',
+    kaya: 'Kaya',
+    cakil: 'Çakıl',
+    dolgu: 'Dolgu',
+  };
+
+  const mapped = map[raw.toLowerCase()];
+  if (mapped) return mapped;
+
+  return raw
+    .split(/\s+/)
+    .map(part => part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part)
+    .join(' ');
+}
+
+function buildAutoSoilProfileText(soilLayers = [], extraParams = {}) {
+  const layers = Array.isArray(soilLayers) ? soilLayers.filter(layer => layer && Number(layer.thickness) > 0) : [];
+  const fillHeight = Number(extraParams?.fillHeight) || 0;
+  const waterTable = Number(extraParams?.waterTable);
+
+  let cursor = 0;
+  const ranges = [];
+
+  if (fillHeight > 0) {
+    ranges.push(`0,00-${formatDepthTR(fillHeight)} metre arasında Dolgu tabaka`);
+    cursor = fillHeight;
+  }
+
+  layers.forEach(layer => {
+    const thickness = Number(layer.thickness) || 0;
+    if (thickness <= 0) return;
+    const start = formatDepthTR(cursor);
+    const end = formatDepthTR(cursor + thickness);
+    ranges.push(`${start}-${end} metre arasında ${prettifySoilType(layer.soilType)} tabaka`);
+    cursor += thickness;
+  });
+
+  const layerSentence = ranges.length > 0
+    ? `Zemin profili incelendiğinde ${ranges.join(', ')} yer almaktadır.`
+    : 'Zemin profili bilgisi bulunmamaktadır.';
+
+  const groundwaterSentence = Number.isFinite(waterTable) && waterTable > 0
+    ? `İnceleme alanında ${formatDepthTR(waterTable)} m’de yeraltı suyuna rastlanmıştır.`
+    : 'İnceleme alanında yeraltı suyuna rastlanmamıştır.';
+
+  return `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). ${layerSentence} ${groundwaterSentence}`;
 }
 
 function PreviewPage({ title, subtitle, logoSrc, dateStr, children, className = '' }) {
@@ -318,7 +380,18 @@ function loadImageFromFile(file) {
   });
 }
 
-function ReportEditorPage({ projectId, projectName, parameters, results, token, lang }) {
+function ReportEditorPage({
+  projectId,
+  projectName,
+  parameters,
+  soilLayers = [],
+  extraParams = {},
+  drawingData = null,
+  units = {},
+  results,
+  token,
+  lang,
+}) {
   const tr = lang === 'tr';
   const [activeSection, setActiveSection] = useState('cover');
   const [sections, setSections] = useState({});
@@ -326,7 +399,7 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
   const [generating, setGenerating] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const autoSaveTimerRef = useRef(null);
-  const sectionDefaults = buildReportFieldDefaults(sections, projectName);
+  const sectionDefaults = buildReportFieldDefaults(sections, projectName, soilLayers, extraParams);
   const previewDateStr = new Date().toLocaleDateString('tr-TR', {
     year: 'numeric',
     month: 'long',
@@ -465,6 +538,27 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
     // Önce taslağı kaydet, sonra indir
     setGenerating(true);
     try {
+      const syncRes = await fetch(`${API_URL}/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: projectName?.trim() || null,
+          parameters,
+          soilLayers,
+          results,
+          drawingData,
+          extraParams,
+          units,
+        }),
+      });
+      if (!syncRes.ok) {
+        const err = await syncRes.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${syncRes.status}`);
+      }
+
       await saveDraft(sections);
 
       const res = await fetch(`${API_URL}/reports/generate/${projectId}`, {
@@ -892,7 +986,7 @@ function ReportEditorPage({ projectId, projectName, parameters, results, token, 
                     <p className="preview-cover__eyebrow">PROJE RAPORU</p>
                     <h2>{sectionDefaults.projectName}</h2>
                     <dl className="preview-cover__grid">
-                      {COVER_FIELDS.map(field => (
+                      {COVER_FIELDS.filter(field => field.key !== 'projectName').map(field => (
                         <div key={field.key}>
                           <dt>{field.label}</dt>
                           <dd>{String(sections[field.key] ?? sectionDefaults[field.key] ?? '—').trim() || '—'}</dd>

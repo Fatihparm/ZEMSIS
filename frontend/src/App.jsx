@@ -191,7 +191,7 @@ function App() {
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentProjectName, setCurrentProjectName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [extraParams, setExtraParams] = useState({ foundationThickness: 0.5, fillHeight: 0 });
+  const [extraParams, setExtraParams] = useState({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
   const drawingDataRef = useRef(null);
   const [parameters, setParameters] = useState({ ...defaultParameters });
   const [soilLayers, setSoilLayers] = useState([...defaultSoilLayers]);
@@ -242,7 +242,7 @@ function App() {
     setUnits({ ...defaultUnits });
     setResults(null);
     setLayerResults(null);
-    setExtraParams({ foundationThickness: 0.5, fillHeight: 0 });
+    setExtraParams({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
     setActivePage('home');
     setActiveTab('parameters');
   };
@@ -305,7 +305,7 @@ function App() {
     if (project.soilLayers && project.soilLayers.length > 0) setSoilLayers(project.soilLayers);
     if (project.units) setUnits(project.units);
     if (project.results) setResults(project.results);
-    if (project.extraParams) setExtraParams(project.extraParams);
+    setExtraParams(project.extraParams || { foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
     drawingDataRef.current = project.drawingData || null;
     setActivePage('workspace');
     setActiveTab('parameters');
@@ -319,7 +319,7 @@ function App() {
     setUnits({ ...defaultUnits });
     setResults(null);
     setLayerResults(null);
-    setExtraParams({ foundationThickness: 0.5, fillHeight: 0 });
+    setExtraParams({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
     drawingDataRef.current = null;
     setActivePage('workspace');
     setActiveTab('parameters');
@@ -333,7 +333,7 @@ function App() {
     setUnits({ ...defaultUnits });
     setResults(null);
     setLayerResults(null);
-    setExtraParams({ foundationThickness: 0.5, fillHeight: 0 });
+    setExtraParams({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
     drawingDataRef.current = null;
     setPendingDxfImport(true);
     setActivePage('workspace');
@@ -681,12 +681,16 @@ function App() {
                 {activeTab === 'report' && (
                   <div className="page-container page-container-full" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <ReportEditorPage
-                      projectId={currentProjectId}
-                      projectName={currentProjectName}
-                      parameters={parameters}
-                      results={results}
-                      token={token}
-                      lang={lang}
+                    projectId={currentProjectId}
+                    projectName={currentProjectName}
+                    parameters={parameters}
+                    soilLayers={soilLayers}
+                    extraParams={extraParams}
+                    drawingData={drawingDataRef.current}
+                    units={units}
+                    results={results}
+                    token={token}
+                    lang={lang}
                     />
                   </div>
                 )}

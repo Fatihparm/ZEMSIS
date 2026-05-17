@@ -39,7 +39,7 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, description, parameters, soil_layers, results,
-              drawing_data, units, created_at, updated_at
+              drawing_data, extra_params, units, created_at, updated_at
        FROM projects
        WHERE id = $1 AND user_id = $2`,
       [req.params.id, req.userId]
@@ -60,6 +60,7 @@ router.get('/:id', async (req, res) => {
         soilLayers: row.soil_layers,
         results: row.results,
         drawingData: row.drawing_data,
+        extraParams: row.extra_params,
         units: row.units,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -74,7 +75,7 @@ router.get('/:id', async (req, res) => {
 // ── POST /api/projects — Create new project ─────────────────
 router.post('/', async (req, res) => {
   try {
-    const { name, description, parameters, soilLayers, results, drawingData, units } = req.body;
+    const { name, description, parameters, soilLayers, results, drawingData, extraParams, units } = req.body;
 
     if (!name || !parameters) {
       return res.status(400).json({
@@ -84,8 +85,8 @@ router.post('/', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO projects (user_id, name, description, parameters, soil_layers, results, drawing_data, units)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO projects (user_id, name, description, parameters, soil_layers, results, drawing_data, extra_params, units)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, name, description, created_at, updated_at`,
       [
         req.userId,
@@ -95,6 +96,7 @@ router.post('/', async (req, res) => {
         JSON.stringify(soilLayers || []),
         results ? JSON.stringify(results) : null,
         drawingData ? JSON.stringify(drawingData) : null,
+        JSON.stringify(extraParams || {}),
         JSON.stringify(units || {})
       ]
     );
@@ -119,7 +121,7 @@ router.post('/', async (req, res) => {
 // ── PUT /api/projects/:id — Update existing project ─────────
 router.put('/:id', async (req, res) => {
   try {
-    const { name, description, parameters, soilLayers, results, drawingData, units } = req.body;
+    const { name, description, parameters, soilLayers, results, drawingData, extraParams, units } = req.body;
 
     // Verify ownership
     const check = await pool.query(
@@ -139,9 +141,10 @@ router.put('/:id', async (req, res) => {
         soil_layers = COALESCE($4, soil_layers),
         results = COALESCE($5, results),
         drawing_data = COALESCE($6, drawing_data),
-        units = COALESCE($7, units),
+        extra_params = COALESCE($7, extra_params),
+        units = COALESCE($8, units),
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8 AND user_id = $9
+       WHERE id = $9 AND user_id = $10
        RETURNING id, name, description, updated_at`,
       [
         name || null,
@@ -150,6 +153,7 @@ router.put('/:id', async (req, res) => {
         soilLayers ? JSON.stringify(soilLayers) : null,
         results ? JSON.stringify(results) : null,
         drawingData ? JSON.stringify(drawingData) : null,
+        extraParams ? JSON.stringify(extraParams) : null,
         units ? JSON.stringify(units) : null,
         req.params.id,
         req.userId

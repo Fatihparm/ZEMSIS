@@ -47,6 +47,7 @@ async function run() {
         soil_layers   JSONB DEFAULT '[]',
         results       JSONB DEFAULT NULL,
         drawing_data  JSONB DEFAULT NULL,
+        extra_params  JSONB DEFAULT '{}',
         units         JSONB DEFAULT '{}',
         created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP

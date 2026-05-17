@@ -33,10 +33,14 @@ async function migrate() {
         soil_layers   JSONB DEFAULT '[]',
         results       JSONB DEFAULT NULL,
         drawing_data  JSONB DEFAULT NULL,
+        extra_params  JSONB DEFAULT '{}',
         units         JSONB DEFAULT '{}',
         created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE projects
+        ADD COLUMN IF NOT EXISTS extra_params JSONB DEFAULT '{}';
 
       -- Index for fast user-based lookups
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);

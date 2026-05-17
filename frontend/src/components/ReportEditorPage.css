@@ -951,7 +951,8 @@
 
 .preview-cover__grid dd {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 14pt;
+  font-weight: 700;
   color: #0f172a;
   word-break: break-word;
 }

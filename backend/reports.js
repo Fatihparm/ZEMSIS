@@ -78,7 +78,7 @@ router.put('/draft/:projectId', async (req, res) => {
 router.post('/generate/:projectId', async (req, res) => {
   try {
     const projectResult = await pool.query(
-      `SELECT id, name, description, parameters, soil_layers, results
+      `SELECT id, name, description, parameters, soil_layers, results, extra_params
        FROM projects WHERE id = $1 AND user_id = $2`,
       [req.params.projectId, req.userId]
     );
@@ -133,7 +133,70 @@ function getSec(sections, key, fallback) {
   return typeof v === 'string' && v.trim() ? v : fallback;
 }
 
-function buildReportSectionDefaults({ parcelName, parcelOwner, dateStr }) {
+function formatDepthTR(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return num.toFixed(2).replace('.', ',');
+}
+
+function prettifySoilType(soilType) {
+  const raw = String(soilType || '').trim();
+  if (!raw) return 'Zemin';
+
+  const map = {
+    kum: 'Kum',
+    kil: 'Kil',
+    silt: 'Silt',
+    kaya: 'Kaya',
+    cakil: 'Çakıl',
+    dolgu: 'Dolgu',
+  };
+
+  const mapped = map[raw.toLowerCase()];
+  if (mapped) return mapped;
+
+  return raw
+    .split(/\s+/)
+    .map(part => part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part)
+    .join(' ');
+}
+
+function buildAutoSoilProfileText(soilLayers = [], extraParams = {}) {
+  const layers = Array.isArray(soilLayers)
+    ? soilLayers.filter(layer => layer && Number(layer.thickness) > 0)
+    : [];
+  const fillHeight = Number(extraParams?.fillHeight) || 0;
+  const waterTable = Number(extraParams?.waterTable);
+
+  let cursor = 0;
+  const ranges = [];
+
+  if (fillHeight > 0) {
+    ranges.push(`0,00-${formatDepthTR(fillHeight)} metre arasında Dolgu tabaka`);
+    cursor = fillHeight;
+  }
+
+  layers.forEach(layer => {
+    const thickness = Number(layer.thickness) || 0;
+    if (thickness <= 0) return;
+    const start = formatDepthTR(cursor);
+    const end = formatDepthTR(cursor + thickness);
+    ranges.push(`${start}-${end} metre arasında ${prettifySoilType(layer.soilType)} tabaka`);
+    cursor += thickness;
+  });
+
+  const layerSentence = ranges.length > 0
+    ? `Zemin profili incelendiğinde ${ranges.join(', ')} yer almaktadır.`
+    : 'Zemin profili bilgisi bulunmamaktadır.';
+
+  const groundwaterSentence = Number.isFinite(waterTable) && waterTable > 0
+    ? `İnceleme alanında ${formatDepthTR(waterTable)} m’de yeraltı suyuna rastlanmıştır.`
+    : 'İnceleme alanında yeraltı suyuna rastlanmamıştır.';
+
+  return `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). ${layerSentence} ${groundwaterSentence}`;
+}
+
+function buildReportSectionDefaults({ parcelName, parcelOwner, dateStr, soilLayers, extraParams }) {
   return {
     intro: `Söz konusu rapor, ${parcelName} parselde, inşası düşünülen, ${parcelOwner} ait taşınmazın Zemin İyileştirme Projesi Hesap Raporunu içermektedir.
 
@@ -146,7 +209,7 @@ Zemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019’da yü
 Yapılması planlanan yapıya ait (TBDY-2018) Bina kullanım sınıfı (BKS), Bina önem katsayısı (I) ve Bina yükseklik sınıfı (BYS) belirlenmiştir. Tablo 3.1.'den BKS değeri 3, I değeri 1 olarak alınmıştır. Tablo 3.2'den BYS ise 6 olarak belirlenmiştir. Yapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
     existingResearch: `İnşaat yapılacak alanda, ABM MÜHENDİSLİK tarafından 1 adet 24,50 metre ve 3 adet 20 metre derinliğinde sondaj yapılmıştır. Ayrıca arazide 4 adet temel sondaj kuyusu açılmış ve 17 adet örselenmiş (SPT), 2 adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde PUSULA LAB. HİZ. LTD. ŞTİ. laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
     additionalResearch: 'İlave bir zemin araştırması yapılmamıştır.',
-    soilProfile: `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). Zemin profili incelendiğinde 0,00-0,50 metre arasında Dolgu tabaka, 0,50-7,50 metre arasında Siltli Kil tabaka, 7,50-12,00 metre arasında Siltli Kum tabaka ve 12,00-20,00 metre arasında Siltli Kil tabaka yer almaktadır. İnceleme alanında 3.50 m’de yeraltı suyuna rastlanmıştır.`,
+    soilProfile: buildAutoSoilProfileText(soilLayers, extraParams),
     seismicity: `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken, zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.
 
 İnceleme alanı için deprem parametreleri olarak DD-2 deprem yer hareketi düzeyi, ZE yerel zemin sınıfı ve koordinatlar E=40.4285°, B=29.1767° dikkate alınmıştır.
@@ -545,7 +608,13 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const preparedBy = (sections && sections.preparedBy) || 'Bursa Teknik Üniversitesi';
   const engineer = (sections && sections.engineer) || 'Prof. Dr. Eyübhan AVCI';
   const employer = (sections && sections.employer) || parcelOwner;
-  const reportDefaults = buildReportSectionDefaults({ parcelName, parcelOwner, dateStr });
+  const reportDefaults = buildReportSectionDefaults({
+    parcelName,
+    parcelOwner,
+    dateStr,
+    soilLayers: project.soil_layers || [],
+    extraParams: project.extra_params || {},
+  });
 
   const paramDefs = [
     { label: 'Kolon Çapı (D)', key: 'D', unit: 'm' },
@@ -620,9 +689,11 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
         },
         children: [
           ...(coverLogoParagraph ? [coverLogoParagraph] : []),
-          new Paragraph({ text: (projectLocation + " " + projectName).toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { before: 1000, after: 1000 } }),
-          ...(employer ? [new Paragraph({ text: employer.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 1000 } })] : []),
-          new Paragraph({ text: "ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 32, bold: true }, spacing: { after: 1500 } }),
+          ...(projectName ? [new Paragraph({ text: projectName.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 36, bold: true }, spacing: { before: 900, after: 500 } })] : []),
+          ...(projectLocation ? [new Paragraph({ text: projectLocation.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 300 } })] : []),
+          ...(parcelOwner ? [new Paragraph({ text: parcelOwner.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 300 } })] : []),
+          ...(employer && employer !== parcelOwner ? [new Paragraph({ text: employer.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 900 } })] : []),
+          new Paragraph({ text: "ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 1200 } }),
           
           new Paragraph({ text: "HAZIRLAYAN", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true, underline: { type: "single" } }, spacing: { after: 300 } }),
           new Paragraph({ text: engineer, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 100 } }),
@@ -631,8 +702,8 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           new Paragraph({ text: "İnşaat Mühendisliği Bölümü", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, italics: true }, spacing: { after: 100 } }),
           new Paragraph({ text: "Geoteknik Anabilim Dalı Başkanı", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, italics: true }, spacing: { after: 1000 } }),
           
-          new Paragraph({ text: coverDate, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true }, spacing: { before: 1000 } }),
-          new Paragraph({ text: reportNumber ? "Rapor No: " + reportNumber : "Rapor No: " + project.id, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true }, spacing: { before: 500 } }),
+          new Paragraph({ text: coverDate, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { before: 900 } }),
+          new Paragraph({ text: reportNumber ? "Rapor No: " + reportNumber : "Rapor No: " + project.id, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { before: 300 } }),
         ]
       },
       // İçindekiler, Tablolar ve Şekiller Listesi

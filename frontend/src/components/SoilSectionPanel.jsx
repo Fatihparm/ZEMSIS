@@ -64,11 +64,18 @@ function SoilSectionPanel({
     useEffect(() => {
         if (extraParams?.foundationThickness !== undefined) setLocalFoundation(extraParams.foundationThickness);
         if (extraParams?.fillHeight !== undefined) setLocalFill(extraParams.fillHeight);
+        if (extraParams?.waterTable !== undefined) setWaterTable(extraParams.waterTable);
     }, [extraParams]);
 
     const notifyExtra = (field, value) => {
         if (onExtraParamsChange) {
-            onExtraParamsChange({ ...extraParams, foundationThickness: localFoundation, fillHeight: localFill, [field]: value });
+            onExtraParamsChange({
+                ...extraParams,
+                foundationThickness: localFoundation,
+                fillHeight: localFill,
+                waterTable,
+                [field]: value
+            });
         }
     };
 
@@ -442,7 +449,7 @@ function SoilSectionPanel({
                         </label>
                         <div className="ssp-extra-input">
                             <input type="number" value={waterTable}
-                                onChange={e => setWaterTable(e.target.value)}
+                                onChange={e => { const v = parseFloat(e.target.value) || 0; setWaterTable(v); notifyExtra('waterTable', v); }}
                                 min={0} max={50} step={0.5} />
                             <span>m</span>
                         </div>
