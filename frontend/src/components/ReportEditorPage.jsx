@@ -237,6 +237,110 @@ function getPreviewLogoSrc(sections) {
   return sections?.coverLogo?.dataUrl || '/zemsis-logo.png';
 }
 
+function buildPreviewTableRows({ sections, sectionDefaults, parameters, results }) {
+  const rows = [];
+  if (sectionDefaultsHasContent(sections, sectionDefaults, 'structureInfo')) {
+    rows.push(
+      { section: 'structureInfo', label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)' },
+      { section: 'structureInfo', label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)' }
+    );
+  }
+
+  if (sectionDefaultsHasContent(sections, sectionDefaults, 'existingResearch')) {
+    rows.push(
+      { section: 'existingResearch', label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri' },
+      { section: 'existingResearch', label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları' }
+    );
+  }
+
+  if (parameters && Object.keys(parameters).length > 0) {
+    rows.push({ section: '_params', label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler' });
+  }
+
+  if (sectionDefaultsHasContent(sections, sectionDefaults, 'seismicity')) {
+    rows.push(
+      { section: 'seismicity', label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)' },
+      { section: 'seismicity', label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri' },
+      { section: 'seismicity', label: 'Tablo 8.3. Yerel Zemin Katsayıları' },
+      { section: 'seismicity', label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)' },
+      { section: 'seismicity', label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)' },
+      { section: 'seismicity', label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu' },
+      { section: 'seismicity', label: 'Tablo 8.7. Deprem Tasarım Sınıfları' }
+    );
+  }
+
+  const categoryLabels = {
+    geometry: 'Geometri Sonuçları',
+    material: 'Malzeme Parametreleri',
+    capacity: 'Taşıma Kapasitesi',
+    improvedSoil: 'İyileştirilmiş Zemin Özellikleri',
+    settlement: 'Oturma Hesapları',
+  };
+
+  if (results && typeof results === 'object') {
+    let categoryIndex = 1;
+    for (const key of ['geometry', 'material', 'capacity', 'improvedSoil', 'settlement']) {
+      if (!results[key] || typeof results[key] !== 'object') continue;
+      rows.push({
+        section: '_results',
+        label: `Tablo 9.${categoryIndex}. ${categoryLabels[key] || key}`,
+      });
+      categoryIndex += 1;
+    }
+  }
+
+  return rows;
+}
+
+function sectionDefaultsHasContent(sections, sectionDefaults, key) {
+  return Boolean((sections?.[key] ?? sectionDefaults?.[key] ?? '').toString().trim());
+}
+
+function buildPreviewFigureRows({ sections, sectionDefaults }) {
+  const rows = [];
+  const sectionFigures = {
+    areaInfo: [{ section: 'areaInfo', label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası' }],
+    structureInfo: [{ section: 'structureInfo', label: 'Şekil 3.1. Vaziyet Planı' }],
+    soilProfile: [
+      { section: 'soilProfile', label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler' },
+      { section: 'soilProfile', label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti' },
+    ],
+    seismicity: [
+      { section: 'seismicity', label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları' },
+      { section: 'seismicity', label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası' },
+      { section: 'seismicity', label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)' },
+      { section: 'seismicity', label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası' },
+      { section: 'seismicity', label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)' },
+      { section: 'seismicity', label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)' },
+      { section: 'seismicity', label: 'Şekil 8.7. PGA (En büyük yer ivmesi)' },
+      { section: 'seismicity', label: 'Şekil 8.8. PGV (En büyük yer hızı)' },
+      { section: 'seismicity', label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu' },
+      { section: 'seismicity', label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu' },
+    ],
+  };
+
+  Object.entries(sectionFigures).forEach(([sectionKey, items]) => {
+    if (!sectionDefaultsHasContent(sections, sectionDefaults, sectionKey)) return;
+    rows.push(...items);
+  });
+
+  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
+  for (const sectionKey of sectionOrder) {
+    const images = getPreviewImages(sections, sectionKey);
+    if (!images.length) continue;
+    images.forEach((img, index) => {
+      const sectionNumber = getSectionNumber(sectionKey);
+      const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+      rows.push({
+        section: sectionKey,
+        label: `Şekil ${figureNumber}. ${img.caption?.trim() || 'Ek görsel'}`,
+      });
+    });
+  }
+
+  return rows;
+}
+
 function formatDepthTR(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return null;
@@ -595,19 +699,8 @@ function ReportEditorPage({
     images: getPreviewImages(sections, sec.key),
   }));
 
-  const previewTableRows = PREVIEW_TABLE_ITEMS.filter(item => {
-    if (item.section === '_params') return Boolean(parameters);
-    if (item.section === '_results') return Boolean(results);
-    return Boolean((sections[item.section] ?? sectionDefaults[item.section] ?? '').toString().trim());
-  });
-
-  const previewFigureRows = PREVIEW_FIGURE_ITEMS.filter(item => {
-    if (item.section === '_params' || item.section === '_results') return false;
-    return Boolean(
-      (sections[item.section] ?? sectionDefaults[item.section] ?? '').toString().trim() ||
-      getPreviewImages(sections, item.section).length > 0
-    );
-  });
+  const previewTableRows = buildPreviewTableRows({ sections, sectionDefaults, parameters, results });
+  const previewFigureRows = buildPreviewFigureRows({ sections, sectionDefaults });
 
   const renderPreviewSectionBody = (sec, text, images) => {
     if (sec.type === 'locked') {
