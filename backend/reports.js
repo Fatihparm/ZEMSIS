@@ -411,6 +411,222 @@ function hasSectionContent(sections, key) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function getSectionText(sections, key, fallback = '') {
+  if (hasSectionContent(sections, key)) return sections[key];
+  return fallback;
+}
+
+function estimateTextPages(text) {
+  const normalized = String(text || '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (normalized.length === 0) return 1;
+
+  const chars = normalized.reduce((sum, line) => sum + line.length, 0);
+  const estimatedUnits = chars + normalized.length * 120;
+  return Math.max(1, Math.ceil(estimatedUnits / 1600));
+}
+
+function estimateImagePages(image) {
+  const width = Math.max(1, Number(image && image.width) || 520);
+  const height = Math.max(1, Number(image && image.height) || 380);
+  const scale = Math.min(520 / width, 380 / height, 1);
+  const scaledHeight = height * scale;
+
+  return Math.max(0.45, (scaledHeight + 90) / 560);
+}
+
+function estimateTablePages(rowCount) {
+  if (!Number.isFinite(rowCount) || rowCount <= 0) return 1;
+  return Math.max(1, Math.ceil((rowCount + 1) / 12));
+}
+
+function estimateContentsPages({ tocEntries = 0, tableEntries = 0, figureEntries = 0 }) {
+  const totalLines = 3 + tocEntries + tableEntries + figureEntries + 4;
+  return Math.max(1, Math.ceil(totalLines / 24));
+}
+
+function buildReportPageMap({ sections, pRows, resCategories, reportDefaults }) {
+  const tableRows = buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults, pageMap: null });
+  const figureRows = buildFigureRowsDynamic({ sections, reportDefaults, pageMap: null });
+  const contentsPages = estimateContentsPages({
+    tocEntries: 11,
+    tableEntries: tableRows.length + 2,
+    figureEntries: figureRows.length + 2,
+  });
+
+  const startPage = 2 + contentsPages;
+  const pageMap = {};
+  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', '_params', 'seismicity', '_results', 'foundationSystem', 'conclusions', 'references'];
+  let cursor = startPage;
+
+  for (const sectionKey of sectionOrder) {
+    pageMap[sectionKey] = cursor;
+
+    if (sectionKey === '_params') {
+      cursor += estimateTablePages(pRows.length + 2);
+      continue;
+    }
+
+    if (sectionKey === '_results') {
+      const resultPages = Array.isArray(resCategories)
+        ? resCategories.reduce((sum, cat) => sum + estimateTablePages((cat.rows || []).length + 2), 0)
+        : 0;
+      cursor += Math.max(1, resultPages || 1);
+      continue;
+    }
+
+    const text = getSectionText(sections, sectionKey, reportDefaults?.[sectionKey] || '');
+    const images = getSectionImages(sections, sectionKey);
+    const textPages = estimateTextPages(text);
+    const imagePages = images.reduce((sum, image) => sum + estimateImagePages(image), 0);
+    cursor += Math.max(1, Math.ceil(textPages + imagePages));
+  }
+
+  return { contentsPages, pageMap };
+}
+
+function buildTableRowsV2({ sections, pRows, resCategories, reportDefaults = {}, pageMap = null }) {
+  const rows = [];
+  const hasStructureInfo = hasSectionContent(sections, 'structureInfo');
+  const hasExistingResearch = hasSectionContent(sections, 'existingResearch');
+  const hasParams = Array.isArray(pRows) && pRows.length > 0;
+  const hasSeismicity = hasSectionContent(sections, 'seismicity');
+
+  const structureTextPages = estimateTextPages(getSectionText(sections, 'structureInfo', reportDefaults.structureInfo || ''));
+  const existingTextPages = estimateTextPages(getSectionText(sections, 'existingResearch', reportDefaults.existingResearch || ''));
+  const seismicityTextPages = estimateTextPages(getSectionText(sections, 'seismicity', reportDefaults.seismicity || ''));
+  const section3Base = Number(pageMap && pageMap.structureInfo) || 1;
+  const section4Base = Number(pageMap && pageMap.existingResearch) || 1;
+  const section7Base = Number(pageMap && pageMap._params) || 1;
+  const section8Base = Number(pageMap && pageMap.seismicity) || 1;
+  const section9Base = Number(pageMap && pageMap._results) || 1;
+
+  if (hasStructureInfo) {
+    const page = String(Math.max(1, Math.ceil(section3Base + structureTextPages)));
+    rows.push(
+      { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page },
+      { label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page }
+    );
+  }
+
+  if (hasExistingResearch) {
+    const page = String(Math.max(1, Math.ceil(section4Base + existingTextPages)));
+    rows.push(
+      { label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page },
+      { label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: String(Math.max(1, Math.ceil(Number(page) + 1))) }
+    );
+  }
+
+  if (hasParams) {
+    rows.push({
+      label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler',
+      page: String(Math.max(1, section7Base)),
+    });
+  }
+
+  if (hasSeismicity) {
+    const page = String(Math.max(1, Math.ceil(section8Base + seismicityTextPages)));
+    rows.push(
+      { label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page },
+      { label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page },
+      { label: 'Tablo 8.3. Yerel Zemin Katsayıları', page },
+      { label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page },
+      { label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page },
+      { label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: String(Math.max(1, Math.ceil(Number(page) + 1))) },
+      { label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: String(Math.max(1, Math.ceil(Number(page) + 1))) }
+    );
+  }
+
+  if (Array.isArray(resCategories) && resCategories.length > 0) {
+    let cursor = Math.max(1, section9Base);
+    resCategories.forEach((cat, index) => {
+      rows.push({
+        label: `Tablo 9.${index + 1}. ${cat.title}`,
+        page: String(Math.max(1, Math.ceil(cursor))),
+      });
+      cursor += estimateTablePages((cat.rows || []).length + 2);
+    });
+  }
+
+  return rows;
+}
+
+function buildFigureRowsV2({ sections, reportDefaults = {}, pageMap = null }) {
+  const rows = [];
+  const sectionFigures = {
+    areaInfo: [{ label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası' }],
+    structureInfo: [{ label: 'Şekil 3.1. Vaziyet Planı' }],
+    soilProfile: [
+      { label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler' },
+      { label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti' },
+    ],
+    seismicity: [
+      { label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları' },
+      { label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası' },
+      { label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)' },
+      { label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası' },
+      { label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)' },
+      { label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)' },
+      { label: 'Şekil 8.7. PGA (En büyük yer ivmesi)' },
+      { label: 'Şekil 8.8. PGV (En büyük yer hızı)' },
+      { label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu' },
+      { label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu' },
+    ],
+  };
+
+  const textPageLookup = {
+    areaInfo: estimateTextPages(getSectionText(sections, 'areaInfo', reportDefaults.areaInfo || '')),
+    structureInfo: estimateTextPages(getSectionText(sections, 'structureInfo', reportDefaults.structureInfo || '')),
+    soilProfile: estimateTextPages(getSectionText(sections, 'soilProfile', reportDefaults.soilProfile || '')),
+    seismicity: estimateTextPages(getSectionText(sections, 'seismicity', reportDefaults.seismicity || '')),
+  };
+
+  Object.entries(sectionFigures).forEach(([sectionKey, items]) => {
+    if (!hasSectionContent(sections, sectionKey)) return;
+    const basePage = Number(pageMap && pageMap[sectionKey]) || 1;
+    const anchorPage = Math.max(1, Math.ceil(basePage + (textPageLookup[sectionKey] || 1) - 1));
+    rows.push(...items.map(item => ({
+      label: item.label,
+      page: String(anchorPage),
+    })));
+  });
+
+  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
+  for (const sectionKey of sectionOrder) {
+    const images = getSectionImages(sections, sectionKey);
+    if (!images.length) continue;
+
+    const basePage = Number(pageMap && pageMap[sectionKey]) || 1;
+    const textPages = estimateTextPages(getSectionText(sections, sectionKey, reportDefaults?.[sectionKey] || ''));
+    let cursor = textPages;
+
+    images.forEach((img, index) => {
+      const sectionNumber = getSectionNumber(sectionKey);
+      const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+      const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Ek görsel';
+      const page = Math.max(1, Math.ceil(basePage + cursor));
+      rows.push({
+        label: `Şekil ${figureNumber}. ${caption}`,
+        page: String(page),
+      });
+      cursor += estimateImagePages(img);
+    });
+  }
+
+  return rows;
+}
+
+function buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults = {}, pageMap = null }) {
+  return buildTableRowsV2({ sections, pRows, resCategories, reportDefaults, pageMap });
+}
+
+function buildFigureRowsDynamic({ sections, reportDefaults = {}, pageMap = null }) {
+  return buildFigureRowsV2({ sections, reportDefaults, pageMap });
+}
+
 function buildDynamicTableRows({ sections, pRows, resCategories }) {
   const rows = [];
   const hasStructureInfo = hasSectionContent(sections, 'structureInfo');
@@ -660,6 +876,25 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
     }
   }
 
+  const pageLayout = buildReportPageMap({
+    sections: generatedSections,
+    pRows,
+    resCategories,
+    reportDefaults,
+  });
+  const tableRows = buildTableRowsDynamic({
+    sections: generatedSections,
+    pRows,
+    resCategories,
+    reportDefaults,
+    pageMap: pageLayout.pageMap,
+  });
+  const figureRows = buildFigureRowsDynamic({
+    sections: generatedSections,
+    reportDefaults,
+    pageMap: pageLayout.pageMap,
+  });
+
   const paramDefs = [
     { label: 'Kolon Çapı (D)', key: 'D', unit: 'm' },
     { label: 'Kolon Aralığı (s)', key: 's', unit: 'm' },
@@ -767,11 +1002,11 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           new Paragraph({ children: [new PageBreak()] }),
           
           new Paragraph({ text: "TABLOLAR LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(buildTableRows({ sections: generatedSections, pRows, resCategories })),
+          ...createListParagraphs(tableRows),
           new Paragraph({ children: [new PageBreak()] }),
           
           new Paragraph({ text: "ŞEKİLLER LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(buildFigureRows({ sections: generatedSections }))
+          ...createListParagraphs(figureRows)
         ]
       },
       // Ana Metin
