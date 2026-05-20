@@ -404,6 +404,108 @@ function buildFigureRows({ sections }) {
   return rows;
 }
 
+function buildTableRowsDynamic({ sections, pRows, resCategories }) {
+  const rows = [];
+
+  if (hasSectionContent(sections, 'structureInfo')) {
+    rows.push(
+      { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page: '8' },
+      { label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page: '8' }
+    );
+  }
+
+  if (hasSectionContent(sections, 'existingResearch')) {
+    rows.push(
+      { label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page: '10' },
+      { label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: '11' }
+    );
+  }
+
+  if (Array.isArray(pRows) && pRows.length > 0) {
+    rows.push({ label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', page: '13' });
+  }
+
+  if (hasSectionContent(sections, 'seismicity')) {
+    rows.push(
+      { label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page: '19' },
+      { label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page: '20' },
+      { label: 'Tablo 8.3. Yerel Zemin Katsayıları', page: '20' },
+      { label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page: '20' },
+      { label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page: '20' },
+      { label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: '21' },
+      { label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: '21' }
+    );
+  }
+
+  if (Array.isArray(resCategories) && resCategories.length > 0) {
+    resCategories.forEach((cat, index) => {
+      rows.push({
+        label: `Tablo 9.${index + 1}. ${cat.title}`,
+        page: '21',
+      });
+    });
+  }
+
+  return rows;
+}
+
+function buildFigureRowsDynamic({ sections }) {
+  const rows = [];
+
+  if (hasSectionContent(sections, 'areaInfo')) {
+    rows.push({ label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası', page: '6' });
+  }
+  if (hasSectionContent(sections, 'structureInfo')) {
+    rows.push({ label: 'Şekil 3.1. Vaziyet Planı', page: '7' });
+  }
+  if (hasSectionContent(sections, 'soilProfile')) {
+    rows.push(
+      { label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler', page: '12' },
+      { label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti', page: '12' }
+    );
+  }
+  if (hasSectionContent(sections, 'seismicity')) {
+    rows.push(
+      { label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları', page: '14' },
+      { label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası', page: '16' },
+      { label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)', page: '16' },
+      { label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası', page: '17' },
+      { label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)', page: '17' },
+      { label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)', page: '18' },
+      { label: 'Şekil 8.7. PGA (En büyük yer ivmesi)', page: '18' },
+      { label: 'Şekil 8.8. PGV (En büyük yer hızı)', page: '19' },
+      { label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu', page: '22' },
+      { label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu', page: '22' }
+    );
+  }
+
+  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
+  for (const sectionKey of sectionOrder) {
+    const images = getSectionImages(sections, sectionKey);
+    if (!images.length) continue;
+    const sectionNumber = getSectionNumber(sectionKey);
+    const fallbackPage = sectionKey === 'intro' ? '5' :
+      sectionKey === 'areaInfo' ? '6' :
+      sectionKey === 'structureInfo' ? '7' :
+      sectionKey === 'existingResearch' ? '10' :
+      sectionKey === 'additionalResearch' ? '11' :
+      sectionKey === 'soilProfile' ? '12' :
+      sectionKey === 'seismicity' ? '14' :
+      sectionKey === 'foundationSystem' ? '23' :
+      sectionKey === 'conclusions' ? '24' : '';
+    images.forEach((img, index) => {
+      const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+      const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Ek görsel';
+      rows.push({
+        label: `Şekil ${figureNumber}. ${caption}`,
+        page: fallbackPage,
+      });
+    });
+  }
+
+  return rows;
+}
+
 function buildTableRows({ sections, pRows, resCategories }) {
   return buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults: {}, pageMap: null });
 }
@@ -564,6 +666,9 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
       resCategories.push({ title: CATEGORY_LABELS[cat] || cat, rows: catRows });
     }
   }
+
+  const tableRows = buildTableRows({ sections: generatedSections, pRows, resCategories });
+  const figureRows = buildFigureRows({ sections: generatedSections });
 
   const doc = new Document({
     styles: {
