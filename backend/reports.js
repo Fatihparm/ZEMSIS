@@ -405,37 +405,6 @@ function createFooterTable(logoAsset, dateStr) {
   });
 }
 
-const TABLE_CATALOG = [
-  { section: 'structureInfo', label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page: '8' },
-  { section: 'structureInfo', label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page: '8' },
-  { section: 'existingResearch', label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page: '10' },
-  { section: 'existingResearch', label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: '11' },
-  { section: 'params', label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', page: '13', condition: rows => rows.length > 0 },
-  { section: 'seismicity', label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page: '19' },
-  { section: 'seismicity', label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page: '20' },
-  { section: 'seismicity', label: 'Tablo 8.3. Yerel Zemin Katsayıları', page: '20' },
-  { section: 'seismicity', label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page: '20' },
-  { section: 'seismicity', label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page: '20' },
-  { section: 'seismicity', label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: '21' },
-  { section: 'seismicity', label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: '21' },
-];
-
-const FIGURE_CATALOG = [
-  { section: 'areaInfo', label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası', page: '6' },
-  { section: 'structureInfo', label: 'Şekil 3.1. Vaziyet Planı', page: '7' },
-  { section: 'soilProfile', label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler', page: '12' },
-  { section: 'soilProfile', label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti', page: '12' },
-  { section: 'seismicity', label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları', page: '14' },
-  { section: 'seismicity', label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası', page: '16' },
-  { section: 'seismicity', label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)', page: '16' },
-  { section: 'seismicity', label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası', page: '17' },
-  { section: 'seismicity', label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)', page: '17' },
-  { section: 'seismicity', label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)', page: '18' },
-  { section: 'seismicity', label: 'Şekil 8.7. PGA (En büyük yer ivmesi)', page: '18' },
-  { section: 'seismicity', label: 'Şekil 8.8. PGV (En büyük yer hızı)', page: '19' },
-  { section: 'seismicity', label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu', page: '22' },
-  { section: 'seismicity', label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu', page: '22' },
-];
 
 function hasSectionContent(sections, key) {
   const value = sections && sections[key];
@@ -734,6 +703,9 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   }
 
   const doc = new Document({
+    features: {
+      updateFields: true,
+    },
     styles: {
       default: {
         document: { run: { font: "Times New Roman", size: 24 } },
@@ -787,8 +759,8 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           page: { margin: PAGE_MARGINS }
         },
         children: [
-          new Paragraph({ text: "İÇİNDEKİLER", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          new TableOfContents("İÇİNDEKİLER", {
+          new Paragraph({ text: "İÇİNDEKİLER", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true }, spacing: { after: 240 } }),
+          new TableOfContents("", {
             hyperlink: true,
             headingStyleRange: "1-2",
           }),
