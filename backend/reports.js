@@ -78,7 +78,7 @@ router.put('/draft/:projectId', async (req, res) => {
 router.post('/generate/:projectId', async (req, res) => {
   try {
     const projectResult = await pool.query(
-      `SELECT id, name, description, parameters, soil_layers, results, extra_params
+      `SELECT id, name, description, parameters, soil_layers, results
        FROM projects WHERE id = $1 AND user_id = $2`,
       [req.params.projectId, req.userId]
     );
@@ -133,83 +133,20 @@ function getSec(sections, key, fallback) {
   return typeof v === 'string' && v.trim() ? v : fallback;
 }
 
-function formatDepthTR(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return null;
-  return num.toFixed(2).replace('.', ',');
-}
-
-function prettifySoilType(soilType) {
-  const raw = String(soilType || '').trim();
-  if (!raw) return 'Zemin';
-
-  const map = {
-    kum: 'Kum',
-    kil: 'Kil',
-    silt: 'Silt',
-    kaya: 'Kaya',
-    cakil: 'Çakıl',
-    dolgu: 'Dolgu',
-  };
-
-  const mapped = map[raw.toLowerCase()];
-  if (mapped) return mapped;
-
-  return raw
-    .split(/\s+/)
-    .map(part => part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part)
-    .join(' ');
-}
-
-function buildAutoSoilProfileText(soilLayers = [], extraParams = {}) {
-  const layers = Array.isArray(soilLayers)
-    ? soilLayers.filter(layer => layer && Number(layer.thickness) > 0)
-    : [];
-  const fillHeight = Number(extraParams?.fillHeight) || 0;
-  const waterTable = Number(extraParams?.waterTable);
-
-  let cursor = 0;
-  const ranges = [];
-
-  if (fillHeight > 0) {
-    ranges.push(`0,00-${formatDepthTR(fillHeight)} metre arasında Dolgu tabaka`);
-    cursor = fillHeight;
-  }
-
-  layers.forEach(layer => {
-    const thickness = Number(layer.thickness) || 0;
-    if (thickness <= 0) return;
-    const start = formatDepthTR(cursor);
-    const end = formatDepthTR(cursor + thickness);
-    ranges.push(`${start}-${end} metre arasında ${prettifySoilType(layer.soilType)} tabaka`);
-    cursor += thickness;
-  });
-
-  const layerSentence = ranges.length > 0
-    ? `Zemin profili incelendiğinde ${ranges.join(', ')} yer almaktadır.`
-    : 'Zemin profili bilgisi bulunmamaktadır.';
-
-  const groundwaterSentence = Number.isFinite(waterTable) && waterTable > 0
-    ? `İnceleme alanında ${formatDepthTR(waterTable)} m’de yeraltı suyuna rastlanmıştır.`
-    : 'İnceleme alanında yeraltı suyuna rastlanmamıştır.';
-
-  return `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). ${layerSentence} ${groundwaterSentence}`;
-}
-
-function buildReportSectionDefaults({ parcelName, parcelOwner, dateStr, soilLayers, extraParams }) {
+function buildReportSectionDefaults({ parcelName, parcelOwner, dateStr }) {
   return {
     intro: `Söz konusu rapor, ${parcelName} parselde, inşası düşünülen, ${parcelOwner} ait taşınmazın Zemin İyileştirme Projesi Hesap Raporunu içermektedir.
 
 Yukarıda bilgileri verilen yapının Zemin İyileştirme Projesinin tarafımdan hazırlanması talebinde bulunulmuştur. İlgili yapının Zemin İyileştirme Projesi ve Hesap Raporu ${dateStr} tarihinde tarafımdan hazırlanmıştır.
 
 Zemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019’da yürürlülüğe giren Türkiye Bina Deprem Yönetmeliği (TBDY-2018), 9 Mart 2019’da yürürlüğe giren Çevre ve Şehircilik Bakanlığı Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı’ ve 2018’de yürürlülüğe giren Çevre ve Şehircilik Bakanlığı Kazı Çukurlarının Desteklenmesi ile İlgili Uyulacak Esaslar Genelgesine (2018) uyulmuştur.`,
-    areaInfo: `İnceleme alanı ${parcelName} parsel üzerinde yer almaktadır. İnceleme alanı koordinatları: E= 40.4285°, B= 29.1767°’dir (Şekil 2.1).`,
-    structureInfo: `${parcelName} parselde, ${parcelOwner} ait parselde 3 bloklu konut amaçlı betonarme yapı yapılması planlanmaktadır. Parsel toplam alanı 562,32 m² alana sahip arsa içerisinde; bodrum, zemin ve iki normal kattan oluşan 3 bloklu betonarme yapı yapılacaktır.
+    areaInfo: `İnceleme alanı ${parcelName} parsel üzerinde yer almaktadır`,
+    structureInfo: `${parcelName} parselde, ${parcelOwner} ait parselde 3 bloklu konut amaçlı betonarme yapı yapılması planlanmaktadır.
 
 Yapılması planlanan yapıya ait (TBDY-2018) Bina kullanım sınıfı (BKS), Bina önem katsayısı (I) ve Bina yükseklik sınıfı (BYS) belirlenmiştir. Tablo 3.1.'den BKS değeri 3, I değeri 1 olarak alınmıştır. Tablo 3.2'den BYS ise 6 olarak belirlenmiştir. Yapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
-    existingResearch: `İnşaat yapılacak alanda, ABM MÜHENDİSLİK tarafından 1 adet 24,50 metre ve 3 adet 20 metre derinliğinde sondaj yapılmıştır. Ayrıca arazide 4 adet temel sondaj kuyusu açılmış ve 17 adet örselenmiş (SPT), 2 adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde PUSULA LAB. HİZ. LTD. ŞTİ. laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
+    existingResearch: `İnşaat yapılacak alanda, ---------- tarafından -------------- derinliğinde sondaj yapılmıştır. Ayrıca arazide --- adet temel sondaj kuyusu açılmış ve --- adet örselenmiş (SPT), --- adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde -------------------- laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
     additionalResearch: 'İlave bir zemin araştırması yapılmamıştır.',
-    soilProfile: buildAutoSoilProfileText(soilLayers, extraParams),
+    soilProfile: `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). Zemin profili incelendiğinde 0,00-0,50 metre arasında Dolgu tabaka, 0,50-7,50 metre arasında Siltli Kil tabaka, 7,50-12,00 metre arasında Siltli Kum tabaka ve 12,00-20,00 metre arasında Siltli Kil tabaka yer almaktadır. İnceleme alanında 3.50 m’de yeraltı suyuna rastlanmıştır.`,
     seismicity: `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken, zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.
 
 İnceleme alanı için deprem parametreleri olarak DD-2 deprem yer hareketi düzeyi, ZE yerel zemin sınıfı ve koordinatlar E=40.4285°, B=29.1767° dikkate alınmıştır.
@@ -405,264 +342,16 @@ function createFooterTable(logoAsset, dateStr) {
   });
 }
 
-
 function hasSectionContent(sections, key) {
   const value = sections && sections[key];
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function getSectionText(sections, key, fallback = '') {
-  if (hasSectionContent(sections, key)) return sections[key];
-  return fallback;
-}
-
-function estimateTextPages(text) {
-  const normalized = String(text || '')
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean);
-
-  if (normalized.length === 0) return 1;
-
-  const chars = normalized.reduce((sum, line) => sum + line.length, 0);
-  const estimatedUnits = chars + normalized.length * 120;
-  return Math.max(1, Math.ceil(estimatedUnits / 1600));
-}
-
-function estimateImagePages(image) {
-  const width = Math.max(1, Number(image && image.width) || 520);
-  const height = Math.max(1, Number(image && image.height) || 380);
-  const scale = Math.min(520 / width, 380 / height, 1);
-  const scaledHeight = height * scale;
-
-  return Math.max(0.45, (scaledHeight + 90) / 560);
-}
-
-function estimateTablePages(rowCount) {
-  if (!Number.isFinite(rowCount) || rowCount <= 0) return 1;
-  return Math.max(1, Math.ceil((rowCount + 1) / 12));
-}
-
-function estimateContentsPages({ tocEntries = 0, tableEntries = 0, figureEntries = 0 }) {
-  const totalLines = 3 + tocEntries + tableEntries + figureEntries + 4;
-  return Math.max(1, Math.ceil(totalLines / 24));
-}
-
-function buildReportPageMap({ sections, pRows, resCategories, reportDefaults }) {
-  const tableRows = buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults, pageMap: null });
-  const figureRows = buildFigureRowsDynamic({ sections, reportDefaults, pageMap: null });
-  const contentsPages = estimateContentsPages({
-    tocEntries: 11,
-    tableEntries: tableRows.length + 2,
-    figureEntries: figureRows.length + 2,
-  });
-
-  const startPage = 2 + contentsPages;
-  const pageMap = {};
-  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', '_params', 'seismicity', '_results', 'foundationSystem', 'conclusions', 'references'];
-  let cursor = startPage;
-
-  for (const sectionKey of sectionOrder) {
-    pageMap[sectionKey] = cursor;
-
-    if (sectionKey === '_params') {
-      cursor += estimateTablePages(pRows.length + 2);
-      continue;
-    }
-
-    if (sectionKey === '_results') {
-      const resultPages = Array.isArray(resCategories)
-        ? resCategories.reduce((sum, cat) => sum + estimateTablePages((cat.rows || []).length + 2), 0)
-        : 0;
-      cursor += Math.max(1, resultPages || 1);
-      continue;
-    }
-
-    const text = getSectionText(sections, sectionKey, reportDefaults?.[sectionKey] || '');
-    const images = getSectionImages(sections, sectionKey);
-    const textPages = estimateTextPages(text);
-    const imagePages = images.reduce((sum, image) => sum + estimateImagePages(image), 0);
-    cursor += Math.max(1, Math.ceil(textPages + imagePages));
-  }
-
-  return { contentsPages, pageMap };
-}
-
-function buildTableRowsV2({ sections, pRows, resCategories, reportDefaults = {}, pageMap = null }) {
-  const rows = [];
-  const hasStructureInfo = hasSectionContent(sections, 'structureInfo');
-  const hasExistingResearch = hasSectionContent(sections, 'existingResearch');
-  const hasParams = Array.isArray(pRows) && pRows.length > 0;
-  const hasSeismicity = hasSectionContent(sections, 'seismicity');
-
-  const structureTextPages = estimateTextPages(getSectionText(sections, 'structureInfo', reportDefaults.structureInfo || ''));
-  const existingTextPages = estimateTextPages(getSectionText(sections, 'existingResearch', reportDefaults.existingResearch || ''));
-  const seismicityTextPages = estimateTextPages(getSectionText(sections, 'seismicity', reportDefaults.seismicity || ''));
-  const section3Base = Number(pageMap && pageMap.structureInfo) || 1;
-  const section4Base = Number(pageMap && pageMap.existingResearch) || 1;
-  const section7Base = Number(pageMap && pageMap._params) || 1;
-  const section8Base = Number(pageMap && pageMap.seismicity) || 1;
-  const section9Base = Number(pageMap && pageMap._results) || 1;
-
-  if (hasStructureInfo) {
-    const page = String(Math.max(1, Math.ceil(section3Base + structureTextPages)));
-    rows.push(
-      { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page },
-      { label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page }
-    );
-  }
-
-  if (hasExistingResearch) {
-    const page = String(Math.max(1, Math.ceil(section4Base + existingTextPages)));
-    rows.push(
-      { label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page },
-      { label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: String(Math.max(1, Math.ceil(Number(page) + 1))) }
-    );
-  }
-
-  if (hasParams) {
-    rows.push({
-      label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler',
-      page: String(Math.max(1, section7Base)),
-    });
-  }
-
-  if (hasSeismicity) {
-    const page = String(Math.max(1, Math.ceil(section8Base + seismicityTextPages)));
-    rows.push(
-      { label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page },
-      { label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page },
-      { label: 'Tablo 8.3. Yerel Zemin Katsayıları', page },
-      { label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page },
-      { label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page },
-      { label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: String(Math.max(1, Math.ceil(Number(page) + 1))) },
-      { label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: String(Math.max(1, Math.ceil(Number(page) + 1))) }
-    );
-  }
-
-  if (Array.isArray(resCategories) && resCategories.length > 0) {
-    let cursor = Math.max(1, section9Base);
-    resCategories.forEach((cat, index) => {
-      rows.push({
-        label: `Tablo 9.${index + 1}. ${cat.title}`,
-        page: String(Math.max(1, Math.ceil(cursor))),
-      });
-      cursor += estimateTablePages((cat.rows || []).length + 2);
-    });
-  }
-
-  return rows;
-}
-
-function buildFigureRowsV2({ sections, reportDefaults = {}, pageMap = null }) {
-  const rows = [];
-  const sectionFigures = {
-    areaInfo: [{ label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası' }],
-    structureInfo: [{ label: 'Şekil 3.1. Vaziyet Planı' }],
-    soilProfile: [
-      { label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler' },
-      { label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti' },
-    ],
-    seismicity: [
-      { label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları' },
-      { label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası' },
-      { label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)' },
-      { label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası' },
-      { label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)' },
-      { label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)' },
-      { label: 'Şekil 8.7. PGA (En büyük yer ivmesi)' },
-      { label: 'Şekil 8.8. PGV (En büyük yer hızı)' },
-      { label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu' },
-      { label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu' },
-    ],
-  };
-
-  const textPageLookup = {
-    areaInfo: estimateTextPages(getSectionText(sections, 'areaInfo', reportDefaults.areaInfo || '')),
-    structureInfo: estimateTextPages(getSectionText(sections, 'structureInfo', reportDefaults.structureInfo || '')),
-    soilProfile: estimateTextPages(getSectionText(sections, 'soilProfile', reportDefaults.soilProfile || '')),
-    seismicity: estimateTextPages(getSectionText(sections, 'seismicity', reportDefaults.seismicity || '')),
-  };
-
-  Object.entries(sectionFigures).forEach(([sectionKey, items]) => {
-    if (!hasSectionContent(sections, sectionKey)) return;
-    const basePage = Number(pageMap && pageMap[sectionKey]) || 1;
-    const anchorPage = Math.max(1, Math.ceil(basePage + (textPageLookup[sectionKey] || 1) - 1));
-    rows.push(...items.map(item => ({
-      label: item.label,
-      page: String(anchorPage),
-    })));
-  });
-
-  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
-  for (const sectionKey of sectionOrder) {
-    const images = getSectionImages(sections, sectionKey);
-    if (!images.length) continue;
-
-    const basePage = Number(pageMap && pageMap[sectionKey]) || 1;
-    const textPages = estimateTextPages(getSectionText(sections, sectionKey, reportDefaults?.[sectionKey] || ''));
-    let cursor = textPages;
-
-    images.forEach((img, index) => {
-      const sectionNumber = getSectionNumber(sectionKey);
-      const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
-      const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Ek görsel';
-      const page = Math.max(1, Math.ceil(basePage + cursor));
-      rows.push({
-        label: `Şekil ${figureNumber}. ${caption}`,
-        page: String(page),
-      });
-      cursor += estimateImagePages(img);
-    });
-  }
-
-  return rows;
-}
-
-function buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults = {}, pageMap = null }) {
-  return buildTableRowsV2({ sections, pRows, resCategories, reportDefaults, pageMap });
-}
-
-function buildFigureRowsDynamic({ sections, reportDefaults = {}, pageMap = null }) {
-  return buildFigureRowsV2({ sections, reportDefaults, pageMap });
-}
-
-function buildDynamicTableRows({ sections, pRows, resCategories }) {
-  const rows = [];
-  const hasStructureInfo = hasSectionContent(sections, 'structureInfo');
-  const hasExistingResearch = hasSectionContent(sections, 'existingResearch');
-  const hasParams = Array.isArray(pRows) && pRows.length > 0;
-  const hasSeismicity = hasSectionContent(sections, 'seismicity');
-
-  if (hasStructureInfo) {
-    rows.push(
-      { label: 'Tablo 3.1. Bina Kullanım Sınıfları ve Bina Önem Katsayıları (TBDY-2018 Tablo 3.1)', page: '8' },
-      { label: 'Tablo 3.2. Bina yükseklik sınıfları ve deprem tasarım sınıflarına göre tanımlanan bina yükseklik aralıkları (TBDY-2018 Tablo 3.3)', page: '8' }
-    );
-  }
-
-  if (hasExistingResearch) {
-    rows.push(
-      { label: 'Tablo 4.1. İnceleme alanında yapılan sondajlara ait SPT ve Düzeltilmiş SPT Değerleri', page: '10' },
-      { label: 'Tablo 4.2. Laboratuvar toplu deney sonuçları', page: '11' }
-    );
-  }
-
-  if (hasParams) {
-    rows.push({ label: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', page: '13' });
-  }
-
-  if (hasSeismicity) {
-    rows.push(
-      { label: 'Tablo 8.1. Yerel Zemin Sınıfı (TBDY-2018 Tablo 16.1)', page: '19' },
-      { label: 'Tablo 8.2. İnceleme Alanı Deprem Parametreleri', page: '20' },
-      { label: 'Tablo 8.3. Yerel Zemin Katsayıları', page: '20' },
-      { label: 'Tablo 8.4. Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.1)', page: '20' },
-      { label: 'Tablo 8.5. 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (TBDY-2018 Tablo 2.2)', page: '20' },
-      { label: 'Tablo 8.6. Elde Edilen Yatay ve Düşey Elastik Tasarım Spektrumu', page: '21' },
-      { label: 'Tablo 8.7. Deprem Tasarım Sınıfları', page: '21' }
-    );
-  }
+function buildTableRows({ sections, pRows, resCategories }) {
+  const rows = TABLE_CATALOG.filter(item => {
+    if (item.condition) return item.condition(pRows || []);
+    return hasSectionContent(sections, item.section);
+  }).map(({ label, page }) => ({ label, page }));
 
   if (Array.isArray(resCategories) && resCategories.length > 0) {
     resCategories.forEach((cat, index) => {
@@ -676,37 +365,10 @@ function buildDynamicTableRows({ sections, pRows, resCategories }) {
   return rows;
 }
 
-function buildTableRows({ sections, pRows, resCategories }) {
-  return buildDynamicTableRows({ sections, pRows, resCategories });
-}
-
-function buildDynamicFigureRows({ sections }) {
-  const rows = [];
-  const sectionFigures = {
-    areaInfo: [{ label: 'Şekil 2.1. İnceleme alanına ait genel uydu haritası', page: '6' }],
-    structureInfo: [{ label: 'Şekil 3.1. Vaziyet Planı', page: '7' }],
-    soilProfile: [
-      { label: 'Şekil 6.1. İdealize zemin profilinde alınan kesitler', page: '12' },
-      { label: 'Şekil 6.2. İdealize Zemin profilinin çıkarılması A-A Kesiti', page: '12' },
-    ],
-    seismicity: [
-      { label: 'Şekil 8.1. Türkiye ve çevresinin başlıca neotektonik yapıları', page: '14' },
-      { label: 'Şekil 8.2. Türkiye Deprem Tehlike Haritası', page: '16' },
-      { label: 'Şekil 8.3. İnceleme Alanı Deprem Tehlike Haritası (AFAD,2018)', page: '16' },
-      { label: 'Şekil 8.4. İnceleme alanının Deprem Tehlike Haritası', page: '17' },
-      { label: 'Şekil 8.5. Ss (Kısa Periyot Harita Spektral İvme Katsayısı)', page: '17' },
-      { label: 'Şekil 8.6. S1 (1.0 Saniye Periyot Harita Spektral İvme Katsayısı)', page: '18' },
-      { label: 'Şekil 8.7. PGA (En büyük yer ivmesi)', page: '18' },
-      { label: 'Şekil 8.8. PGV (En büyük yer hızı)', page: '19' },
-      { label: 'Şekil 8.9. Yatay Elastik Tasarım Spektrumu', page: '22' },
-      { label: 'Şekil 8.10. Düşey Elastik Tasarım Spektrumu', page: '22' },
-    ],
-  };
-
-  Object.entries(sectionFigures).forEach(([sectionKey, items]) => {
-    if (!hasSectionContent(sections, sectionKey)) return;
-    rows.push(...items);
-  });
+function buildFigureRows({ sections }) {
+  const rows = FIGURE_CATALOG
+    .filter(item => hasSectionContent(sections, item.section))
+    .map(({ label, page }) => ({ label, page }));
 
   const fallbackPages = {
     intro: '5',
@@ -722,12 +384,13 @@ function buildDynamicFigureRows({ sections }) {
   };
 
   const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
+
   for (const sectionKey of sectionOrder) {
     const images = getSectionImages(sections, sectionKey);
     if (!images.length) continue;
 
     const sectionNumber = getSectionNumber(sectionKey);
-    const fallbackPage = fallbackPages[sectionKey] || '';
+    const fallbackPage = FIGURE_CATALOG.find(item => item.section === sectionKey)?.page || fallbackPages[sectionKey] || '';
     images.forEach((img, index) => {
       const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
       const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Ek görsel';
@@ -739,10 +402,6 @@ function buildDynamicFigureRows({ sections }) {
   }
 
   return rows;
-}
-
-function buildFigureRows({ sections }) {
-  return buildDynamicFigureRows({ sections });
 }
 
 const REPORT_SECTION_NUMBERS = {
@@ -854,27 +513,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const preparedBy = (sections && sections.preparedBy) || 'Bursa Teknik Üniversitesi';
   const engineer = (sections && sections.engineer) || 'Prof. Dr. Eyübhan AVCI';
   const employer = (sections && sections.employer) || parcelOwner;
-  const reportDefaults = buildReportSectionDefaults({
-    parcelName,
-    parcelOwner,
-    dateStr,
-    soilLayers: project.soil_layers || [],
-    extraParams: project.extra_params || {},
-  });
-  const generatedSections = { ...reportDefaults };
-  for (const [key, value] of Object.entries(sections || {})) {
-    if (typeof value === 'string') {
-      if (value.trim()) generatedSections[key] = value;
-      continue;
-    }
-    if (Array.isArray(value)) {
-      if (value.length > 0) generatedSections[key] = value;
-      continue;
-    }
-    if (value && typeof value === 'object') {
-      generatedSections[key] = value;
-    }
-  }
+  const reportDefaults = buildReportSectionDefaults({ parcelName, parcelOwner, dateStr });
 
   const paramDefs = [
     { label: 'Kolon Çapı (D)', key: 'D', unit: 'm' },
@@ -918,29 +557,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
     }
   }
 
-  const pageLayout = buildReportPageMap({
-    sections: generatedSections,
-    pRows,
-    resCategories,
-    reportDefaults,
-  });
-  const tableRows = buildTableRowsDynamic({
-    sections: generatedSections,
-    pRows,
-    resCategories,
-    reportDefaults,
-    pageMap: pageLayout.pageMap,
-  });
-  const figureRows = buildFigureRowsDynamic({
-    sections: generatedSections,
-    reportDefaults,
-    pageMap: pageLayout.pageMap,
-  });
-
   const doc = new Document({
-    features: {
-      updateFields: true,
-    },
     styles: {
       default: {
         document: { run: { font: "Times New Roman", size: 24 } },
@@ -994,19 +611,19 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           page: { margin: PAGE_MARGINS }
         },
         children: [
-          new Paragraph({ text: "İÇİNDEKİLER", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true }, spacing: { after: 240 } }),
-          new TableOfContents("", {
+          new Paragraph({ text: "İÇİNDEKİLER", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
+          new TableOfContents("İÇİNDEKİLER", {
             hyperlink: true,
             headingStyleRange: "1-2",
           }),
           new Paragraph({ children: [new PageBreak()] }),
           
           new Paragraph({ text: "TABLOLAR LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(tableRows),
+          ...createListParagraphs(buildTableRows({ sections, pRows, resCategories })),
           new Paragraph({ children: [new PageBreak()] }),
           
           new Paragraph({ text: "ŞEKİLLER LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(figureRows)
+          ...createListParagraphs(buildFigureRows({ sections }))
         ]
       },
       // Ana Metin
