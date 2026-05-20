@@ -876,25 +876,6 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
     }
   }
 
-  const pageLayout = buildReportPageMap({
-    sections: generatedSections,
-    pRows,
-    resCategories,
-    reportDefaults,
-  });
-  const tableRows = buildTableRowsDynamic({
-    sections: generatedSections,
-    pRows,
-    resCategories,
-    reportDefaults,
-    pageMap: pageLayout.pageMap,
-  });
-  const figureRows = buildFigureRowsDynamic({
-    sections: generatedSections,
-    reportDefaults,
-    pageMap: pageLayout.pageMap,
-  });
-
   const paramDefs = [
     { label: 'Kolon Çapı (D)', key: 'D', unit: 'm' },
     { label: 'Kolon Aralığı (s)', key: 's', unit: 'm' },
@@ -936,6 +917,25 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
       resCategories.push({ title: CATEGORY_LABELS[cat] || cat, rows: catRows });
     }
   }
+
+  const pageLayout = buildReportPageMap({
+    sections: generatedSections,
+    pRows,
+    resCategories,
+    reportDefaults,
+  });
+  const tableRows = buildTableRowsDynamic({
+    sections: generatedSections,
+    pRows,
+    resCategories,
+    reportDefaults,
+    pageMap: pageLayout.pageMap,
+  });
+  const figureRows = buildFigureRowsDynamic({
+    sections: generatedSections,
+    reportDefaults,
+    pageMap: pageLayout.pageMap,
+  });
 
   const doc = new Document({
     features: {
