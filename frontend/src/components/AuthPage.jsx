@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import './AuthPage.css';
 
-function AuthPage({ onLogin, lang }) {
+function AuthPage({ onLogin, lang, initialError = '' }) {
   const tr = lang === 'tr';
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError);
   const [loading, setLoading] = useState(false);
 
   const API = '/api/auth';

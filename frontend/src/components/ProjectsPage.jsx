@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './ProjectsPage.css';
 
-function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProject }) {
+function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProject, onLogout }) {
   const tr = lang === 'tr';
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +18,12 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      
+      if ((res.status === 401 || data.error === 'Invalid or expired token' || data.error === 'Token required') && onLogout) {
+        onLogout(tr ? 'Oturum süresi doldu, lütfen tekrar giriş yapın.' : 'Session expired, please login again.');
+        return;
+      }
+      
       if (data.success) {
         setProjects(data.projects);
       } else {
@@ -41,6 +47,12 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      
+      if ((res.status === 401 || data.error === 'Invalid or expired token' || data.error === 'Token required') && onLogout) {
+        onLogout(tr ? 'Oturum süresi doldu, lütfen tekrar giriş yapın.' : 'Session expired, please login again.');
+        return;
+      }
+      
       if (data.success) {
         setProjects(prev => prev.filter(p => p.id !== id));
         if (onDeleteProject) onDeleteProject(id);
@@ -57,6 +69,12 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      
+      if ((res.status === 401 || data.error === 'Invalid or expired token' || data.error === 'Token required') && onLogout) {
+        onLogout(tr ? 'Oturum süresi doldu, lütfen tekrar giriş yapın.' : 'Session expired, please login again.');
+        return;
+      }
+      
       if (data.success) {
         onLoadProject(data.project);
       }

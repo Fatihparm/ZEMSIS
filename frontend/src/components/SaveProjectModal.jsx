@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './SaveProjectModal.css';
 
-function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, projectData }) {
+function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, projectData, onLogout }) {
   const tr = lang === 'tr';
   const [name, setName] = useState(projectData?.name || '');
   const [description, setDescription] = useState(projectData?.description || '');
@@ -51,6 +51,11 @@ function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, proj
       });
 
       const data = await res.json();
+
+      if ((res.status === 401 || data.error === 'Invalid or expired token' || data.error === 'Token required') && onLogout) {
+        onLogout(tr ? 'Oturum süresi doldu, lütfen tekrar giriş yapın.' : 'Session expired, please login again.');
+        return;
+      }
 
       if (data.success) {
         onSave(data.project, saveMode);

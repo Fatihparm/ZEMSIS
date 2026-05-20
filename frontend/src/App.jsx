@@ -183,6 +183,7 @@ function App() {
   const [lang, setLang] = useState('tr');
   const [activePage, setActivePage] = useState('home');
   const [activeTab, setActiveTab] = useState('parameters');
+  const [authError, setAuthError] = useState('');
   const [token, setToken] = useState(() => localStorage.getItem('jg_token'));
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('jg_user');
@@ -247,11 +248,12 @@ function App() {
     setActiveTab('parameters');
   };
 
-  const handleLogout = () => {
+  const handleLogout = (errorMsg = '') => {
     localStorage.removeItem('jg_token');
     localStorage.removeItem('jg_user');
     setToken(null);
     setUser(null);
+    setAuthError(typeof errorMsg === 'string' ? errorMsg : '');
     resetWorkspace();
   };
 
@@ -362,7 +364,7 @@ function App() {
   };
 
   if (!token) {
-    return <AuthPage onLogin={handleLogin} lang={lang} />;
+    return <AuthPage onLogin={handleLogin} lang={lang} initialError={authError} />;
   }
 
   const menuItems = [
@@ -569,6 +571,7 @@ function App() {
                 onDeleteProject={(id) => {
                   if (currentProjectId === id) resetWorkspace();
                 }}
+                onLogout={handleLogout}
               />
             )}
 
@@ -691,6 +694,7 @@ function App() {
                     results={results}
                     token={token}
                     lang={lang}
+                    onLogout={handleLogout}
                     />
                   </div>
                 )}
@@ -713,6 +717,7 @@ function App() {
           onSave={handleSaveComplete}
           onClose={() => setShowSaveModal(false)}
           projectData={getProjectData()}
+          onLogout={handleLogout}
         />
       )}
     </div>
