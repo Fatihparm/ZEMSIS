@@ -404,6 +404,14 @@ function buildFigureRows({ sections }) {
   return rows;
 }
 
+function buildTableRows({ sections, pRows, resCategories }) {
+  return buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults: {}, pageMap: null });
+}
+
+function buildFigureRows({ sections }) {
+  return buildFigureRowsDynamic({ sections, reportDefaults: {}, pageMap: null });
+}
+
 const REPORT_SECTION_NUMBERS = {
   intro: '1',
   areaInfo: '2',
@@ -619,11 +627,11 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           new Paragraph({ children: [new PageBreak()] }),
           
           new Paragraph({ text: "TABLOLAR LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(buildTableRows({ sections, pRows, resCategories })),
+          ...createListParagraphs(tableRows),
           new Paragraph({ children: [new PageBreak()] }),
           
           new Paragraph({ text: "ŞEKİLLER LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(buildFigureRows({ sections }))
+          ...createListParagraphs(figureRows)
         ]
       },
       // Ana Metin
