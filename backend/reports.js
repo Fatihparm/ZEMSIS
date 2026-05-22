@@ -173,7 +173,8 @@ function fmtNum(val) {
   if (val === null || val === undefined || val === '') return '-';
   const n = parseFloat(val);
   if (Number.isNaN(n)) return String(val);
-  if (Math.abs(n) >= 1000 && Number.isInteger(n)) return n.toLocaleString('tr-TR');
+  // Büyük sayıları (hem tam hem ondalıklı) Türkçe locale ile formatla
+  if (Math.abs(n) >= 1000) return n.toLocaleString('tr-TR', { maximumFractionDigits: 3 });
   return n.toFixed(3);
 }
 
@@ -223,13 +224,11 @@ function createListParagraphs(items) {
 
 const PAGE_MARGINS = { top: 1440, right: 1440, bottom: 1800, left: 1800 };
 const DEFAULT_LOGO_PATH = path.join(__dirname, '..', 'frontend', 'public', 'zemsis-logo.png');
-let defaultLogoBuffer = null;
-
+// Logo dosyası her rapor oluşturmada taze okunur; böylece sunucu
+// yeniden başlatılmadan da dosya değişikliği anında yansıtılır.
 function loadDefaultLogoBuffer() {
-  if (defaultLogoBuffer) return defaultLogoBuffer;
   if (!fs.existsSync(DEFAULT_LOGO_PATH)) return null;
-  defaultLogoBuffer = fs.readFileSync(DEFAULT_LOGO_PATH);
-  return defaultLogoBuffer;
+  return fs.readFileSync(DEFAULT_LOGO_PATH);
 }
 
 function parseImageInput(image) {
@@ -457,6 +456,35 @@ function buildFigureRows({ sections }) {
   return buildFigureRowsDynamic({ sections });
 }
 
+// İçindekiler listesini dinamik olarak oluşturur.
+// Tüm bölümler varsayılan içerikle her zaman raporda yer aldığından
+// liste genellikle eksiksiz döner; ancak bu yapı gelecekteki isteğe
+// bağlı bölümler için kolayca genişletilebilir.
+function buildTocRows({ sections, pRows, resCategories, reportDefaults }) {
+  const tocDefs = [
+    { label: '1. Giriş',                                                     page: '5',  key: 'intro' },
+    { label: '2. İnceleme Alanı Hakkında Bilgiler',                          page: '6',  key: 'areaInfo' },
+    { label: '3. Yapı Hakkında Bilgiler',                                     page: '7',  key: 'structureInfo' },
+    { label: '4. Mevcut Zemin Araştırmaları',                                 page: '10', key: 'existingResearch' },
+    { label: '5. İlave Zemin Araştırmaları',                                  page: '11', key: 'additionalResearch' },
+    { label: '6. İdealize Zemin Profili ve Yer Altı Suyu Durumu',             page: '12', key: 'soilProfile' },
+    { label: '7. Geoteknik Tasarım Parametrelerinin Tespiti',                 page: '13', always: true },
+    { label: '8. Depremsellik',                                               page: '14', key: 'seismicity' },
+    { label: '9. Zemin İyileştirme Alternatifleri',                           page: '21', always: true },
+    { label: '10. Önerilen Temel Sistemi',                                    page: '23', key: 'foundationSystem' },
+    { label: '11. Sonuç ve Öneriler',                                         page: '24', key: 'conclusions' },
+    { label: '12. Yararlanılan Kaynaklar',                                    page: '25', key: 'references' },
+  ];
+
+  return tocDefs
+    .filter(item => {
+      if (item.always) return true;
+      // Kullanıcı içeriği yoksa varsayılan içerikle kontrol et
+      return !!getSec(sections, item.key, (reportDefaults && reportDefaults[item.key]) || '');
+    })
+    .map(item => ({ label: item.label, page: item.page }));
+}
+
 const REPORT_SECTION_NUMBERS = {
   intro: '1',
   areaInfo: '2',
@@ -560,12 +588,14 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
 
   const projectName = (sections && sections.projectName) || (project && project.name) || 'Zemin İyileştirme Projesi';
   const parcelName = (sections && sections.parcelName) || (sections && sections.location) || (project && project.description) || '[Parsel adı]';
-  const parcelOwner = (sections && sections.parcelOwner) || (sections && sections.employer) || '[Parsel sahibi]';
+  // parcelOwner ve employer bağımsız alanlardır; birbirlerine fallback yapmaları
+  // döngüsel eşitliğe yol açarak kapak sayfasında employer satırını her zaman gizliyordu.
+  const parcelOwner = (sections && sections.parcelOwner) || '[Parsel sahibi]';
   const projectLocation = parcelName;
   const reportNumber = (sections && sections.docNumber) || '';
   const preparedBy = (sections && sections.preparedBy) || 'Bursa Teknik Üniversitesi';
   const engineer = (sections && sections.engineer) || 'Prof. Dr. Eyübhan AVCI';
-  const employer = (sections && sections.employer) || parcelOwner;
+  const employer = (sections && sections.employer) || '';
   const reportDefaults = buildReportSectionDefaults({ parcelName, parcelOwner, dateStr });
 
   const paramDefs = [
@@ -612,6 +642,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
 
   const tableRows = buildTableRows({ sections, pRows, resCategories });
   const figureRows = buildFigureRows({ sections });
+  const tocRows = buildTocRows({ sections, pRows, resCategories, reportDefaults });
 
   const doc = new Document({
     styles: {
@@ -644,21 +675,21 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
         },
         children: [
           ...(coverLogoParagraph ? [coverLogoParagraph] : []),
-          ...(projectName ? [new Paragraph({ text: projectName.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 36, bold: true }, spacing: { before: 900, after: 500 } })] : []),
-          ...(projectLocation ? [new Paragraph({ text: projectLocation.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 300 } })] : []),
-          ...(parcelOwner ? [new Paragraph({ text: parcelOwner.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 300 } })] : []),
-          ...(employer && employer !== parcelOwner ? [new Paragraph({ text: employer.toUpperCase(), alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 900 } })] : []),
-          new Paragraph({ text: "ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 1200 } }),
-          
-          new Paragraph({ text: "HAZIRLAYAN", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true, underline: { type: "single" } }, spacing: { after: 300 } }),
-          new Paragraph({ text: engineer, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { after: 100 } }),
-          new Paragraph({ text: preparedBy, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, italics: true }, spacing: { after: 100 } }),
-          new Paragraph({ text: "Mühendislik ve Doğa Bilimleri Fakültesi", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, italics: true }, spacing: { after: 100 } }),
-          new Paragraph({ text: "İnşaat Mühendisliği Bölümü", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, italics: true }, spacing: { after: 100 } }),
-          new Paragraph({ text: "Geoteknik Anabilim Dalı Başkanı", alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, italics: true }, spacing: { after: 1000 } }),
-          
-          new Paragraph({ text: coverDate, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { before: 900 } }),
-          new Paragraph({ text: reportNumber ? "Rapor No: " + reportNumber : "Rapor No: " + project.id, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 28, bold: true }, spacing: { before: 300 } }),
+          ...(projectName ? [new Paragraph({ children: [new TextRun({ text: projectName.toUpperCase(), font: "Times New Roman", size: 36, bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 900, after: 500 } })] : []),
+          ...(projectLocation ? [new Paragraph({ children: [new TextRun({ text: projectLocation.toUpperCase(), font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 300 } })] : []),
+          ...(parcelOwner ? [new Paragraph({ children: [new TextRun({ text: parcelOwner.toUpperCase(), font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 300 } })] : []),
+          ...(employer && employer !== parcelOwner ? [new Paragraph({ children: [new TextRun({ text: employer.toUpperCase(), font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 900 } })] : []),
+          new Paragraph({ children: [new TextRun({ text: "ZEMİN İYİLEŞTİRME PROJESİ HESAP RAPORU", font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 1200 } }),
+
+          new Paragraph({ children: [new TextRun({ text: "HAZIRLAYAN", font: "Times New Roman", size: 28, bold: true, underline: { type: "single" } })], alignment: AlignmentType.CENTER, spacing: { after: 300 } }),
+          new Paragraph({ children: [new TextRun({ text: engineer, font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: preparedBy, font: "Times New Roman", size: 24, italics: true })], alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: "Mühendislik ve Doğa Bilimleri Fakültesi", font: "Times New Roman", size: 24, italics: true })], alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: "İnşaat Mühendisliği Bölümü", font: "Times New Roman", size: 24, italics: true })], alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: "Geoteknik Anabilim Dalı Başkanı", font: "Times New Roman", size: 24, italics: true })], alignment: AlignmentType.CENTER, spacing: { after: 1000 } }),
+
+          new Paragraph({ children: [new TextRun({ text: coverDate, font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 900 } }),
+          new Paragraph({ children: [new TextRun({ text: reportNumber ? "Rapor No: " + reportNumber : "Rapor No: " + project.id, font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 300 } }),
         ]
       },
       // İçindekiler, Tablolar ve Şekiller Listesi
@@ -672,20 +703,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
             alignment: AlignmentType.CENTER,
             spacing: { before: 0, after: 320 },
           }),
-          ...createListParagraphs([
-            { label: "1. Giriş", page: "5" },
-            { label: "2. İnceleme Alanı Hakkında Bilgiler", page: "6" },
-            { label: "3. Yapı Hakkında Bilgiler", page: "7" },
-            { label: "4. Mevcut Zemin Araştırmaları", page: "10" },
-            { label: "5. İlave Zemin Araştırmaları", page: "11" },
-            { label: "6. İdealize Zemin Profili ve Yer Altı Suyu Durumu", page: "12" },
-            { label: "7. Geoteknik Tasarım Parametrelerinin Tespiti", page: "13" },
-            { label: "8. Depremsellik", page: "14" },
-            { label: "9. Zemin İyileştirme Alternatifleri", page: "21" },
-            { label: "10. Önerilen Temel Sistemi", page: "23" },
-            { label: "11. Sonuç ve Öneriler", page: "24" },
-            { label: "12. Yararlanılan Kaynaklar", page: "25" },
-          ]),
+          ...createListParagraphs(tocRows),
           new Paragraph({ children: [new PageBreak()] }),
 
           new Paragraph({
@@ -751,6 +769,8 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
               createDataTable(cat.rows)
             ];
           }).flat(),
+          // '_results' section key'i: frontend'in 'sections._resultsImages' alanını
+          // göndermesi gerekir (getSectionImages pattern'i: `${sectionKey}Images`).
           ...createImageBlocks('_results', getSectionImages(sections, '_results')),
           
           ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSec(sections, 'foundationSystem', reportDefaults.foundationSystem), getSectionImages(sections, 'foundationSystem')),
