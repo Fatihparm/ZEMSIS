@@ -347,62 +347,7 @@ function hasSectionContent(sections, key) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function buildTableRows({ sections, pRows, resCategories }) {
-  const rows = TABLE_CATALOG.filter(item => {
-    if (item.condition) return item.condition(pRows || []);
-    return hasSectionContent(sections, item.section);
-  }).map(({ label, page }) => ({ label, page }));
 
-  if (Array.isArray(resCategories) && resCategories.length > 0) {
-    resCategories.forEach((cat, index) => {
-      rows.push({
-        label: `Tablo 9.${index + 1}. ${cat.title}`,
-        page: '21',
-      });
-    });
-  }
-
-  return rows;
-}
-
-function buildFigureRows({ sections }) {
-  const rows = FIGURE_CATALOG
-    .filter(item => hasSectionContent(sections, item.section))
-    .map(({ label, page }) => ({ label, page }));
-
-  const fallbackPages = {
-    intro: '5',
-    areaInfo: '6',
-    structureInfo: '7',
-    existingResearch: '10',
-    additionalResearch: '11',
-    soilProfile: '12',
-    seismicity: '14',
-    foundationSystem: '23',
-    conclusions: '24',
-    references: '25',
-  };
-
-  const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
-
-  for (const sectionKey of sectionOrder) {
-    const images = getSectionImages(sections, sectionKey);
-    if (!images.length) continue;
-
-    const sectionNumber = getSectionNumber(sectionKey);
-    const fallbackPage = FIGURE_CATALOG.find(item => item.section === sectionKey)?.page || fallbackPages[sectionKey] || '';
-    images.forEach((img, index) => {
-      const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
-      const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Ek görsel';
-      rows.push({
-        label: `Şekil ${figureNumber}. ${caption}`,
-        page: fallbackPage,
-      });
-    });
-  }
-
-  return rows;
-}
 
 function buildTableRowsDynamic({ sections, pRows, resCategories }) {
   const rows = [];
@@ -507,11 +452,11 @@ function buildFigureRowsDynamic({ sections }) {
 }
 
 function buildTableRows({ sections, pRows, resCategories }) {
-  return buildTableRowsDynamic({ sections, pRows, resCategories, reportDefaults: {}, pageMap: null });
+  return buildTableRowsDynamic({ sections, pRows, resCategories });
 }
 
 function buildFigureRows({ sections }) {
-  return buildFigureRowsDynamic({ sections, reportDefaults: {}, pageMap: null });
+  return buildFigureRowsDynamic({ sections });
 }
 
 const REPORT_SECTION_NUMBERS = {
@@ -667,8 +612,8 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
     }
   }
 
-  const tableRows = buildTableRows({ sections: generatedSections, pRows, resCategories });
-  const figureRows = buildFigureRows({ sections: generatedSections });
+  const tableRows = buildTableRows({ sections, pRows, resCategories });
+  const figureRows = buildFigureRows({ sections });
 
   const doc = new Document({
     styles: {
@@ -764,15 +709,25 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki değerler sistem tarafından hesaplanmış ve veritabanına kilitlenmiştir. Bu değerler kullanıcı tarafından değiştirilemez.", italics: true }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 120, after: 60 },
+            children: [new TextRun({ text: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', bold: true })]
+          }),
           createDataTable(pRows),
           
           ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity')),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki sonuçlar ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.", italics: true }),
-          ...resCategories.map(cat => {
+          ...resCategories.map((cat, index) => {
             return [
               new Paragraph({ text: cat.title, heading: HeadingLevel.HEADING_2 }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 120, after: 60 },
+                children: [new TextRun({ text: `Tablo 9.${index + 1}. ${cat.title}`, bold: true })]
+              }),
               createDataTable(cat.rows)
             ];
           }).flat(),
