@@ -1055,6 +1055,388 @@
   color: #1d4ed8;
 }
 
+/* ── Media Actions Group (Görsel + Tablo butonları yan yana) ── */
+.media-actions-group {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Tablo Ekle Butonu ── */
+.table-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+  transition: all 0.2s;
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.3);
+}
+
+.table-add-button:hover {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(99, 102, 241, 0.4);
+}
+
+/* ── Tablo Listesi ── */
+.table-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* ── Tablo Kartı ── */
+.table-card {
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  background: #fafbff;
+  overflow: hidden;
+}
+
+.table-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #eef2ff;
+  border-bottom: 1px solid #c7d2fe;
+  flex-wrap: wrap;
+}
+
+.table-card__caption-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4338ca;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.table-card__name-input {
+  flex: 1;
+  min-width: 120px;
+  background: #fff;
+  border: 1px solid #c7d2fe;
+  border-radius: 7px;
+  color: #1e293b;
+  padding: 7px 10px;
+  font-size: 0.83rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.table-card__name-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.table-card__resize {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.table-card__resize label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.table-card__resize input[type="number"] {
+  width: 52px;
+  background: #fff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #1e293b;
+  padding: 5px 6px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  outline: none;
+  text-align: center;
+}
+
+.table-card__resize input[type="number"]:focus {
+  border-color: #6366f1;
+}
+
+/* ── Tablo Izgara ── */
+.table-card__grid-wrap {
+  overflow-x: auto;
+  padding: 10px;
+}
+
+.table-card__grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table-card__grid td {
+  border: 1px solid #c7d2fe;
+  padding: 2px;
+  vertical-align: top;
+  background: #fff;
+}
+
+.table-card__grid tr:first-child td {
+  background: #eef2ff;
+}
+
+.table-cell-input {
+  width: 100%;
+  min-width: 60px;
+  border: none;
+  background: transparent;
+  padding: 6px 7px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  color: #1e293b;
+  resize: none;
+  outline: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+
+.table-cell-input:focus {
+  background: #f0f4ff;
+}
+
+/* ── Tablo Ekleme Modalı ── */
+.table-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.65);
+  backdrop-filter: blur(6px);
+  animation: previewFadeIn 0.18s ease-out;
+}
+
+.table-modal {
+  width: min(500px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #fff;
+}
+
+.table-modal__header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.table-modal__close {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.table-modal__close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.table-modal__body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.table-modal__dims {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.table-modal__dims label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.table-modal__dims input[type="number"] {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  color: #1e293b;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.table-modal__dims input[type="number"]:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.table-modal__preview-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table-modal__preview-label {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.table-modal__preview-scroll {
+  overflow: auto;
+  max-height: 200px;
+  padding: 10px;
+  background: #fff;
+}
+
+.table-modal__preview-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table-modal__preview-table td {
+  border: 1px solid #c7d2fe;
+  height: 28px;
+  min-width: 40px;
+  background: #f5f3ff;
+}
+
+.table-modal__preview-table tr:first-child td {
+  background: #ddd6fe;
+}
+
+.table-modal__footer {
+  padding: 16px 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.table-modal__cancel {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.table-modal__cancel:hover {
+  background: #f1f5f9;
+}
+
+.table-modal__confirm {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border: none;
+  color: #fff;
+  padding: 9px 22px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.table-modal__confirm:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  transform: translateY(-1px);
+}
+
+/* ── Önizleme Kullanıcı Tabloları ── */
+.preview-user-table-wrap {
+  margin: 14px 0;
+}
+
+.preview-user-table-scroll {
+  overflow-x: auto;
+}
+
+.preview-user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11pt;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.preview-user-table td {
+  border: 1px solid #374151;
+  padding: 6px 10px;
+  vertical-align: top;
+}
+
+.preview-user-table tr:first-child td {
+  background: #d9d9d9;
+  font-weight: 700;
+}
+
+.preview-user-table-caption {
+  margin: 6px 0 0 0;
+  font-size: 10pt;
+  font-family: "Times New Roman", Times, serif;
+  font-style: italic;
+  text-align: center;
+  color: #374151;
+}
+
+.preview-user-table-caption strong {
+  font-style: normal;
+  color: #1d4ed8;
+}
+
 @keyframes previewFadeIn {
   from {
     opacity: 0;

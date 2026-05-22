@@ -388,6 +388,21 @@ function buildTableRowsDynamic({ sections, pRows, resCategories }) {
     });
   }
 
+  // Kullanıcı tanımlı tablolar
+  const userTableSections = [
+    'intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch',
+    'soilProfile', 'seismicity', '_results', 'foundationSystem', 'conclusions',
+  ];
+  for (const sectionKey of userTableSections) {
+    const tbls = getSectionTables(sections, sectionKey);
+    tbls.forEach((tbl, idx) => {
+      const sectionNum = REPORT_SECTION_NUMBERS[sectionKey] || '';
+      const captionNum = sectionNum ? `${sectionNum}.${idx + 1}` : `${idx + 1}`;
+      const name = typeof tbl.name === 'string' && tbl.name.trim() ? tbl.name.trim() : 'İsimsiz Tablo';
+      rows.push({ label: `Tablo ${captionNum}. ${name}`, page: '' });
+    });
+  }
+
   return rows;
 }
 
@@ -509,6 +524,11 @@ function getSectionImages(sections, sectionKey) {
   return Array.isArray(images) ? images.filter(img => img && typeof img === 'object') : [];
 }
 
+function getSectionTables(sections, sectionKey) {
+  const tables = sections && sections[`${sectionKey}Tables`];
+  return Array.isArray(tables) ? tables.filter(t => t && typeof t === 'object') : [];
+}
+
 function parseDataUrl(dataUrl) {
   if (typeof dataUrl !== 'string') return null;
   const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl);
@@ -577,6 +597,68 @@ function createSectionBlocks(sectionKey, title, text, images = []) {
     ...createParagraphs(text),
     ...createImageBlocks(sectionKey, images),
   ];
+}
+
+const REPORT_TABLE_SECTION_NUMBERS = {
+  intro: '1', areaInfo: '2', structureInfo: '3',
+  existingResearch: '4', additionalResearch: '5',
+  soilProfile: '6', _params: '7', seismicity: '8',
+  _results: '9', foundationSystem: '10', conclusions: '11', references: '12',
+};
+
+function createUserTableBlocks(sectionKey, tables) {
+  if (!tables || !tables.length) return [];
+  const sectionNumber = REPORT_TABLE_SECTION_NUMBERS[sectionKey] || '';
+  const blocks = [];
+  tables.forEach((tbl, idx) => {
+    if (!tbl || !tbl.rows || !tbl.cols) return;
+    const captionNum = sectionNumber ? `${sectionNumber}.${idx + 1}` : `${idx + 1}`;
+    const caption = typeof tbl.name === 'string' && tbl.name.trim() ? tbl.name.trim() : 'İsimsiz Tablo';
+
+    const rows = [];
+    for (let r = 0; r < tbl.rows; r++) {
+      const cells = [];
+      for (let c = 0; c < tbl.cols; c++) {
+        const cellText = String(tbl.cells[r * tbl.cols + c] || '');
+        const isHeader = r === 0;
+        cells.push(new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ text: cellText, bold: isHeader })],
+            alignment: AlignmentType.CENTER,
+          })],
+          shading: isHeader ? { fill: 'D9D9D9' } : undefined,
+          verticalAlign: VerticalAlign.CENTER,
+        }));
+      }
+      rows.push(new TableRow({ children: cells }));
+    }
+
+    blocks.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+          bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+          left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+          right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 2, color: '000000' },
+          insideVertical: { style: BorderStyle.SINGLE, size: 2, color: '000000' },
+        },
+        rows,
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 80, after: 120 },
+        children: [
+          new TextRun({
+            text: `Tablo ${captionNum}. ${caption}`,
+            italics: true,
+          }),
+        ],
+      })
+    );
+  });
+  return blocks;
 }
 
 function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
@@ -734,16 +816,22 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
         },
         children: [
           ...createSectionBlocks('intro', "1. GİRİŞ", getSec(sections, 'intro', reportDefaults.intro), getSectionImages(sections, 'intro')),
+          ...createUserTableBlocks('intro', getSectionTables(sections, 'intro')),
           
           ...createSectionBlocks('areaInfo', "2. İNCELEME ALANI HAKKINDA BİLGİLER", getSec(sections, 'areaInfo', reportDefaults.areaInfo), getSectionImages(sections, 'areaInfo')),
+          ...createUserTableBlocks('areaInfo', getSectionTables(sections, 'areaInfo')),
           
           ...createSectionBlocks('structureInfo', "3. YAPI HAKKINDA BİLGİLER", getSec(sections, 'structureInfo', reportDefaults.structureInfo), getSectionImages(sections, 'structureInfo')),
+          ...createUserTableBlocks('structureInfo', getSectionTables(sections, 'structureInfo')),
           
           ...createSectionBlocks('existingResearch', "4. MEVCUT ZEMİN ARAŞTIRMALARI", getSec(sections, 'existingResearch', reportDefaults.existingResearch), getSectionImages(sections, 'existingResearch')),
+          ...createUserTableBlocks('existingResearch', getSectionTables(sections, 'existingResearch')),
           
           ...createSectionBlocks('additionalResearch', "5. İLAVE ZEMİN ARAŞTIRMALARI", getSec(sections, 'additionalResearch', reportDefaults.additionalResearch), getSectionImages(sections, 'additionalResearch')),
+          ...createUserTableBlocks('additionalResearch', getSectionTables(sections, 'additionalResearch')),
           
           ...createSectionBlocks('soilProfile', "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", getSec(sections, 'soilProfile', reportDefaults.soilProfile), getSectionImages(sections, 'soilProfile')),
+          ...createUserTableBlocks('soilProfile', getSectionTables(sections, 'soilProfile')),
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki değerler sistem tarafından hesaplanmış ve veritabanına kilitlenmiştir. Bu değerler kullanıcı tarafından değiştirilemez.", italics: true }),
@@ -758,8 +846,10 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
               }),
             ],
           }),
+          ...createUserTableBlocks('_params', getSectionTables(sections, '_params')),
           
           ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity')),
+          ...createUserTableBlocks('seismicity', getSectionTables(sections, 'seismicity')),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki sonuçlar ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.", italics: true }),
@@ -782,10 +872,13 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           // '_results' section key'i: frontend'in 'sections._resultsImages' alanını
           // göndermesi gerekir (getSectionImages pattern'i: `${sectionKey}Images`).
           ...createImageBlocks('_results', getSectionImages(sections, '_results')),
+          ...createUserTableBlocks('_results', getSectionTables(sections, '_results')),
           
           ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSec(sections, 'foundationSystem', reportDefaults.foundationSystem), getSectionImages(sections, 'foundationSystem')),
+          ...createUserTableBlocks('foundationSystem', getSectionTables(sections, 'foundationSystem')),
           
           ...createSectionBlocks('conclusions', "11. SONUÇ VE ÖNERİLER", getSec(sections, 'conclusions', reportDefaults.conclusions), getSectionImages(sections, 'conclusions')),
+          ...createUserTableBlocks('conclusions', getSectionTables(sections, 'conclusions')),
           
           ...createSectionBlocks('references', "12. YARARLANILAN KAYNAKLAR", getSec(sections, 'references', reportDefaults.references), getSectionImages(sections, 'references')),
         ]

@@ -424,6 +424,27 @@ function PreviewPage({ title, subtitle, logoSrc, dateStr, children, className = 
 
 const MAX_IMAGE_DIMENSION = 1600;
 const MAX_IMAGE_COUNT_PER_SECTION = 12;
+const MAX_TABLE_COUNT_PER_SECTION = 10;
+
+function getSectionTableKey(sectionKey) {
+  return `${sectionKey}Tables`;
+}
+
+function createEmptyTable(rows = 3, cols = 3) {
+  return {
+    id: `tbl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: '',
+    rows,
+    cols,
+    // cells: flat array [row0col0, row0col1, ..., row(rows-1)col(cols-1)]
+    cells: Array(rows * cols).fill(''),
+  };
+}
+
+function getTableCaptionNumber(sectionKey, index) {
+  const sectionNumber = getSectionNumber(sectionKey);
+  return sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
+}
 
 function getSectionImageKey(sectionKey) {
   return `${sectionKey}Images`;
@@ -502,6 +523,8 @@ function ReportEditorPage({
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [generating, setGenerating] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // tableModalState: null | { sectionKey, tableId (null=new), rows, cols }
+  const [tableModalState, setTableModalState] = useState(null);
   const autoSaveTimerRef = useRef(null);
   const sectionDefaults = buildReportFieldDefaults(sections, projectName, soilLayers, extraParams);
   const previewDateStr = new Date().toLocaleDateString('tr-TR', {
@@ -540,6 +563,66 @@ function ReportEditorPage({
     });
     setSaveStatus('idle');
   }, []);
+
+  const updateSectionTables = useCallback((sectionKey, updater) => {
+    setSections(prev => {
+      const current = Array.isArray(prev[getSectionTableKey(sectionKey)])
+        ? prev[getSectionTableKey(sectionKey)]
+        : [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [getSectionTableKey(sectionKey)]: next };
+    });
+    setSaveStatus('idle');
+  }, []);
+
+  const handleAddTable = (sectionKey, rows, cols) => {
+    updateSectionTables(sectionKey, prev => {
+      if (prev.length >= MAX_TABLE_COUNT_PER_SECTION) {
+        alert(`Bu bölüm için en fazla ${MAX_TABLE_COUNT_PER_SECTION} tablo eklenebilir.`);
+        return prev;
+      }
+      return [...prev, createEmptyTable(rows, cols)];
+    });
+  };
+
+  const handleRemoveTable = (sectionKey, tableId) => {
+    updateSectionTables(sectionKey, prev => prev.filter(t => t.id !== tableId));
+  };
+
+  const handleUpdateTableName = (sectionKey, tableId, name) => {
+    updateSectionTables(sectionKey, prev =>
+      prev.map(t => t.id === tableId ? { ...t, name } : t)
+    );
+  };
+
+  const handleUpdateTableCell = (sectionKey, tableId, cellIndex, value) => {
+    updateSectionTables(sectionKey, prev =>
+      prev.map(t => {
+        if (t.id !== tableId) return t;
+        const cells = [...t.cells];
+        cells[cellIndex] = value;
+        return { ...t, cells };
+      })
+    );
+  };
+
+  const handleResizeTable = (sectionKey, tableId, newRows, newCols) => {
+    updateSectionTables(sectionKey, prev =>
+      prev.map(t => {
+        if (t.id !== tableId) return t;
+        const oldCells = t.cells;
+        const newCells = Array(newRows * newCols).fill('').map((_, i) => {
+          const row = Math.floor(i / newCols);
+          const col = i % newCols;
+          if (row < t.rows && col < t.cols) {
+            return oldCells[row * t.cols + col] || '';
+          }
+          return '';
+        });
+        return { ...t, rows: newRows, cols: newCols, cells: newCells };
+      })
+    );
+  };
 
   const handleImageFiles = async (sectionKey, files) => {
     if (!files?.length) return;
@@ -697,12 +780,27 @@ function ReportEditorPage({
     ...sec,
     text: (sections[sec.key] ?? sectionDefaults[sec.key] ?? '').toString(),
     images: getPreviewImages(sections, sec.key),
+    tables: Array.isArray(sections[getSectionTableKey(sec.key)]) ? sections[getSectionTableKey(sec.key)] : [],
   }));
 
   const previewTableRows = buildPreviewTableRows({ sections, sectionDefaults, parameters, results });
   const previewFigureRows = buildPreviewFigureRows({ sections, sectionDefaults });
 
-  const renderPreviewSectionBody = (sec, text, images) => {
+  // Kullanıcı tanımlı tabloları önizleme tablolar listesine ekle
+  const userTableRows = [];
+  const sectionOrderForTables = SECTIONS.filter(s => s.allowImages || s.key === '_results');
+  for (const sec of sectionOrderForTables) {
+    const tbls = Array.isArray(sections[getSectionTableKey(sec.key)]) ? sections[getSectionTableKey(sec.key)] : [];
+    tbls.forEach((tbl, idx) => {
+      const captionNum = getTableCaptionNumber(sec.key, idx);
+      userTableRows.push({
+        section: sec.key,
+        label: `Tablo ${captionNum}. ${tbl.name || 'İsimsiz Tablo'}`,
+      });
+    });
+  }
+
+  const renderPreviewSectionBody = (sec, text, images, tables = []) => {
     if (sec.type === 'locked') {
       return (
         <>
@@ -713,6 +811,27 @@ function ReportEditorPage({
               results={sec.key === '_results' ? results : undefined}
             />
           </div>
+          {tables.length > 0 && tables.map((tbl, tblIdx) => (
+            <div className="preview-user-table-wrap" key={tbl.id}>
+              <div className="preview-user-table-scroll">
+                <table className="preview-user-table">
+                  <tbody>
+                    {Array.from({ length: tbl.rows }, (_, r) => (
+                      <tr key={r}>
+                        {Array.from({ length: tbl.cols }, (_, c) => (
+                          <td key={c}>{tbl.cells[r * tbl.cols + c] || ''}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="preview-user-table-caption">
+                <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
+                {tbl.name || 'İsimsiz Tablo'}
+              </p>
+            </div>
+          ))}
           {images.length > 0 && (
             <div className="preview-image-grid">
               {images.map((img, idx) => (
@@ -746,6 +865,27 @@ function ReportEditorPage({
             Bu bölüm için henüz içerik girilmedi.
           </p>
         )}
+        {tables.length > 0 && tables.map((tbl, tblIdx) => (
+          <div className="preview-user-table-wrap" key={tbl.id}>
+            <div className="preview-user-table-scroll">
+              <table className="preview-user-table">
+                <tbody>
+                  {Array.from({ length: tbl.rows }, (_, r) => (
+                    <tr key={r}>
+                      {Array.from({ length: tbl.cols }, (_, c) => (
+                        <td key={c}>{tbl.cells[r * tbl.cols + c] || ''}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="preview-user-table-caption">
+              <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
+              {tbl.name || 'İsimsiz Tablo'}
+            </p>
+          </div>
+        ))}
         {sec.allowImages && images.length > 0 && (
           <div className="preview-image-grid">
             {images.map((img, idx) => (
@@ -846,6 +986,9 @@ function ReportEditorPage({
       const images = Array.isArray(sections[getSectionImageKey(sec.key)])
         ? sections[getSectionImageKey(sec.key)]
         : [];
+      const tables = Array.isArray(sections[getSectionTableKey(sec.key)])
+        ? sections[getSectionTableKey(sec.key)]
+        : [];
       return (
         <div className="wysiwyg-section">
           <p className="section-desc">{sec.description}</p>
@@ -860,25 +1003,94 @@ function ReportEditorPage({
             <div className="section-image-tools">
               <div className="section-image-tools__header">
                 <div>
-                  <p className="section-image-tools__title">Görseller</p>
+                  <p className="section-image-tools__title">Görseller & Tablolar</p>
                   <p className="section-image-tools__note">
-                    Maksimum {MAX_IMAGE_DIMENSION}px kenar uzunluğu. Görseller raporda ortalanır ve
-                    Şekil {getSectionNumber(sec.key)}.1 formatında numaralanır.
+                    Görseller Şekil {getSectionNumber(sec.key)}.1, tablolar Tablo {getSectionNumber(sec.key)}.1 formatında numaralanır.
                   </p>
                 </div>
-                <label className="image-upload-button">
-                  Görsel Ekle
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={e => {
-                      handleImageFiles(sec.key, e.target.files);
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
+                <div className="media-actions-group">
+                  <label className="image-upload-button">
+                    📷 Görsel Ekle
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={e => {
+                        handleImageFiles(sec.key, e.target.files);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="table-add-button"
+                    onClick={() => setTableModalState({ sectionKey: sec.key, rows: 3, cols: 3 })}
+                  >
+                    ＋ Tablo Ekle
+                  </button>
+                </div>
               </div>
+              {tables.length > 0 && (
+                <div className="table-list">
+                  {tables.map((tbl, idx) => (
+                    <div className="table-card" key={tbl.id}>
+                      <div className="table-card__header">
+                        <span className="table-card__caption-num">Tablo {getTableCaptionNumber(sec.key, idx)}</span>
+                        <input
+                          type="text"
+                          className="table-card__name-input"
+                          value={tbl.name || ''}
+                          onChange={e => handleUpdateTableName(sec.key, tbl.id, e.target.value)}
+                          placeholder="Tablo başlığı girin..."
+                        />
+                        <div className="table-card__resize">
+                          <label>Satır</label>
+                          <input
+                            type="number"
+                            min={1} max={20}
+                            value={tbl.rows}
+                            onChange={e => handleResizeTable(sec.key, tbl.id, Math.max(1, Math.min(20, Number(e.target.value))), tbl.cols)}
+                          />
+                          <label>Sütun</label>
+                          <input
+                            type="number"
+                            min={1} max={10}
+                            value={tbl.cols}
+                            onChange={e => handleResizeTable(sec.key, tbl.id, tbl.rows, Math.max(1, Math.min(10, Number(e.target.value))))}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="image-remove-btn"
+                          onClick={() => handleRemoveTable(sec.key, tbl.id)}
+                        >
+                          Kaldır
+                        </button>
+                      </div>
+                      <div className="table-card__grid-wrap">
+                        <table className="table-card__grid">
+                          <tbody>
+                            {Array.from({ length: tbl.rows }, (_, r) => (
+                              <tr key={r}>
+                                {Array.from({ length: tbl.cols }, (_, c) => (
+                                  <td key={c}>
+                                    <textarea
+                                      className="table-cell-input"
+                                      value={tbl.cells[r * tbl.cols + c] || ''}
+                                      onChange={e => handleUpdateTableCell(sec.key, tbl.id, r * tbl.cols + c, e.target.value)}
+                                      rows={1}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {images.length > 0 && (
                 <div className="image-list">
                   {images.map((img, idx) => (
@@ -921,6 +1133,9 @@ function ReportEditorPage({
       const images = Array.isArray(sections[getSectionImageKey(sec.key)])
         ? sections[getSectionImageKey(sec.key)]
         : [];
+      const tables = Array.isArray(sections[getSectionTableKey(sec.key)])
+        ? sections[getSectionTableKey(sec.key)]
+        : [];
       return (
         <div className="locked-section-wrap">
           <p className="section-desc">{sec.description}</p>
@@ -932,25 +1147,94 @@ function ReportEditorPage({
             <div className="section-image-tools section-image-tools--locked">
               <div className="section-image-tools__header">
                 <div>
-                  <p className="section-image-tools__title">Görseller</p>
+                  <p className="section-image-tools__title">Görseller & Tablolar</p>
                   <p className="section-image-tools__note">
-                    Bu bölümdeki görseller Şekil {getSectionNumber(sec.key)}.1, {getSectionNumber(sec.key)}.2 ...
-                    şeklinde numaralanır.
+                    Görseller Şekil {getSectionNumber(sec.key)}.1, tablolar Tablo {getSectionNumber(sec.key)}.1 formatında numaralanır.
                   </p>
                 </div>
-                <label className="image-upload-button">
-                  Görsel Ekle
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={e => {
-                      handleImageFiles(sec.key, e.target.files);
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
+                <div className="media-actions-group">
+                  <label className="image-upload-button">
+                    📷 Görsel Ekle
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={e => {
+                        handleImageFiles(sec.key, e.target.files);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="table-add-button"
+                    onClick={() => setTableModalState({ sectionKey: sec.key, rows: 3, cols: 3 })}
+                  >
+                    ＋ Tablo Ekle
+                  </button>
+                </div>
               </div>
+              {tables.length > 0 && (
+                <div className="table-list">
+                  {tables.map((tbl, idx) => (
+                    <div className="table-card" key={tbl.id}>
+                      <div className="table-card__header">
+                        <span className="table-card__caption-num">Tablo {getTableCaptionNumber(sec.key, idx)}</span>
+                        <input
+                          type="text"
+                          className="table-card__name-input"
+                          value={tbl.name || ''}
+                          onChange={e => handleUpdateTableName(sec.key, tbl.id, e.target.value)}
+                          placeholder="Tablo başlığı girin..."
+                        />
+                        <div className="table-card__resize">
+                          <label>Satır</label>
+                          <input
+                            type="number"
+                            min={1} max={20}
+                            value={tbl.rows}
+                            onChange={e => handleResizeTable(sec.key, tbl.id, Math.max(1, Math.min(20, Number(e.target.value))), tbl.cols)}
+                          />
+                          <label>Sütun</label>
+                          <input
+                            type="number"
+                            min={1} max={10}
+                            value={tbl.cols}
+                            onChange={e => handleResizeTable(sec.key, tbl.id, tbl.rows, Math.max(1, Math.min(10, Number(e.target.value))))}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="image-remove-btn"
+                          onClick={() => handleRemoveTable(sec.key, tbl.id)}
+                        >
+                          Kaldır
+                        </button>
+                      </div>
+                      <div className="table-card__grid-wrap">
+                        <table className="table-card__grid">
+                          <tbody>
+                            {Array.from({ length: tbl.rows }, (_, r) => (
+                              <tr key={r}>
+                                {Array.from({ length: tbl.cols }, (_, c) => (
+                                  <td key={c}>
+                                    <textarea
+                                      className="table-cell-input"
+                                      value={tbl.cells[r * tbl.cols + c] || ''}
+                                      onChange={e => handleUpdateTableCell(sec.key, tbl.id, r * tbl.cols + c, e.target.value)}
+                                      rows={1}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {images.length > 0 && (
                 <div className="image-list">
                   {images.map((img, idx) => (
@@ -1113,8 +1397,8 @@ function ReportEditorPage({
                 dateStr={previewDateStr}
               >
                 <div className="preview-catalog">
-                  {previewTableRows.length > 0 ? previewTableRows.map(item => (
-                    <div className="preview-catalog__item" key={`${item.section}-${item.label}`}>
+                  {[...previewTableRows, ...userTableRows].length > 0 ? [...previewTableRows, ...userTableRows].map((item, i) => (
+                    <div className="preview-catalog__item" key={`${item.section}-${item.label}-${i}`}>
                       <span>{item.label}</span>
                       <small>{SECTIONS.find(sec => sec.key === item.section)?.label || item.section}</small>
                     </div>
@@ -1150,9 +1434,90 @@ function ReportEditorPage({
                   logoSrc={previewLogoSrc}
                   dateStr={previewDateStr}
                 >
-                  {renderPreviewSectionBody(sec, sec.text, sec.images)}
+                  {renderPreviewSectionBody(sec, sec.text, sec.images, sec.tables)}
                 </PreviewPage>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tablo Ekleme Modalı ── */}
+      {tableModalState && (
+        <div
+          className="table-modal-backdrop"
+          onClick={() => setTableModalState(null)}
+        >
+          <div
+            className="table-modal"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="table-modal__header">
+              <h3>Yeni Tablo Ekle</h3>
+              <button
+                type="button"
+                className="table-modal__close"
+                onClick={() => setTableModalState(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="table-modal__body">
+              <div className="table-modal__dims">
+                <label>
+                  Satır Sayısı
+                  <input
+                    type="number"
+                    min={1} max={20}
+                    value={tableModalState.rows}
+                    onChange={e => setTableModalState(prev => ({ ...prev, rows: Math.max(1, Math.min(20, Number(e.target.value))) }))}
+                  />
+                </label>
+                <label>
+                  Sütun Sayısı
+                  <input
+                    type="number"
+                    min={1} max={10}
+                    value={tableModalState.cols}
+                    onChange={e => setTableModalState(prev => ({ ...prev, cols: Math.max(1, Math.min(10, Number(e.target.value))) }))}
+                  />
+                </label>
+              </div>
+              <div className="table-modal__preview-wrap">
+                <p className="table-modal__preview-label">Önizleme ({tableModalState.rows} × {tableModalState.cols})</p>
+                <div className="table-modal__preview-scroll">
+                  <table className="table-modal__preview-table">
+                    <tbody>
+                      {Array.from({ length: tableModalState.rows }, (_, r) => (
+                        <tr key={r}>
+                          {Array.from({ length: tableModalState.cols }, (_, c) => (
+                            <td key={c} />
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div className="table-modal__footer">
+              <button
+                type="button"
+                className="table-modal__cancel"
+                onClick={() => setTableModalState(null)}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                className="table-modal__confirm"
+                onClick={() => {
+                  handleAddTable(tableModalState.sectionKey, tableModalState.rows, tableModalState.cols);
+                  setTableModalState(null);
+                }}
+              >
+                Tablo Ekle
+              </button>
             </div>
           </div>
         </div>
