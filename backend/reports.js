@@ -747,12 +747,17 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
           new Paragraph({ text: "Aşağıdaki değerler sistem tarafından hesaplanmış ve veritabanına kilitlenmiştir. Bu değerler kullanıcı tarafından değiştirilemez.", italics: true }),
+          createDataTable(pRows),
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { before: 120, after: 60 },
-            children: [new TextRun({ text: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler', bold: true })]
+            spacing: { before: 80, after: 120 },
+            children: [
+              new TextRun({
+                text: 'Tablo 7.1. Geoteknik Hesaplarında Kullanılması Önerilen Geoteknik Parametreler',
+                italics: true,
+              }),
+            ],
           }),
-          createDataTable(pRows),
           
           ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity')),
           
@@ -761,12 +766,17 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           ...resCategories.map((cat, index) => {
             return [
               new Paragraph({ text: cat.title, heading: HeadingLevel.HEADING_2 }),
+              createDataTable(cat.rows),
               new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 120, after: 60 },
-                children: [new TextRun({ text: `Tablo 9.${index + 1}. ${cat.title}`, bold: true })]
+                spacing: { before: 80, after: 120 },
+                children: [
+                  new TextRun({
+                    text: `Tablo 9.${index + 1}. ${cat.title}`,
+                    italics: true,
+                  }),
+                ],
               }),
-              createDataTable(cat.rows)
             ];
           }).flat(),
           // '_results' section key'i: frontend'in 'sections._resultsImages' alanını
