@@ -17,9 +17,7 @@ const {
   WidthType,
   BorderStyle,
   PageBreak,
-  TableOfContents,
   VerticalAlign,
-  TextDirection,
   Header,
   Footer
 } = require('docx');
@@ -669,19 +667,41 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           page: { margin: PAGE_MARGINS }
         },
         children: [
-          new Paragraph({ text: "İÇİNDEKİLER", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          new TableOfContents("İÇİNDEKİLER", {
-            hyperlink: true,
-            headingStyleRange: "1-2",
+          new Paragraph({
+            children: [new TextRun({ text: "İÇİNDEKİLER", bold: true, size: 28, font: "Times New Roman" })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 0, after: 320 },
           }),
+          ...createListParagraphs([
+            { label: "1. Giriş", page: "5" },
+            { label: "2. İnceleme Alanı Hakkında Bilgiler", page: "6" },
+            { label: "3. Yapı Hakkında Bilgiler", page: "7" },
+            { label: "4. Mevcut Zemin Araştırmaları", page: "10" },
+            { label: "5. İlave Zemin Araştırmaları", page: "11" },
+            { label: "6. İdealize Zemin Profili ve Yer Altı Suyu Durumu", page: "12" },
+            { label: "7. Geoteknik Tasarım Parametrelerinin Tespiti", page: "13" },
+            { label: "8. Depremsellik", page: "14" },
+            { label: "9. Zemin İyileştirme Alternatifleri", page: "21" },
+            { label: "10. Önerilen Temel Sistemi", page: "23" },
+            { label: "11. Sonuç ve Öneriler", page: "24" },
+            { label: "12. Yararlanılan Kaynaklar", page: "25" },
+          ]),
           new Paragraph({ children: [new PageBreak()] }),
-          
-          new Paragraph({ text: "TABLOLAR LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
+
+          new Paragraph({
+            children: [new TextRun({ text: "TABLOLAR LİSTESİ", bold: true, size: 28, font: "Times New Roman" })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 0, after: 320 },
+          }),
           ...createListParagraphs(tableRows),
           new Paragraph({ children: [new PageBreak()] }),
-          
-          new Paragraph({ text: "ŞEKİLLER LİSTESİ", heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, run: { font: "Times New Roman", size: 24, bold: true } }),
-          ...createListParagraphs(figureRows)
+
+          new Paragraph({
+            children: [new TextRun({ text: "ŞEKİLLER LİSTESİ", bold: true, size: 28, font: "Times New Roman" })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 0, after: 320 },
+          }),
+          ...createListParagraphs(figureRows),
         ]
       },
       // Ana Metin
