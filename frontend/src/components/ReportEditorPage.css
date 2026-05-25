@@ -1472,3 +1472,425 @@
     flex-direction: column;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Blok Editörü Stilleri
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Section Header: Katlanabilirlik Toggle ── */
+.section-header__toggle {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #3b82f6;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  transform: rotate(90deg);
+}
+
+.section-header__toggle--collapsed {
+  transform: rotate(0deg);
+}
+
+.section-header__toggle:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* ── Block Editor Container ── */
+.block-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* ── Toolbar ── */
+.block-editor__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.block-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.block-add-btn--paragraph {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.block-add-btn--paragraph:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.block-add-btn--subheading {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.block-add-btn--subheading:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+  transform: translateY(-1px);
+}
+
+.block-add-btn--sideheading {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.block-add-btn--sideheading:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #14532d;
+  transform: translateY(-1px);
+}
+
+/* ── Block List ── */
+.block-editor__list {
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  padding: 8px;
+  gap: 6px;
+}
+
+.block-editor__list--collapsed {
+  opacity: 0.4;
+  pointer-events: none;
+  user-select: none;
+}
+
+.block-editor__empty {
+  margin: auto;
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.block-editor__empty--collapsed {
+  color: #64748b;
+}
+
+/* ── Block Item (base) ── */
+.block-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.block-item--hovered {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+/* Paragraph */
+.block-item--paragraph {
+  border-left: 3px solid #e2e8f0;
+}
+
+.block-item--paragraph.block-item--hovered {
+  border-left-color: #94a3b8;
+}
+
+/* Subheading (alt başlık) */
+.block-item--subheading {
+  border-left: 3px solid #3b82f6;
+  background: linear-gradient(135deg, #f0f7ff 0%, #fff 60%);
+}
+
+.block-item--subheading.block-item--hovered {
+  border-color: #93c5fd;
+  border-left-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+/* Sideheading (yan başlık) */
+.block-item--sideheading {
+  border-left: 3px solid #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #fff 60%);
+}
+
+.block-item--sideheading.block-item--hovered {
+  border-color: #86efac;
+  border-left-color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* ── Katlanabilirlik Üçgeni ── */
+.block-item__collapse-btn {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #3b82f6;
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 2px;
+  transition: all 0.2s ease;
+  transform: rotate(90deg); /* Aşağı bakan */
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.block-item--hovered .block-item__collapse-btn,
+.block-item__collapse-btn--collapsed {
+  opacity: 1;
+}
+
+.block-item__collapse-btn--collapsed {
+  transform: rotate(0deg); /* Sağa bakan (daraltılmış) */
+  color: #64748b;
+}
+
+.block-item__collapse-btn:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.block-item__collapse-spacer {
+  width: 20px;
+  min-width: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Tip Rozeti ── */
+.block-item__type-badge {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.block-item__type-badge--paragraph {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.block-item__type-badge--subheading {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.block-item__type-badge--sideheading {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* ── Input Alanı ── */
+.block-item__input-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Paragraph textarea */
+.block-item__textarea {
+  width: 100%;
+  min-height: 72px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #1e293b;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.block-item__textarea:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
+}
+
+/* Heading input (alt başlık & yan başlık) */
+.block-item__input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid #bfdbfe;
+  border-radius: 0;
+  padding: 6px 4px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.block-item__input:focus {
+  border-bottom-color: #3b82f6;
+}
+
+.block-item__input::placeholder {
+  color: #93c5fd;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Yan başlık — altı çizili görünüm */
+.block-item__input--sideheading {
+  border-bottom-color: #86efac;
+  color: #14532d;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.block-item__input--sideheading:focus {
+  border-bottom-color: #22c55e;
+}
+
+.block-item__input--sideheading::placeholder {
+  color: #86efac;
+  text-decoration: none;
+}
+
+/* Gizlenen blok sayacı */
+.block-item__hidden-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-style: italic;
+  padding: 2px 4px;
+}
+
+/* ── Kontrol Butonları (↑ ↓ ✕) ── */
+.block-item__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.block-item--hovered .block-item__controls {
+  opacity: 1;
+}
+
+.block-ctrl-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.block-ctrl-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.block-ctrl-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.block-ctrl-btn--remove:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Preview: Alt Başlık & Yan Başlık Stilleri
+   ═══════════════════════════════════════════════════════════ */
+
+/* Alt başlık (subheading) — Times New Roman, 12pt, bold, 0.5cm indent */
+.preview-subheading {
+  margin: 10px 0 6px 0;
+  padding-left: 0.5cm;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  font-weight: 700;
+  color: #111827;
+  text-indent: 0;
+  line-height: 1.4;
+}
+
+/* Yan başlık (sideheading) — Times New Roman, 12pt, bold, altı çizili, 0.5cm indent */
+.preview-sideheading {
+  margin: 10px 0 6px 0;
+  padding-left: 0.5cm;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: #111827;
+  text-indent: 0;
+  line-height: 1.4;
+}
+

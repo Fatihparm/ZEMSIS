@@ -505,6 +505,210 @@ function loadImageFromFile(file) {
   });
 }
 
+// ── Blok sistemi yardımcı fonksiyonları ──────────────────────
+function getSectionBlocksKey(sectionKey) {
+  return `${sectionKey}Blocks`;
+}
+
+function createBlock(type = 'paragraph', text = '') {
+  return {
+    id: `blk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    text,
+  };
+}
+
+function getBlocksForSection(sections, sectionKey, sectionDefaults) {
+  const blocksKey = getSectionBlocksKey(sectionKey);
+  const blocks = sections?.[blocksKey];
+  if (Array.isArray(blocks)) return blocks;
+  // Eski string'den migrate et
+  const legacyText = sections?.[sectionKey] ?? sectionDefaults?.[sectionKey] ?? '';
+  if (String(legacyText).trim()) {
+    return [createBlock('paragraph', String(legacyText))];
+  }
+  return [];
+}
+
+// ── BlockEditor bileşeni ──────────────────────────────────────
+function BlockEditor({ blocks, onChange, collapsed }) {
+  const [hoveredId, setHoveredId] = useState(null);
+  const [collapsedSubheadings, setCollapsedSubheadings] = useState(new Set());
+
+  const addBlock = (type) => {
+    onChange(prev => [...prev, createBlock(type)]);
+  };
+
+  const updateBlock = (id, text) => {
+    onChange(prev => prev.map(b => b.id === id ? { ...b, text } : b));
+  };
+
+  const removeBlock = (id) => {
+    onChange(prev => prev.filter(b => b.id !== id));
+  };
+
+  const moveBlock = (id, direction) => {
+    onChange(prev => {
+      const idx = prev.findIndex(b => b.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      const swapIdx = idx + direction;
+      if (swapIdx < 0 || swapIdx >= next.length) return prev;
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      return next;
+    });
+  };
+
+  const toggleSubheading = (id) => {
+    setCollapsedSubheadings(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  // Hangi blokların görünür olduğunu belirle
+  const visibleSet = new Set();
+  let skipMode = false;
+  for (const block of blocks) {
+    if (block.type === 'subheading') {
+      skipMode = collapsedSubheadings.has(block.id);
+      visibleSet.add(block.id);
+    } else if (block.type === 'sideheading') {
+      skipMode = false;
+      visibleSet.add(block.id);
+    } else {
+      if (!skipMode) visibleSet.add(block.id);
+    }
+  }
+
+  return (
+    <div className="block-editor">
+      <div className="block-editor__toolbar">
+        <button type="button" className="block-add-btn block-add-btn--paragraph" onClick={() => addBlock('paragraph')}>
+          ¶ Paragraf Ekle
+        </button>
+        <button type="button" className="block-add-btn block-add-btn--subheading" onClick={() => addBlock('subheading')}>
+          ▸ Alt Başlık Ekle
+        </button>
+        <button type="button" className="block-add-btn block-add-btn--sideheading" onClick={() => addBlock('sideheading')}>
+          § Yan Başlık Ekle
+        </button>
+      </div>
+
+      <div className={`block-editor__list${collapsed ? ' block-editor__list--collapsed' : ''}`}>
+        {blocks.length === 0 && !collapsed && (
+          <p className="block-editor__empty">
+            Henüz içerik eklenmedi. Yukarıdaki butonlarla paragraf veya başlık ekleyin.
+          </p>
+        )}
+        {collapsed && (
+          <p className="block-editor__empty block-editor__empty--collapsed">
+            Bu bölüm daraltıldı. Başlık yanındaki ▶ butona tıklayarak genişletin.
+          </p>
+        )}
+        {!collapsed && blocks.map((block, idx) => {
+          const isVisible = visibleSet.has(block.id);
+          const isSubheading = block.type === 'subheading';
+          const isSubheadingCollapsed = collapsedSubheadings.has(block.id);
+
+          let hiddenCount = 0;
+          if (isSubheading && isSubheadingCollapsed) {
+            for (let i = idx + 1; i < blocks.length; i++) {
+              if (blocks[i].type === 'subheading' || blocks[i].type === 'sideheading') break;
+              hiddenCount++;
+            }
+          }
+
+          if (!isVisible) return null;
+
+          return (
+            <div
+              key={block.id}
+              className={`block-item block-item--${block.type}${hoveredId === block.id ? ' block-item--hovered' : ''}`}
+              onMouseEnter={() => setHoveredId(block.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              {/* Sol: katlanabilirlik üçgeni (sadece alt başlık) */}
+              {isSubheading ? (
+                <button
+                  type="button"
+                  className={`block-item__collapse-btn${isSubheadingCollapsed ? ' block-item__collapse-btn--collapsed' : ''}`}
+                  onClick={() => toggleSubheading(block.id)}
+                  title={isSubheadingCollapsed ? 'Genişlet' : 'Daralt'}
+                >
+                  ▶
+                </button>
+              ) : (
+                <span className="block-item__collapse-spacer" />
+              )}
+
+              {/* Tip rozeti */}
+              <div className={`block-item__type-badge block-item__type-badge--${block.type}`}>
+                {block.type === 'paragraph' ? '¶' : block.type === 'subheading' ? '#' : '§'}
+              </div>
+
+              {/* Input alanı */}
+              <div className="block-item__input-wrap">
+                {block.type === 'paragraph' ? (
+                  <textarea
+                    className="block-item__textarea"
+                    value={block.text}
+                    onChange={e => updateBlock(block.id, e.target.value)}
+                    placeholder="Paragraf metni girin..."
+                    rows={3}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    className={`block-item__input${block.type === 'sideheading' ? ' block-item__input--sideheading' : ''}`}
+                    value={block.text}
+                    onChange={e => updateBlock(block.id, e.target.value)}
+                    placeholder={
+                      block.type === 'subheading'
+                        ? 'Alt başlık (örn: 8.1. Yerel Zemin Sınıflarının Belirlenmesi)'
+                        : 'Yan başlık girin...'
+                    }
+                  />
+                )}
+                {isSubheading && isSubheadingCollapsed && hiddenCount > 0 && (
+                  <span className="block-item__hidden-hint">
+                    {hiddenCount} blok gizlendi — genişletmek için ▶ tıklayın
+                  </span>
+                )}
+              </div>
+
+              {/* Sağ: kontroller */}
+              <div className="block-item__controls">
+                <button
+                  type="button"
+                  className="block-ctrl-btn"
+                  onClick={() => moveBlock(block.id, -1)}
+                  disabled={idx === 0}
+                  title="Yukarı taşı"
+                >↑</button>
+                <button
+                  type="button"
+                  className="block-ctrl-btn"
+                  onClick={() => moveBlock(block.id, 1)}
+                  disabled={idx === blocks.length - 1}
+                  title="Aşağı taşı"
+                >↓</button>
+                <button
+                  type="button"
+                  className="block-ctrl-btn block-ctrl-btn--remove"
+                  onClick={() => removeBlock(block.id)}
+                  title="Bloğu sil"
+                >✕</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ReportEditorPage({
   projectId,
   projectName,
@@ -525,6 +729,8 @@ function ReportEditorPage({
   const [previewOpen, setPreviewOpen] = useState(false);
   // tableModalState: null | { sectionKey, tableId (null=new), rows, cols }
   const [tableModalState, setTableModalState] = useState(null);
+  // Daraltılmış ana bölümler (section key'lerin Set'i)
+  const [collapsedSections, setCollapsedSections] = useState(new Set());
   const autoSaveTimerRef = useRef(null);
   const sectionDefaults = buildReportFieldDefaults(sections, projectName, soilLayers, extraParams);
   const previewDateStr = new Date().toLocaleDateString('tr-TR', {
@@ -574,6 +780,27 @@ function ReportEditorPage({
     });
     setSaveStatus('idle');
   }, []);
+
+  const updateSectionBlocks = useCallback((sectionKey, updater) => {
+    setSections(prev => {
+      const blockKey = getSectionBlocksKey(sectionKey);
+      const current = Array.isArray(prev[blockKey])
+        ? prev[blockKey]
+        : (String(prev[sectionKey] ?? '').trim()
+          ? [createBlock('paragraph', String(prev[sectionKey]))]
+          : []);
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [blockKey]: next };
+    });
+    setSaveStatus('idle');
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      setSections(current => {
+        saveDraft(current);
+        return current;
+      });
+    }, 2000);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddTable = (sectionKey, rows, cols) => {
     updateSectionTables(sectionKey, prev => {
@@ -779,6 +1006,9 @@ function ReportEditorPage({
   const previewSectionEntries = SECTIONS.filter(sec => sec.type !== 'cover').map(sec => ({
     ...sec,
     text: (sections[sec.key] ?? sectionDefaults[sec.key] ?? '').toString(),
+    blocks: Array.isArray(sections[getSectionBlocksKey(sec.key)])
+      ? sections[getSectionBlocksKey(sec.key)]
+      : null,
     images: getPreviewImages(sections, sec.key),
     tables: Array.isArray(sections[getSectionTableKey(sec.key)]) ? sections[getSectionTableKey(sec.key)] : [],
   }));
@@ -800,7 +1030,46 @@ function ReportEditorPage({
     });
   }
 
-  const renderPreviewSectionBody = (sec, text, images, tables = []) => {
+  const renderPreviewSectionBody = (sec, text, images, tables = [], blocks = null) => {
+    // Ortak tablo ve görsel render yardımcıları
+    const renderTables = () => tables.length > 0 && tables.map((tbl, tblIdx) => (
+      <div className="preview-user-table-wrap" key={tbl.id}>
+        <div className="preview-user-table-scroll">
+          <table className="preview-user-table">
+            <tbody>
+              {Array.from({ length: tbl.rows }, (_, r) => (
+                <tr key={r}>
+                  {Array.from({ length: tbl.cols }, (_, c) => (
+                    <td key={c}>{tbl.cells[r * tbl.cols + c] || ''}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="preview-user-table-caption">
+          <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
+          {tbl.name || 'İsimsiz Tablo'}
+        </p>
+      </div>
+    ));
+
+    const renderImages = () => images.length > 0 && (
+      <div className="preview-image-grid">
+        {images.map((img, idx) => (
+          <figure className="preview-image-card" key={img.id}>
+            <div className="preview-image-card__frame">
+              <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+            </div>
+            <figcaption>
+              <strong>Şekil {getImageCaptionNumber(sec.key, idx)}</strong>
+              <span>{img.caption || img.name || 'Açıklama girilmedi'}</span>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    );
+
     if (sec.type === 'locked') {
       return (
         <>
@@ -811,46 +1080,41 @@ function ReportEditorPage({
               results={sec.key === '_results' ? results : undefined}
             />
           </div>
-          {tables.length > 0 && tables.map((tbl, tblIdx) => (
-            <div className="preview-user-table-wrap" key={tbl.id}>
-              <div className="preview-user-table-scroll">
-                <table className="preview-user-table">
-                  <tbody>
-                    {Array.from({ length: tbl.rows }, (_, r) => (
-                      <tr key={r}>
-                        {Array.from({ length: tbl.cols }, (_, c) => (
-                          <td key={c}>{tbl.cells[r * tbl.cols + c] || ''}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="preview-user-table-caption">
-                <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
-                {tbl.name || 'İsimsiz Tablo'}
-              </p>
-            </div>
-          ))}
-          {images.length > 0 && (
-            <div className="preview-image-grid">
-              {images.map((img, idx) => (
-                <figure className="preview-image-card" key={img.id}>
-                  <div className="preview-image-card__frame">
-                    <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
-                  </div>
-                  <figcaption>
-                    <strong>Şekil {getImageCaptionNumber(sec.key, idx)}</strong>
-                    <span>{img.caption || img.name || 'Açıklama girilmedi'}</span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
+          {renderTables()}
+          {renderImages()}
         </>
       );
     }
 
+    // Blok tabanlı içerik (yeni sistem)
+    if (blocks && blocks.length > 0) {
+      return (
+        <>
+          {blocks.map((block, idx) => {
+            const blockText = (block.text || '').trim();
+            if (!blockText) return null;
+            if (block.type === 'subheading') {
+              return (
+                <p key={idx} className="preview-subheading">{blockText}</p>
+              );
+            }
+            if (block.type === 'sideheading') {
+              return (
+                <p key={idx} className="preview-sideheading">{blockText}</p>
+              );
+            }
+            // paragraph — birden fazla satır varsa her satırı ayrı paragraf yap
+            return blockText.split('\n').filter(l => l.trim()).map((line, lineIdx) => (
+              <p key={`${idx}-${lineIdx}`} className="preview-paragraph">{line.trim()}</p>
+            ));
+          })}
+          {renderTables()}
+          {sec.allowImages && renderImages()}
+        </>
+      );
+    }
+
+    // Eski string tabanlı içerik (migration fallback)
     const paragraphs = splitPreviewParagraphs(text);
     return (
       <>
@@ -865,42 +1129,8 @@ function ReportEditorPage({
             Bu bölüm için henüz içerik girilmedi.
           </p>
         )}
-        {tables.length > 0 && tables.map((tbl, tblIdx) => (
-          <div className="preview-user-table-wrap" key={tbl.id}>
-            <div className="preview-user-table-scroll">
-              <table className="preview-user-table">
-                <tbody>
-                  {Array.from({ length: tbl.rows }, (_, r) => (
-                    <tr key={r}>
-                      {Array.from({ length: tbl.cols }, (_, c) => (
-                        <td key={c}>{tbl.cells[r * tbl.cols + c] || ''}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="preview-user-table-caption">
-              <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
-              {tbl.name || 'İsimsiz Tablo'}
-            </p>
-          </div>
-        ))}
-        {sec.allowImages && images.length > 0 && (
-          <div className="preview-image-grid">
-            {images.map((img, idx) => (
-              <figure className="preview-image-card" key={img.id}>
-                <div className="preview-image-card__frame">
-                  <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
-                </div>
-                <figcaption>
-                  <strong>Şekil {getImageCaptionNumber(sec.key, idx)}</strong>
-                  <span>{img.caption || img.name || 'Açıklama girilmedi'}</span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        )}
+        {renderTables()}
+        {sec.allowImages && renderImages()}
       </>
     );
   };
@@ -989,15 +1219,17 @@ function ReportEditorPage({
       const tables = Array.isArray(sections[getSectionTableKey(sec.key)])
         ? sections[getSectionTableKey(sec.key)]
         : [];
+      const blocks = getBlocksForSection(sections, sec.key, sectionDefaults);
+      const isSectionCollapsed = collapsedSections.has(sec.key);
+
       return (
         <div className="wysiwyg-section">
           <p className="section-desc">{sec.description}</p>
-          <textarea
+          <BlockEditor
             key={sec.key}
-            className="plain-text-editor"
-            value={sections[sec.key] ?? sectionDefaults[sec.key] ?? ''}
-            onChange={e => updateSection(sec.key, e.target.value)}
-            placeholder={sec.placeholder}
+            blocks={blocks}
+            onChange={(updater) => updateSectionBlocks(sec.key, updater)}
+            collapsed={isSectionCollapsed}
           />
           {sec.allowImages && (
             <div className="section-image-tools">
@@ -1434,7 +1666,7 @@ function ReportEditorPage({
                   logoSrc={previewLogoSrc}
                   dateStr={previewDateStr}
                 >
-                  {renderPreviewSectionBody(sec, sec.text, sec.images, sec.tables)}
+                  {renderPreviewSectionBody(sec, sec.text, sec.images, sec.tables, sec.blocks)}
                 </PreviewPage>
               ))}
             </div>
@@ -1596,8 +1828,24 @@ function ReportEditorPage({
           <div className="section-header">
             {(() => {
               const sec = SECTIONS.find(s => s.key === activeSection);
-              return sec ? (
+              if (!sec) return null;
+              const isSectionCollapsed = collapsedSections.has(sec.key);
+              return (
                 <>
+                  {sec.type === 'wysiwyg' && (
+                    <button
+                      type="button"
+                      className={`section-header__toggle${isSectionCollapsed ? ' section-header__toggle--collapsed' : ''}`}
+                      onClick={() => setCollapsedSections(prev => {
+                        const next = new Set(prev);
+                        if (next.has(sec.key)) next.delete(sec.key); else next.add(sec.key);
+                        return next;
+                      })}
+                      title={isSectionCollapsed ? 'Bölümü genişlet' : 'Bölümü daralt'}
+                    >
+                      ▶
+                    </button>
+                  )}
                   <h3>{sec.label}</h3>
                   {sec.type === 'wysiwyg' && (
                     <div className="section-type-badge editable">✏️ Kullanıcı Girişi</div>
@@ -1609,7 +1857,7 @@ function ReportEditorPage({
                     <div className="section-type-badge cover">📋 Kapak Formu</div>
                   )}
                 </>
-              ) : null;
+              );
             })()}
           </div>
 

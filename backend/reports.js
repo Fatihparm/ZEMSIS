@@ -144,12 +144,12 @@ Zemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019’da yü
 Yapılması planlanan yapıya ait (TBDY-2018) Bina kullanım sınıfı (BKS), Bina önem katsayısı (I) ve Bina yükseklik sınıfı (BYS) belirlenmiştir. Tablo 3.1.'den BKS değeri 3, I değeri 1 olarak alınmıştır. Tablo 3.2'den BYS ise 6 olarak belirlenmiştir. Yapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
     existingResearch: `İnşaat yapılacak alanda, ---------- tarafından -------------- derinliğinde sondaj yapılmıştır. Ayrıca arazide --- adet temel sondaj kuyusu açılmış ve --- adet örselenmiş (SPT), --- adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde -------------------- laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
     additionalResearch: 'İlave bir zemin araştırması yapılmamıştır.',
-    soilProfile: `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri (A-A Kesiti) çıkartılmıştır (Şekil 6.1. ve Şekil 6.2). Zemin profili incelendiğinde 0,00-0,50 metre arasında Dolgu tabaka, 0,50-7,50 metre arasında Siltli Kil tabaka, 7,50-12,00 metre arasında Siltli Kum tabaka ve 12,00-20,00 metre arasında Siltli Kil tabaka yer almaktadır. İnceleme alanında 3.50 m’de yeraltı suyuna rastlanmıştır.`,
-    seismicity: `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken, zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.
+    soilProfile: `Yapının yapılacağı temel altı zemini için sondaj verileri ve sismik veriler kullanılarak idealize zemin profilleri çıkartılmıştı. Zemin profili incelendiğinde 0,00-0,50 metre arasında Dolgu tabaka, 0,50-7,50 metre arasında Siltli Kil tabaka, 7,50-12,00 metre arasında Siltli Kum tabaka ve 12,00-20,00 metre arasında Siltli Kil tabaka yer almaktadır. İnceleme alanında 3.50 m’de yeraltı suyuna rastlanmıştır.`,
+    seismicity: `01/01/2019 tarihinde Türkiye Bina Deprem Yönetmeliği’nin (TBDY-2018) yürürlüğe girmesi ile birlikte Geoteknik ve Yapı tasarımında bu yönetmelik hükümleri uygulanmaktadır. TBDY-2018 ile beraber 22/01/2018 tarih ve 2018/11275 sayılı Bakanlar Kurulu kararı ile Türkiye Deprem Tehlike Haritaları yürürlülüğe girmiştir ve tasarımda bu haritalardan yararlanılmaktadır (Şekil 8.1.). Bursa ili ve çevresi “Afet İşleri Genel Müdürlüğü” nce yayınlanan “Türkiye Deprem Tehlike Haritası” nda Yüksek Tehlike riski taşıyan alan içinde kalmaktadır. Bursa yöresinde aktif olarak deprem oluşturabilecek 4 fay bulunmaktadır.  Bunlar Gemlik Fayı, Bursa Fayı, Uluabat Fayı ve Zeytinbağı Fayı dır. 
 
-İnceleme alanı için deprem parametreleri olarak DD-2 deprem yer hareketi düzeyi, ZE yerel zemin sınıfı ve koordinatlar E=40.4285°, B=29.1767° dikkate alınmıştır.
+Gemlik fayı, Kuzey Anadolu fayının bir koludur. Kuzey Anadolu fayının Geyve-Gemlik arasında kalan kısmı birkaç segmentten oluşmaktadır. Geyve batısında Sakarya nehrini yaklaşık 10-15 km sağ yönlü olarak öteleyen fay Geyve havzasını güneyden sınırlar. Fay, batıya doğru Mekece yakınlarında sağa sıçrama yaparak Mekece içinden geçer ve yine havzayı sınırlayarak İznik’e doğru devam eder. Mekece batısına doğru B-GB istikametinde devam eden fay Kaynarca’dan geçerek İznik Gölü’nün güneyine doğru uzanır. Çerkeşli ile İznik gölü arasında genelde gölün güney kenarı boyunca izlenir. Fay, Sölöz civarında çatallanır ve tali bir kol güneybatıya ayrılarak devam eder. Ana kol ise İznik gölünün batı ucundan yaklaşık doğu-batı istikametinde Gemlik körfezine doğru uzanır. Fayın bu kesimi Gemlik’in 7-8 km doğusunda yine çatallanır ve bir kol güneybatıya doğru ayrılarak Engürücük güneyinden Gençali köyünden geçer ve denize girer.Bu bölgelerdeki ötelenmiş dereler, fay façetaları ile şevler, fayın sağ yanal atımlı bir yapıda olduğunu göstermektedir (Yılmaz ve diğ., 1995). Gemlik Fayı, İznik gölü ile Gemlik körfezi arasında uzanır ve D-B doğrultusundadır. Fayın doğu ve batı uzantıları su altında olup karada izlenebilen bölümünün uzunluğu yaklaşık 40 kmdir (Kuşçu vd., 2009). 
 
-Elde edilen spektral ivme katsayıları ışığında kısa periyot ve 1.0 saniye periyot için Yerel Zemin Etki Katsayıları TBDY-2018 Tablo 2.1 ve Tablo 2.2'den seçilmiş; tasarım spektrumları buna göre değerlendirilmiştir.`,
+Ulubat ve Manyas Fayı, normal bileşenli sağ yanal atımlıdır. Yanal atımlı faylar Gölcük depremini oluşturan faylar gibi büyük hasar yaratan faylardır. Manyas Fayı 1964'te kırılmış ve 7 büyüklüğünde bir depreme yol açmıştır. Manyas gibi bir normal fay olan Ulubat Fayı ise yakın dönemde henüz kırılmamıştır (Manyas ve Ulubat gölleri bu fayların kırılmasıyla oluşmuştur). Ulubat Fayı aktif bir fay olduğuna göre kırılmamış olması riskli bir durumdur. İki parçalı bu fayın 30 kilometrelik uzun parçası kırılırsa 6 büyüklük civarında bir deprem üretebilir. Nitekim Gönen'de 1 Şubat 2001'de meydana gelen 4 büyüklüğündeki deprem bu bölgede sismik hareketlilik yaşandığını gösteriyor. Kuzey Anadolu Fay hattının güney kolu üzerinde, doğudan batıya doğru, birbirinden sağa sıçramalı yapılarla ayrılan segmentlerden biridir. Taze fay diklikleri ve morfolojik ötelenmeler kol boyunca Holosen aktivitesinin varlığını göstermektedir (Tsukuda vd., 1988; Honkura ve Işıkara, 1991; Yoshioka ve Kuşçu, 1994; Barka, 1997). Öte yandan sismik profillerde Marmara Denizi güney şelfinde izlenen fayın Geç Kuvaterner aktivitesine ilişkin izler oldukça belirgindir (Alpar ve Çizmeci, 1999; Yaltırak ve Alpar, 2002; Okamura vd., 2003; Kurtuluş ve Canbay, 2007; Kuşçu vd., 2009).`,
     foundationSystem: 'Yapılan değerlendirmeler sonucunda temel sistemi olarak radye temel sisteminin uygun olduğu görülmüştür.',
     conclusions: 'İnceleme alanı kapsamında yapılan analiz ve değerlendirmeler sonucunda, zemin iyileştirme ihtiyacı ve uygulanacak yöntem belirlenmiştir.',
     references: `TBDY-2018, Türkiye Bina Deprem Yönetmeliği, 2018.
@@ -529,6 +529,11 @@ function getSectionTables(sections, sectionKey) {
   return Array.isArray(tables) ? tables.filter(t => t && typeof t === 'object') : [];
 }
 
+function getSectionBlocks(sections, sectionKey) {
+  const blocks = sections && sections[`${sectionKey}Blocks`];
+  return Array.isArray(blocks) ? blocks : null;
+}
+
 function parseDataUrl(dataUrl) {
   if (typeof dataUrl !== 'string') return null;
   const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl);
@@ -591,10 +596,63 @@ function createImageBlocks(sectionKey, images) {
   });
 }
 
-function createSectionBlocks(sectionKey, title, text, images = []) {
+// 0.5 cm = 284 twips (1 inch = 1440 twips, 2.54 cm = 1440 twips => 1 cm = 567 twips)
+const INDENT_05CM = 284;
+
+function createBlocksContent(blocks) {
+  if (!Array.isArray(blocks) || blocks.length === 0) return [];
+  return blocks.flatMap(block => {
+    const text = (block.text || '').trim();
+    if (!text) return [];
+    switch (block.type) {
+      case 'subheading':
+        return [new Paragraph({
+          children: [new TextRun({
+            text,
+            font: 'Times New Roman',
+            size: 24, // 12pt
+            bold: true,
+          })],
+          indent: { left: INDENT_05CM },
+          spacing: { before: 160, after: 80 },
+          alignment: AlignmentType.LEFT,
+        })];
+      case 'sideheading':
+        return [new Paragraph({
+          children: [new TextRun({
+            text,
+            font: 'Times New Roman',
+            size: 24,
+            bold: true,
+            underline: { type: 'single' },
+          })],
+          indent: { left: INDENT_05CM },
+          spacing: { before: 120, after: 80 },
+          alignment: AlignmentType.LEFT,
+        })];
+      default: // paragraph
+        return text.split('\n').filter(line => line.trim()).map(line =>
+          new Paragraph({
+            children: [new TextRun({
+              text: line.trim(),
+              font: 'Times New Roman',
+              size: 24,
+            })],
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { after: 120 },
+          })
+        );
+    }
+  });
+}
+
+function createSectionBlocks(sectionKey, title, text, images = [], blocks = null) {
+  const contentParagraphs = (blocks && blocks.length > 0)
+    ? createBlocksContent(blocks)
+    : createParagraphs(text);
   return [
     new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }),
-    ...createParagraphs(text),
+    ...contentParagraphs,
     ...createImageBlocks(sectionKey, images),
   ];
 }
@@ -815,22 +873,22 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           })
         },
         children: [
-          ...createSectionBlocks('intro', "1. GİRİŞ", getSec(sections, 'intro', reportDefaults.intro), getSectionImages(sections, 'intro')),
+          ...createSectionBlocks('intro', "1. GİRİŞ", getSec(sections, 'intro', reportDefaults.intro), getSectionImages(sections, 'intro'), getSectionBlocks(sections, 'intro')),
           ...createUserTableBlocks('intro', getSectionTables(sections, 'intro')),
           
-          ...createSectionBlocks('areaInfo', "2. İNCELEME ALANI HAKKINDA BİLGİLER", getSec(sections, 'areaInfo', reportDefaults.areaInfo), getSectionImages(sections, 'areaInfo')),
+          ...createSectionBlocks('areaInfo', "2. İNCELEME ALANI HAKKINDA BİLGİLER", getSec(sections, 'areaInfo', reportDefaults.areaInfo), getSectionImages(sections, 'areaInfo'), getSectionBlocks(sections, 'areaInfo')),
           ...createUserTableBlocks('areaInfo', getSectionTables(sections, 'areaInfo')),
           
-          ...createSectionBlocks('structureInfo', "3. YAPI HAKKINDA BİLGİLER", getSec(sections, 'structureInfo', reportDefaults.structureInfo), getSectionImages(sections, 'structureInfo')),
+          ...createSectionBlocks('structureInfo', "3. YAPI HAKKINDA BİLGİLER", getSec(sections, 'structureInfo', reportDefaults.structureInfo), getSectionImages(sections, 'structureInfo'), getSectionBlocks(sections, 'structureInfo')),
           ...createUserTableBlocks('structureInfo', getSectionTables(sections, 'structureInfo')),
           
-          ...createSectionBlocks('existingResearch', "4. MEVCUT ZEMİN ARAŞTIRMALARI", getSec(sections, 'existingResearch', reportDefaults.existingResearch), getSectionImages(sections, 'existingResearch')),
+          ...createSectionBlocks('existingResearch', "4. MEVCUT ZEMİN ARAŞTIRMALARI", getSec(sections, 'existingResearch', reportDefaults.existingResearch), getSectionImages(sections, 'existingResearch'), getSectionBlocks(sections, 'existingResearch')),
           ...createUserTableBlocks('existingResearch', getSectionTables(sections, 'existingResearch')),
           
-          ...createSectionBlocks('additionalResearch', "5. İLAVE ZEMİN ARAŞTIRMALARI", getSec(sections, 'additionalResearch', reportDefaults.additionalResearch), getSectionImages(sections, 'additionalResearch')),
+          ...createSectionBlocks('additionalResearch', "5. İLAVE ZEMİN ARAŞTIRMALARI", getSec(sections, 'additionalResearch', reportDefaults.additionalResearch), getSectionImages(sections, 'additionalResearch'), getSectionBlocks(sections, 'additionalResearch')),
           ...createUserTableBlocks('additionalResearch', getSectionTables(sections, 'additionalResearch')),
           
-          ...createSectionBlocks('soilProfile', "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", getSec(sections, 'soilProfile', reportDefaults.soilProfile), getSectionImages(sections, 'soilProfile')),
+          ...createSectionBlocks('soilProfile', "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", getSec(sections, 'soilProfile', reportDefaults.soilProfile), getSectionImages(sections, 'soilProfile'), getSectionBlocks(sections, 'soilProfile')),
           ...createUserTableBlocks('soilProfile', getSectionTables(sections, 'soilProfile')),
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
@@ -848,7 +906,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           }),
           ...createUserTableBlocks('_params', getSectionTables(sections, '_params')),
           
-          ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity')),
+          ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity'), getSectionBlocks(sections, 'seismicity')),
           ...createUserTableBlocks('seismicity', getSectionTables(sections, 'seismicity')),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
@@ -874,13 +932,13 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           ...createImageBlocks('_results', getSectionImages(sections, '_results')),
           ...createUserTableBlocks('_results', getSectionTables(sections, '_results')),
           
-          ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSec(sections, 'foundationSystem', reportDefaults.foundationSystem), getSectionImages(sections, 'foundationSystem')),
+          ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSec(sections, 'foundationSystem', reportDefaults.foundationSystem), getSectionImages(sections, 'foundationSystem'), getSectionBlocks(sections, 'foundationSystem')),
           ...createUserTableBlocks('foundationSystem', getSectionTables(sections, 'foundationSystem')),
           
-          ...createSectionBlocks('conclusions', "11. SONUÇ VE ÖNERİLER", getSec(sections, 'conclusions', reportDefaults.conclusions), getSectionImages(sections, 'conclusions')),
+          ...createSectionBlocks('conclusions', "11. SONUÇ VE ÖNERİLER", getSec(sections, 'conclusions', reportDefaults.conclusions), getSectionImages(sections, 'conclusions'), getSectionBlocks(sections, 'conclusions')),
           ...createUserTableBlocks('conclusions', getSectionTables(sections, 'conclusions')),
           
-          ...createSectionBlocks('references', "12. YARARLANILAN KAYNAKLAR", getSec(sections, 'references', reportDefaults.references), getSectionImages(sections, 'references')),
+          ...createSectionBlocks('references', "12. YARARLANILAN KAYNAKLAR", getSec(sections, 'references', reportDefaults.references), getSectionImages(sections, 'references'), getSectionBlocks(sections, 'references')),
         ]
       }
     ]
