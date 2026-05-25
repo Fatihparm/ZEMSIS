@@ -157,6 +157,12 @@ Ulubat ve Manyas Fayı, normal bileşenli sağ yanal atımlıdır. Yanal atıml�
   };
 }
 
+// Girinti sabitleri (twips: 1 inch = 1440 twips, 2.54 cm = 1440 twips)
+// 0.5 cm  = 284 twips
+const INDENT_05CM = 284;
+// 0.52 cm = 295 twips
+const INDENT_052CM = 295;
+
 function createParagraphs(text) {
   if (!text) return [];
   return text.split('\n').filter(line => line.trim().length > 0).map(line => {
@@ -164,7 +170,8 @@ function createParagraphs(text) {
     return new Paragraph({
       children: [new TextRun({ text: line.trim(), bold: isSubHeading })],
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { after: 120 }
+      spacing: { after: 120 },
+      indent: { firstLine: INDENT_052CM },
     });
   });
 }
@@ -596,8 +603,6 @@ function createImageBlocks(sectionKey, images) {
   });
 }
 
-// 0.5 cm = 284 twips (1 inch = 1440 twips, 2.54 cm = 1440 twips => 1 cm = 567 twips)
-const INDENT_05CM = 284;
 
 function createBlocksContent(blocks) {
   if (!Array.isArray(blocks) || blocks.length === 0) return [];
@@ -640,6 +645,7 @@ function createBlocksContent(blocks) {
             })],
             alignment: AlignmentType.JUSTIFIED,
             spacing: { after: 120 },
+            indent: { firstLine: INDENT_052CM },
           })
         );
     }
@@ -651,7 +657,11 @@ function createSectionBlocks(sectionKey, title, text, images = [], blocks = null
     ? createBlocksContent(blocks)
     : createParagraphs(text);
   return [
-    new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }),
+    new Paragraph({
+      text: title,
+      heading: HeadingLevel.HEADING_1,
+      indent: { left: INDENT_052CM },
+    }),
     ...contentParagraphs,
     ...createImageBlocks(sectionKey, images),
   ];
@@ -793,17 +803,29 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
         {
           id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal",
           run: { font: "Times New Roman", size: 24, bold: true },
-          paragraph: { spacing: { before: 240, after: 120 } }
+          paragraph: {
+            spacing: { before: 240, after: 120 },
+            outlineLevel: 0,  // Word'de katlanabilir başlık (mavi üçgen)
+            indent: { left: INDENT_052CM },
+          }
         },
         {
           id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal",
           run: { font: "Times New Roman", size: 24, bold: true },
-          paragraph: { spacing: { before: 240, after: 120 } }
+          paragraph: {
+            spacing: { before: 240, after: 120 },
+            outlineLevel: 1,  // Word'de katlanabilir alt başlık
+            indent: { left: INDENT_05CM },
+          }
         },
         {
           id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal",
           run: { font: "Times New Roman", size: 24, bold: true },
-          paragraph: { spacing: { before: 120, after: 120 } }
+          paragraph: {
+            spacing: { before: 120, after: 120 },
+            outlineLevel: 2,
+            indent: { left: INDENT_05CM },
+          }
         }
       ]
     },
