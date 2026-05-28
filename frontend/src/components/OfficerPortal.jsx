@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import ApplicationDetailModal from './ApplicationDetailModal';
+import OfficerWorkspaceView from './OfficerWorkspaceView';
 import './OfficerPortal.css';
 
 const API_URL = '/api';
@@ -24,7 +25,12 @@ export default function OfficerPortal({ user, token, onLogout }) {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+
+  // Modal: başvuru detay (onay/red)
   const [selectedAppId, setSelectedAppId] = useState(null);
+
+  // Workspace: proje inceleme görünümü
+  const [workspaceAppId, setWorkspaceAppId] = useState(null);
 
   const authHeader = { Authorization: `Bearer ${token}` };
 
@@ -55,7 +61,7 @@ export default function OfficerPortal({ user, token, onLogout }) {
 
   useEffect(() => { fetchApplications(); }, [fetchApplications]);
 
-  const handleReviewed = (action) => {
+  const handleReviewed = () => {
     setSelectedAppId(null);
     fetchApplications();
   };
@@ -85,6 +91,18 @@ export default function OfficerPortal({ user, token, onLogout }) {
     rejected: applications.filter(a => a.status === 'rejected').length,
   };
 
+  // ── Eğer proje inceleme modundaysa OfficerWorkspaceView göster ──────────────
+  if (workspaceAppId) {
+    return (
+      <OfficerWorkspaceView
+        applicationId={workspaceAppId}
+        token={token}
+        onBack={() => setWorkspaceAppId(null)}
+      />
+    );
+  }
+
+  // ── Normal liste görünümü ────────────────────────────────────────────────────
   return (
     <div className="op-root">
       {/* Page header */}
@@ -185,7 +203,7 @@ export default function OfficerPortal({ user, token, onLogout }) {
                   <th>Proje Adı</th>
                   <th>Başvuran</th>
                   <th>Durum</th>
-                  <th>İşlem</th>
+                  <th>İşlemler</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,13 +223,25 @@ export default function OfficerPortal({ user, token, onLogout }) {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="op-detail-btn"
-                        id={`detail-btn-${app.id}`}
-                        onClick={() => setSelectedAppId(app.id)}
-                      >
-                        Detay →
-                      </button>
+                      {/* İki buton: Detay (onay/red) + Projeyi İncele (workspace) */}
+                      <div className="op-action-btns">
+                        <button
+                          className="op-inspect-btn"
+                          id={`inspect-btn-${app.id}`}
+                          onClick={() => setWorkspaceAppId(app.id)}
+                          title="Projeyi Parametreler / Zemin / Sonuçlar ile İncele"
+                        >
+                          🔬 İncele
+                        </button>
+                        <button
+                          className="op-detail-btn"
+                          id={`detail-btn-${app.id}`}
+                          onClick={() => setSelectedAppId(app.id)}
+                          title="Başvuru Detayı & Onay/Red"
+                        >
+                          Detay →
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

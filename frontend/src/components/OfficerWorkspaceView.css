@@ -1,0 +1,330 @@
+/* ══════════════════════════════════════════════════════════════════
+   OfficerWorkspaceView — Read-Only Project Inspector
+   ══════════════════════════════════════════════════════════════════ */
+
+.owv-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Top banner — proje & başvuran bilgisi ── */
+.owv-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, rgba(30, 60, 100, 0.6) 0%, rgba(20, 40, 80, 0.5) 100%);
+  border: 1px solid rgba(100, 160, 255, 0.15);
+  border-radius: 12px;
+  margin-bottom: 0.85rem;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+
+.owv-banner__left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.owv-banner__back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.owv-banner__back:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.owv-banner__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.owv-banner__project {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8f0fe;
+  letter-spacing: 0.01em;
+}
+
+.owv-banner__sub {
+  font-size: 0.78rem;
+  color: rgba(200, 220, 255, 0.55);
+}
+
+.owv-banner__sub span {
+  font-weight: 600;
+  color: rgba(200, 220, 255, 0.75);
+}
+
+.owv-banner__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Read-only badge */
+.owv-readonly-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(255, 171, 64, 0.12);
+  border: 1px solid rgba(255, 171, 64, 0.3);
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #ffab40;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.owv-readonly-badge::before {
+  content: '🔒';
+  font-size: 0.8rem;
+}
+
+/* Status badge */
+.owv-status {
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.owv-status--pending {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  color: #ffc107;
+}
+
+.owv-status--approved {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.35);
+  color: #66bb6a;
+}
+
+.owv-status--rejected {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.35);
+  color: #ef5350;
+}
+
+/* ── Tabs ── */
+.owv-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-bottom: 0.85rem;
+  flex-shrink: 0;
+}
+
+.owv-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.owv-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.owv-tab--active {
+  background: rgba(100, 160, 255, 0.18);
+  color: #90caf9;
+  font-weight: 600;
+  border: 1px solid rgba(100, 160, 255, 0.2);
+}
+
+.owv-tab-icon {
+  font-size: 1rem;
+}
+
+/* ── Content area ── */
+.owv-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.owv-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.owv-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.owv-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+/* full-height content (zemin & kesit) */
+.owv-content--full {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Loading / Error ── */
+.owv-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+}
+
+.owv-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(100, 160, 255, 0.15);
+  border-top-color: #90caf9;
+  border-radius: 50%;
+  animation: owv-spin 0.8s linear infinite;
+}
+
+@keyframes owv-spin {
+  to { transform: rotate(360deg); }
+}
+
+.owv-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.25);
+  border-radius: 10px;
+  color: #ef9a9a;
+  font-size: 0.88rem;
+  margin: 1rem 0;
+}
+
+/* ── Parameters tab ── */
+.owv-params-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.owv-param-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.owv-param-card h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(144, 202, 249, 0.7);
+  margin: 0 0 0.85rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.owv-param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.owv-param-row:last-child {
+  border-bottom: none;
+}
+
+.owv-param-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  flex: 1;
+}
+
+.owv-param-value {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.owv-param-val {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #e8f0fe;
+  font-family: 'Courier New', monospace;
+  background: rgba(100, 160, 255, 0.08);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  min-width: 60px;
+  text-align: right;
+}
+
+.owv-param-unit {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  min-width: 38px;
+}
+
+/* ── Results tab ── */
+.owv-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+/* ── Soil layers tab — full height wrapper ── */
+.owv-soil-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}

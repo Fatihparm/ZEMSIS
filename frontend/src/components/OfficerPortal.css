@@ -349,9 +349,39 @@
 .op-badge--approved { background: rgba(16,185,129,0.12); color: #34d399; }
 .op-badge--rejected { background: rgba(239,68,68,0.12);  color: #f87171; }
 
+/* ── Action buttons container ─────────────────────────────────── */
+.op-action-btns {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Inspect button (🔬 Projeyi İncele) ──────────────────────── */
+.op-inspect-btn {
+  padding: 0.45rem 0.9rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+  color: #34d399;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.op-inspect-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
 /* ── Detail button ────────────────────────────────────────────── */
 .op-detail-btn {
-  padding: 0.45rem 1rem;
+  padding: 0.45rem 0.9rem;
   background: rgba(37,99,235,0.12);
   border: 1px solid rgba(37,99,235,0.25);
   border-radius: 8px;
@@ -371,3 +401,4 @@
 }
 
 @keyframes opSpin { to { transform: rotate(360deg); } }
+

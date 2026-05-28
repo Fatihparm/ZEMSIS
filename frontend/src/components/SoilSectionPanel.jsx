@@ -33,13 +33,15 @@ const soilNames = {
     tr: { kum: 'Kum', kil: 'Kil', silt: 'Silt', kaya: 'Kaya', cakil: 'Çakıl' }
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  SoilSectionPanel — Unified Soil Layers + Cross-Section View
-// ═══════════════════════════════════════════════════════════════════════════════
 function SoilSectionPanel({
-    layers, onChange, parameters, lang,
-    onParameterChange, extraParams, onExtraParamsChange,
-    translations
+    layers,
+    onChange,
+    parameters,
+    lang,
+    extraParams = {},
+    onExtraParamsChange,
+    readOnly = false,
+    translations = {}
 }) {
     const tr = lang === 'tr';
     const t = translations;
@@ -110,7 +112,7 @@ function SoilSectionPanel({
     };
 
     // ── Drag & Drop ──
-    const onDragStart = (e, index) => { dragItem.current = index; e.dataTransfer.effectAllowed = "move"; };
+    const onDragStart = (e, index) => { if (readOnly) return; dragItem.current = index; e.dataTransfer.effectAllowed = "move"; };
     const onDragEnter = (_, index) => { dragOverItem.current = index; };
     const onDragEnd = () => {
         const copy = [...layers];
@@ -131,6 +133,7 @@ function SoilSectionPanel({
 
     // ── Floating popup open ──
     const handleLayerClick = (e, layerId) => {
+        if (readOnly) return; // read-only modda popup açılmaz
         const rect = e.currentTarget.getBoundingClientRect();
         // Position popup to the right of the clicked layer
         setPopupPos({ x: rect.right + 8, y: rect.top });
@@ -405,7 +408,7 @@ function SoilSectionPanel({
     // ═══════════════════════════════════════════════════════════════════════════
     //  Render
     // ═══════════════════════════════════════════════════════════════════════════
-    return (
+    return ( 
         <div className="ssp-wrapper">
             {/* ── Left panel: Soil layers ── */}
             <div className="ssp-left">
@@ -425,8 +428,8 @@ function SoilSectionPanel({
                         </label>
                         <div className="ssp-extra-input">
                             <input type="number" value={localFoundation}
-                                onChange={e => { const v = parseFloat(e.target.value) || 0; setLocalFoundation(v); notifyExtra('foundationThickness', v); }}
-                                min={0} max={5} step={0.1} />
+                                onChange={e => { if (readOnly) return; const v = parseFloat(e.target.value) || 0; setLocalFoundation(v); notifyExtra('foundationThickness', v); }}
+                                min={0} max={5} step={0.1} disabled={readOnly} />
                             <span>m</span>
                         </div>
                     </div>
@@ -437,8 +440,8 @@ function SoilSectionPanel({
                         </label>
                         <div className="ssp-extra-input">
                             <input type="number" value={localFill}
-                                onChange={e => { const v = parseFloat(e.target.value) || 0; setLocalFill(v); notifyExtra('fillHeight', v); }}
-                                min={0} max={10} step={0.1} />
+                                onChange={e => { if (readOnly) return; const v = parseFloat(e.target.value) || 0; setLocalFill(v); notifyExtra('fillHeight', v); }}
+                                min={0} max={10} step={0.1} disabled={readOnly} />
                             <span>m</span>
                         </div>
                     </div>
@@ -449,131 +452,24 @@ function SoilSectionPanel({
                         </label>
                         <div className="ssp-extra-input">
                             <input type="number" value={waterTable}
-                                onChange={e => { const v = parseFloat(e.target.value) || 0; setWaterTable(v); notifyExtra('waterTable', v); }}
-                                min={0} max={50} step={0.5} />
+                                onChange={e => { if (readOnly) return; const v = parseFloat(e.target.value) || 0; setWaterTable(v); notifyExtra('waterTable', v); }}
+                                min={0} max={20} step={0.1} disabled={readOnly} />
                             <span>m</span>
                         </div>
                     </div>
-                </div>
 
-                <div className="ssp-divider" />
-                <div className="ssp-extra-params">
-                    <div className="ssp-extra-row">
-                        <label>
-                            <span className="ssp-extra-icon">○</span>
-                            {tr ? 'Çap (D)' : 'Diameter (D)'}
-                        </label>
-                        <div className="ssp-extra-input">
-                            <input type="number" name="D" value={parameters.D} onChange={onParameterChange} min={0.3} max={3.0} step={0.1} />
-                            <span>m</span>
-                        </div>
-                    </div>
-                    <div className="ssp-extra-row">
-                        <label>
-                            <span className="ssp-extra-icon">↔</span>
-                            {tr ? 'Aralık (s)' : 'Spacing (s)'}
-                        </label>
-                        <div className="ssp-extra-input">
-                            <input type="number" name="s" value={parameters.s} onChange={onParameterChange} min={0.5} max={10.0} step={0.1} />
-                            <span>m</span>
-                        </div>
-                    </div>
-                    <div className="ssp-extra-row">
-                        <label>
-                            <span className="ssp-extra-icon">↕</span>
-                            {tr ? 'Boy (H)' : '  Length (H)'}
-                        </label>
-                        <div className="ssp-extra-input">
-                            <input type="number" name="H" value={parameters.H} onChange={onParameterChange} min={1} max={50} step={0.5} />
-                            <span>m</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="ssp-divider" />
-
-                {/* Layer stack */}
-                <div className="ssp-layer-stack">
-                    <div className="ssp-surface-tag">
-                        <span>─── {tr ? 'Zemin Yüzeyi' : 'Ground Surface'} (0.0 m) ───</span>
-                    </div>
-                    {layers.map((layer, index) => {
-                        const depth = getDepthRange(index);
-                        const colors = SOIL_COLORS_VISUAL[layer.soilType] || SOIL_COLORS_VISUAL.kil;
-                        const isPopupOpen = popupLayerId === layer.id;
-
-                        return (
-                            <div
-                                key={layer.id}
-                                className={`ssp-layer-row ${isPopupOpen ? 'active' : ''}`}
-                                style={{ borderLeftColor: colors.accent }}
-                                onClick={(e) => handleLayerClick(e, layer.id)}
-                                draggable
-                                onDragStart={(e) => onDragStart(e, index)}
-                                onDragEnter={(e) => onDragEnter(e, index)}
-                                onDragEnd={onDragEnd}
-                                onDragOver={onDragOver}
-                            >
-                                <div className="ssp-layer-color" style={{ background: colors.bg }} />
-                                <div className="ssp-layer-info">
-                                    <span className="ssp-layer-name">{getSoilName(layer.soilType)}</span>
-                                    <span className="ssp-layer-depth">{depth.start}–{depth.end} m</span>
-                                </div>
-                                <div className="ssp-layer-thick">
-                                    <input
-                                        type="number"
-                                        value={layer.thickness}
-                                        onChange={(e) => { e.stopPropagation(); updateLayer(layer.id, 'thickness', parseFloat(e.target.value) || 0); }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        min={0.5} max={30} step={0.5}
-                                    />
-                                    <span>m</span>
-                                </div>
-                                <div className="ssp-layer-drag" title={tr ? 'Sürükle' : 'Drag'}>⋮⋮</div>
+                    {popupLayer && (
+                        <div className="ssp-popup" ref={popupRef}
+                            style={{ top: popupPos.y, left: popupPos.x }}>
+                            <div className="ssp-popup-row">
+                                <label>{tr ? 'Zemin Tipi' : 'Soil Type'}</label>
+                                <select value={popupLayer.soilType}
+                                    onChange={e => updateLayer(popupLayerId, 'soilType', e.target.value)}>
+                                    {SOIL_TYPES.map(type => (
+                                        <option key={type} value={type}>{getSoilName(type)}</option>
+                                    ))}
+                                </select>
                             </div>
-                        );
-                    })}
-                </div>
-
-                {/* Add layer button */}
-                <button className="ssp-add-btn" onClick={addLayer} style={{ marginTop: '15px' }}>
-                    + {tr ? 'Tabaka Ekle' : 'Add Layer'}
-                </button>
-            </div>
-
-            {/* ── Floating Popup — Layer parameters (Word-style mini toolbar) ── */}
-            {popupLayer && (
-                <div
-                    className="ssp-popup"
-                    ref={popupRef}
-                    style={{
-                        top: Math.min(popupPos.y, window.innerHeight - 380),
-                        left: Math.min(popupPos.x, window.innerWidth - 280)
-                    }}
-                >
-                    <div className="ssp-popup-header">
-                        <span className="ssp-popup-title">
-                            {getSoilName(popupLayer.soilType)} — {tr ? 'Parametreler' : 'Parameters'}
-                        </span>
-                        <div className="ssp-popup-actions">
-                            {layers.length > 1 && (
-                                <button className="ssp-popup-del" onClick={() => removeLayer(popupLayerId)} title={tr ? 'Sil' : 'Delete'}>🗑️</button>
-                            )}
-                            <button className="ssp-popup-close" onClick={() => setPopupLayerId(null)}>✕</button>
-                        </div>
-                    </div>
-
-                    <div className="ssp-popup-body">
-                        {/* Soil type selector */}
-                        <div className="ssp-popup-row">
-                            <label>{tr ? 'Zemin Tipi' : 'Soil Type'}</label>
-                            <select value={popupLayer.soilType}
-                                onChange={e => updateLayer(popupLayerId, 'soilType', e.target.value)}>
-                                {SOIL_TYPES.map(type => (
-                                    <option key={type} value={type}>{getSoilName(type)}</option>
-                                ))}
-                            </select>
-                        </div>
 
                         <div className="ssp-popup-divider" />
 
@@ -629,8 +525,9 @@ function SoilSectionPanel({
                             </div>
                         </div>
                     </div>
+                )}
                 </div>
-            )}
+            </div>
 
             {/* ── Right panel: Cross-Section View ── */}
             <div className="ssp-right">
