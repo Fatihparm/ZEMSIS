@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SoilSectionPanel from './SoilSectionPanel';
 import ResultCard from './ResultCard';
 import './OfficerWorkspaceView.css';
@@ -107,6 +107,31 @@ const IconBarChart = () => (
   </svg>
 );
 
+const IconFileText = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const IconCheckCircle = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+
 const IconAlertTriangle = () => (
   <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
@@ -118,6 +143,7 @@ const TABS = [
   { key: 'parameters', Icon: IconSettings,  label: 'Parametreler' },
   { key: 'soilSection', Icon: IconLayers,   label: 'Zemin & Kesit' },
   { key: 'results',     Icon: IconBarChart, label: 'Hesap Sonuçları' },
+  { key: 'report',      Icon: IconFileText, label: 'Rapor' },
 ];
 
 const fmtNum = (v, decimals = 3) => {
@@ -142,6 +168,50 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
   const [soilLayers, setSoilLayers] = useState([]);
   const [extraParams, setExtraParams] = useState({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
   const [results, setResults] = useState(null);
+
+  // Rapor indirme durumu
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const reportSuccessTimer = useRef(null);
+
+  // Rapor indirme fonksiyonu
+  const handleDownloadReport = async () => {
+    setReportLoading(true);
+    setReportError('');
+    setReportSuccess(false);
+    try {
+      const res = await fetch(`${API_URL}/reports/generate-for-application/${applicationId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setReportError(data.error || `Rapor oluşturulamadı (${res.status})`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const projectName = (appData?.project?.name || 'rapor')
+        .replace(/[^a-zA-Z0-9\u00C0-\u024F\s\-_]/g, '')
+        .trim()
+        .replace(/\s+/g, '_');
+      a.href = url;
+      a.download = `${projectName}_JG_Raporu.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setReportSuccess(true);
+      clearTimeout(reportSuccessTimer.current);
+      reportSuccessTimer.current = setTimeout(() => setReportSuccess(false), 4000);
+    } catch {
+      setReportError('Sunucuya bağlanılamadı.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -333,6 +403,106 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
               Bu proje için hesap sonucu bulunmuyor. Başvuru sahibi henüz hesaplama yapmamış olabilir.
             </div>
           )}
+        </div>
+      )}
+
+      {/* Rapor */}
+      {activeTab === 'report' && (
+        <div className="owv-content">
+          <div className="owv-report-panel">
+
+            {/* Bilgi kartı */}
+            <div className="owv-report-info-card">
+              <div className="owv-report-info-icon">
+                <IconFileText />
+              </div>
+              <div className="owv-report-info-text">
+                <h3>Jet Grout Hesap Raporu</h3>
+                <p>
+                  Bu rapor; proje parametrelerini, zemin profilini ve hesap sonuçlarını
+                  içeren resmi DOCX formatında bir belgedir. İnceleme amacıyla
+                  indirip görüntüleyebilirsiniz.
+                </p>
+              </div>
+            </div>
+
+            {/* Proje özeti */}
+            <div className="owv-report-meta-grid">
+              <div className="owv-report-meta-item">
+                <span className="owv-report-meta-label">Proje Adı</span>
+                <span className="owv-report-meta-value">{appData?.project?.name || '—'}</span>
+              </div>
+              <div className="owv-report-meta-item">
+                <span className="owv-report-meta-label">Başvuran</span>
+                <span className="owv-report-meta-value">{appData?.applicantName || '—'}</span>
+              </div>
+              <div className="owv-report-meta-item">
+                <span className="owv-report-meta-label">Belediye</span>
+                <span className="owv-report-meta-value">{appData?.municipality || '—'}</span>
+              </div>
+              <div className="owv-report-meta-item">
+                <span className="owv-report-meta-label">Başvuru Tarihi</span>
+                <span className="owv-report-meta-value">
+                  {appData?.appliedAt
+                    ? new Date(appData.appliedAt).toLocaleDateString('tr-TR', {
+                        year: 'numeric', month: 'long', day: 'numeric',
+                      })
+                    : '—'}
+                </span>
+              </div>
+              <div className="owv-report-meta-item">
+                <span className="owv-report-meta-label">Hesap Sonuçları</span>
+                <span className={`owv-report-meta-value owv-report-meta-badge ${results ? 'owv-report-meta-badge--ok' : 'owv-report-meta-badge--missing'}`}>
+                  {results ? '✓ Mevcut' : '✗ Yok'}
+                </span>
+              </div>
+              <div className="owv-report-meta-item">
+                <span className="owv-report-meta-label">Rapor Formatı</span>
+                <span className="owv-report-meta-value">Microsoft Word (.docx)</span>
+              </div>
+            </div>
+
+            {/* Hata mesajı */}
+            {reportError && (
+              <div className="owv-error" style={{ marginBottom: '1rem' }}>
+                <IconAlertTriangle />
+                {reportError}
+              </div>
+            )}
+
+            {/* Başarı mesajı */}
+            {reportSuccess && (
+              <div className="owv-report-success">
+                <IconCheckCircle />
+                Rapor başarıyla indirildi!
+              </div>
+            )}
+
+            {/* İndirme butonu */}
+            {results ? (
+              <button
+                id="owv-report-download-btn"
+                className={`owv-report-download-btn ${reportLoading ? 'owv-report-download-btn--loading' : ''}`}
+                onClick={handleDownloadReport}
+                disabled={reportLoading}
+              >
+                {reportLoading ? (
+                  <><span className="owv-report-btn-spinner" /> Rapor Oluşturuluyor...</>
+                ) : (
+                  <><IconDownload /> Raporu İndir (.docx)</>
+                )}
+              </button>
+            ) : (
+              <div className="owv-report-no-data">
+                <IconAlertTriangle />
+                <div>
+                  <strong>Rapor oluşturulamıyor</strong>
+                  <p>Bu proje için henüz hesaplama sonucu bulunmuyor. Başvuru sahibinin önce hesaplama yapması gerekiyor.</p>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 

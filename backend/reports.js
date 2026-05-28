@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('./db');
-const { authMiddleware } = require('./auth');
+const { authMiddleware, officerMiddleware } = require('./auth');
 const {
   Document,
   Packer,
@@ -122,6 +122,97 @@ router.post('/generate/:projectId', async (req, res) => {
     res.send(docxBuffer);
   } catch (err) {
     console.error('Generate report error:', err);
+    res.status(500).json({ success: false, error: 'Rapor oluşturulamadı: ' + err.message });
+  }
+});
+
+// ── POST /api/reports/generate-for-application/:applicationId ─────────────────
+// Belediye personelinin bir başvuruya ait projenin raporunu oluşturmasını sağlar.
+// Hem başvuran sahibi hem de yetkili belediye personeli bu endpoint'e erişebilir.
+router.post('/generate-for-application/:applicationId', async (req, res) => {
+  try {
+    // Başvuruyu ve ilgili projeyi getir
+    const appResult = await pool.query(
+      `SELECT
+         a.id, a.municipality, a.status, a.user_id,
+         p.id AS project_id, p.name AS project_name, p.description,
+         p.parameters, p.soil_layers, p.results,
+         u.full_name AS applicant_name, u.email AS applicant_email
+       FROM project_applications a
+       JOIN projects p ON p.id = a.project_id
+       JOIN users u ON u.id = a.user_id
+       WHERE a.id = $1`,
+      [req.params.applicationId]
+    );
+
+    if (appResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Başvuru bulunamadı' });
+    }
+
+    const row = appResult.rows[0];
+
+    // Erişim kontrolü: başvuran sahibi veya yetkili belediye personeli
+    const isOwner = row.user_id === req.userId;
+    const isOfficer = req.userRole === 'municipal_officer';
+
+    if (!isOwner && !isOfficer) {
+      return res.status(403).json({ success: false, error: 'Bu rapora erişim izniniz yok' });
+    }
+
+    // Officer ise kendi belediyesine ait mi kontrol et
+    if (isOfficer && !isOwner) {
+      const officerResult = await pool.query(
+        'SELECT municipality FROM users WHERE id = $1',
+        [req.userId]
+      );
+      const officerMunicipality = officerResult.rows[0]?.municipality;
+      if (officerMunicipality && officerMunicipality !== row.municipality) {
+        return res.status(403).json({ success: false, error: 'Bu başvuru kendi belediyenize ait değil' });
+      }
+    }
+
+    const project = {
+      id: row.project_id,
+      name: row.project_name,
+      description: row.description,
+    };
+
+    const lockedParams = row.parameters || {};
+    const lockedResults = row.results || null;
+
+    if (!lockedResults) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bu proje için hesaplama sonuçları bulunamadı. Başvuru sahibi henüz hesaplama yapmamış olabilir.',
+      });
+    }
+
+    // Başvuran kullanıcının kaydettiği rapor taslağını getir (varsa)
+    const draftResult = await pool.query(
+      `SELECT sections FROM report_drafts WHERE project_id = $1 AND user_id = $2`,
+      [row.project_id, row.user_id]
+    );
+    const sections = draftResult.rows.length > 0 ? draftResult.rows[0].sections : {};
+
+    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections });
+    const docxBuffer = await Packer.toBuffer(doc);
+
+    const safeName = (project.name || 'rapor')
+      .replace(/[^a-zA-Z0-9\u00C0-\u024F\s\-_]/g, '')
+      .trim()
+      .replace(/\s+/g, '_');
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}_JG_Raporu.docx`
+    );
+    res.send(docxBuffer);
+  } catch (err) {
+    console.error('Generate report for application error:', err);
     res.status(500).json({ success: false, error: 'Rapor oluşturulamadı: ' + err.message });
   }
 });
