@@ -5,7 +5,7 @@ import './OfficerWorkspaceView.css';
 
 const API_URL = '/api';
 
-// ── Translations (tr sabit kullanıyoruz belediye portalı için) ────────────────
+// ── Translations ──────────────────────────────────────────────────────────────
 const soilTranslations = {
   title: 'Zemin Tabakaları',
   layer: 'Tabaka',
@@ -44,22 +44,10 @@ const PARAM_LABELS = {
 
 // Parametre grupları
 const PARAM_GROUPS = [
-  {
-    title: 'Kolon Geometrisi',
-    keys: ['D', 's', 'H'],
-  },
-  {
-    title: 'Zemin Özellikleri',
-    keys: ['cu', 'Es', 'alpha', 'Nc'],
-  },
-  {
-    title: 'Jet Grout Özellikleri',
-    keys: ['sigmaJet', 'Ejg', 'Fs', 'FS'],
-  },
-  {
-    title: 'Yükleme Koşulları',
-    keys: ['qtemel', 'qnet'],
-  },
+  { title: 'Kolon Geometrisi',      keys: ['D', 's', 'H'] },
+  { title: 'Zemin Özellikleri',     keys: ['cu', 'Es', 'alpha', 'Nc'] },
+  { title: 'Jet Grout Özellikleri', keys: ['sigmaJet', 'Ejg', 'Fs', 'FS'] },
+  { title: 'Yükleme Koşulları',     keys: ['qtemel', 'qnet'] },
 ];
 
 const RESULT_LABELS = {
@@ -71,15 +59,65 @@ const RESULT_LABELS = {
 };
 
 const STATUS_CONFIG = {
-  pending:  { label: 'Değerlendirme Bekliyor', icon: '🕐', cls: 'owv-status--pending'  },
-  approved: { label: 'Kabul Edilmiştir',        icon: '✅', cls: 'owv-status--approved' },
-  rejected: { label: 'Reddedildi',              icon: '❌', cls: 'owv-status--rejected' },
+  pending:  { label: 'Değerlendirme Bekliyor', cls: 'owv-status--pending'  },
+  approved: { label: 'Kabul Edilmiştir',        cls: 'owv-status--approved' },
+  rejected: { label: 'Reddedildi',              cls: 'owv-status--rejected' },
 };
 
+/* ── SVG icon components ─────────────────────────────────────────────────── */
+const IconArrowLeft = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 12H5M12 5l-7 7 7 7" />
+  </svg>
+);
+
+const IconHardHat = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2H2v2Z" />
+    <path d="M20 15a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2" />
+    <path d="M12 3a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7Z" />
+  </svg>
+);
+
+const IconLock = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const IconSettings = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconLayers = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+    <path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59" />
+    <path d="m6.08 14.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59" />
+  </svg>
+);
+
+const IconBarChart = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20V10M6 20V4M18 20v-6" />
+  </svg>
+);
+
+const IconAlertTriangle = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+    <path d="M12 9v4M12 17h.01" />
+  </svg>
+);
+
 const TABS = [
-  { key: 'parameters', icon: '⚙️', label: 'Parametreler' },
-  { key: 'soilSection', icon: '🏔️', label: 'Zemin & Kesit' },
-  { key: 'results',     icon: '📊', label: 'Hesap Sonuçları' },
+  { key: 'parameters', Icon: IconSettings,  label: 'Parametreler' },
+  { key: 'soilSection', Icon: IconLayers,   label: 'Zemin & Kesit' },
+  { key: 'results',     Icon: IconBarChart, label: 'Hesap Sonuçları' },
 ];
 
 const fmtNum = (v, decimals = 3) => {
@@ -91,22 +129,20 @@ const fmtNum = (v, decimals = 3) => {
     : n.toFixed(decimals);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
 //  OfficerWorkspaceView — Read-Only Project Inspector for Municipal Officers
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
 export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
   const [appData, setAppData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('parameters');
 
-  // Proje state'leri (read-only — sadece gösterim için)
   const [parameters, setParameters] = useState({});
   const [soilLayers, setSoilLayers] = useState([]);
   const [extraParams, setExtraParams] = useState({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
   const [results, setResults] = useState(null);
 
-  // Uygulama verisini çek
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -123,7 +159,6 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
         const app = d.application;
         setAppData(app);
 
-        // Proje verilerini state'e aktar
         const proj = app.project || {};
         if (proj.parameters)  setParameters(proj.parameters);
         if (proj.soilLayers && proj.soilLayers.length > 0) setSoilLayers(proj.soilLayers);
@@ -154,9 +189,12 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
   if (error) {
     return (
       <div className="owv-root">
-        <div className="owv-error">⚠️ {error}</div>
+        <div className="owv-error">
+          <IconAlertTriangle />
+          {error}
+        </div>
         <button className="owv-banner__back" onClick={onBack} style={{ marginTop: '1rem', alignSelf: 'flex-start' }}>
-          ← Listeye Dön
+          <IconArrowLeft /> Listeye Dön
         </button>
       </div>
     );
@@ -172,11 +210,14 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
       <div className="owv-banner">
         <div className="owv-banner__left">
           <button className="owv-banner__back" onClick={onBack} id="owv-back-btn">
-            ← Başvuru Listesi
+            <IconArrowLeft /> Başvuru Listesi
           </button>
           <div className="owv-banner__info">
-            <div className="owv-banner__project">
-              🏗️ {appData?.project?.name || 'Proje'}
+            <div className="owv-banner__project-row">
+              <IconHardHat />
+              <div className="owv-banner__project">
+                {appData?.project?.name || 'Proje'}
+              </div>
             </div>
             <div className="owv-banner__sub">
               Başvuran: <span>{appData?.applicantName}</span>
@@ -192,9 +233,12 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
           </div>
         </div>
         <div className="owv-banner__right">
-          <div className="owv-readonly-badge">Salt Okunur</div>
+          <div className="owv-readonly-badge">
+            <IconLock /> Salt Okunur
+          </div>
           <div className={`owv-status ${status.cls}`}>
-            {status.icon} {status.label}
+            <span className="owv-status__dot" />
+            {status.label}
           </div>
         </div>
       </div>
@@ -208,7 +252,7 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
             className={`owv-tab ${activeTab === tab.key ? 'owv-tab--active' : ''}`}
             onClick={() => setActiveTab(tab.key)}
           >
-            <span className="owv-tab-icon">{tab.icon}</span>
+            <tab.Icon />
             {tab.label}
           </button>
         ))}
@@ -251,17 +295,20 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
             {soilLayers.length > 0 ? (
               <SoilSectionPanel
                 layers={soilLayers}
-                onChange={() => {}}            /* read-only: değişiklikleri yoksay */
+                onChange={() => {}}
                 parameters={parameters}
                 lang="tr"
-                onParameterChange={() => {}}   /* read-only */
+                onParameterChange={() => {}}
                 extraParams={extraParams}
-                onExtraParamsChange={() => {}}  /* read-only */
+                onExtraParamsChange={() => {}}
                 translations={soilTranslations}
                 readOnly={true}
               />
             ) : (
-              <div className="owv-error">Bu proje için zemin profili verisi bulunamadı.</div>
+              <div className="owv-error">
+                <IconAlertTriangle />
+                Bu proje için zemin profili verisi bulunamadı.
+              </div>
             )}
           </div>
         </div>
@@ -282,7 +329,8 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
             </div>
           ) : (
             <div className="owv-error">
-              ⚠️ Bu proje için hesap sonucu bulunmuyor. Başvuru sahibi henüz hesaplama yapmamış olabilir.
+              <IconAlertTriangle />
+              Bu proje için hesap sonucu bulunmuyor. Başvuru sahibi henüz hesaplama yapmamış olabilir.
             </div>
           )}
         </div>
