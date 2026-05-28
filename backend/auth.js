@@ -24,10 +24,19 @@ function authMiddleware(req, res, next) {
     req.userId       = decoded.userId;
     req.userEmail    = decoded.email;
     req.userFullName = decoded.fullName;
+    req.userRole     = decoded.role || 'user';
     next();
   } catch (err) {
     return res.status(401).json({ success: false, error: 'Invalid or expired token' });
   }
+}
+
+// ── Officer-only middleware ──────────────────────────────────
+function officerMiddleware(req, res, next) {
+  if (req.userRole !== 'municipal_officer') {
+    return res.status(403).json({ success: false, error: 'Sadece belediye personeli erişebilir' });
+  }
+  next();
 }
 
 // ── POST /api/auth/register ─────────────────────────────────
@@ -73,13 +82,14 @@ router.post('/register', async (req, res) => {
       id:        user.id,
       email:     user.email,
       fullName:  user.full_name,
+      role:      user.role || 'user',
       createdAt: user.created_at
     };
     userCache.set(user.id, userPayload);
 
     // Embed user info in token so /me never needs the DB
     const token = jwt.sign(
-      { userId: user.id, email: user.email, fullName: user.full_name },
+      { userId: user.id, email: user.email, fullName: user.full_name, role: user.role || 'user' },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -105,7 +115,7 @@ router.post('/login', async (req, res) => {
 
     // Find user
     const result = await pool.query(
-      'SELECT id, email, password_hash, full_name, created_at FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, full_name, role, created_at FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
 
@@ -132,13 +142,14 @@ router.post('/login', async (req, res) => {
       id:        user.id,
       email:     user.email,
       fullName:  user.full_name,
+      role:      user.role || 'user',
       createdAt: user.created_at
     };
     userCache.set(user.id, userPayload);
 
     // Embed user info in token so /me never needs the DB
     const token = jwt.sign(
-      { userId: user.id, email: user.email, fullName: user.full_name },
+      { userId: user.id, email: user.email, fullName: user.full_name, role: user.role || 'user' },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -168,6 +179,7 @@ router.get('/me', authMiddleware, async (req, res) => {
         id:        req.userId,
         email:     req.userEmail,
         fullName:  req.userFullName,
+        role:      req.userRole || 'user',
         createdAt: null   // not critical for UI
       };
       userCache.set(req.userId, userPayload);   // warm the cache
@@ -176,7 +188,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 
     // 3. Last resort — DB fallback (old tokens without embedded fields)
     const result = await pool.query(
-      'SELECT id, email, full_name, created_at FROM users WHERE id = $1',
+      'SELECT id, email, full_name, role, created_at FROM users WHERE id = $1',
       [req.userId]
     );
 
@@ -189,6 +201,7 @@ router.get('/me', authMiddleware, async (req, res) => {
       id:        user.id,
       email:     user.email,
       fullName:  user.full_name,
+      role:      user.role || 'user',
       createdAt: user.created_at
     };
     userCache.set(user.id, userPayload);   // warm the cache for next time
@@ -199,4 +212,4 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = { router, authMiddleware };
+module.exports = { router, authMiddleware, officerMiddleware };

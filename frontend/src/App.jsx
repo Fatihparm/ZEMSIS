@@ -9,6 +9,8 @@ import ProjectsPage from './components/ProjectsPage';
 import SaveProjectModal from './components/SaveProjectModal';
 import { generatePdfReport, parsePdfReport } from './utils/pdfReport';
 import ReportEditorPage from './components/ReportEditorPage';
+import ApplicationPanel from './components/ApplicationPanel';
+import OfficerPortal from './components/OfficerPortal';
 import './App.css';
 
 const API_URL = '/api';
@@ -367,17 +369,77 @@ function App() {
     return <AuthPage onLogin={handleLogin} lang={lang} initialError={authError} />;
   }
 
+  // ── Officer portal — rol bazlı tam sayfa ───────────────────────────────────
+  if (user?.role === 'municipal_officer') {
+    return (
+      <div className="dashboard-container">
+        <nav className="sidebar">
+          <div className="sidebar-logo" title="ZEMSIS">
+            <img src="/zemsis-logo-beyaz.png" alt="ZEMSIS Logo Beyaz" className="sidebar-logo-img" style={{ width: "64px", height: "auto" }} />
+            <div className="sidebar-logo-text">
+              <strong>ZEMSIS</strong>
+              <span>Belediye Portalı</span>
+            </div>
+          </div>
+          <div className="user-profile-card">
+            <div className="avatar-circle">
+              {(user?.fullName || 'ME').split(' ').filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase()}
+            </div>
+            <div className="user-details">
+              <h4>{user?.fullName}</h4>
+              <span>Denetim Memuru</span>
+            </div>
+          </div>
+          <div className="nav-menu">
+            <button className="nav-item active" title="Başvurular">
+              <span className="menu-icon">🏦</span>
+              <span className="menu-label">Başvurular</span>
+            </button>
+          </div>
+          <div className="sidebar-bottom">
+            <button className="logout-btn" onClick={handleLogout} title="Çıkış">
+              <span className="menu-icon">×</span>
+              <span className="menu-label">Çıkış</span>
+            </button>
+          </div>
+        </nav>
+        <main className="dashboard-main">
+          <div className="top-bar">
+            <div>
+              <h2>Proje Başvuruları</h2>
+              <p>Belediyenize gelen başvuruları denetleyin.</p>
+            </div>
+            <div className="top-bar-actions">
+              <img src="/btu-logo.png" alt="BTU Logo" style={{ height: "40px", objectFit: "contain", marginRight: "1rem" }} />
+              <div className="date-tag">{todayLabel}</div>
+            </div>
+          </div>
+          <div className="content-area">
+            <div className="main-scroll-content">
+              <OfficerPortal user={user} token={token} onLogout={handleLogout} />
+            </div>
+            <footer className="global-dashboard-footer">
+              <span className="footer-brand">ZEMSIS / Belediye Portalı</span>
+              <span><span className="status-dot" />Denetim Memuru Oturumu</span>
+            </footer>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const menuItems = [
-    { key: 'home', icon: '⌂', label: tr ? 'Ana Sayfa' : 'Home' },
-    { key: 'projects', icon: '▣', label: tr ? 'Projeler' : 'Projects' },
+    { key: 'home',     icon: '⌂',  label: tr ? 'Ana Sayfa' : 'Home' },
+    { key: 'projects', icon: '▣',  label: tr ? 'Projeler'  : 'Projects' },
   ];
 
   const workspaceTabs = [
-    { key: 'parameters', icon: '▫', label: tr ? 'Parametreler' : 'Parameters' },
-    { key: 'soilSection', icon: '▤', label: tr ? 'Zemin ve Kesit' : 'Soil & Section' },
-    { key: 'planView', icon: '✎', label: tr ? 'Cizim' : 'Drawing' },
-    { key: 'results', icon: '◌', label: tr ? 'Sonuclar' : 'Results' },
-    { key: 'report', icon: '📄', label: tr ? 'Rapor' : 'Report' },
+    { key: 'parameters', icon: '▫', label: tr ? 'Parametreler'     : 'Parameters' },
+    { key: 'soilSection', icon: '▤', label: tr ? 'Zemin ve Kesit'  : 'Soil & Section' },
+    { key: 'planView',   icon: '✎', label: tr ? 'Cizim'            : 'Drawing' },
+    { key: 'results',    icon: '◌', label: tr ? 'Sonuclar'         : 'Results' },
+    { key: 'report',     icon: '📄', label: tr ? 'Rapor'            : 'Report' },
+    { key: 'application',icon: '🏦', label: tr ? 'Başvuru'          : 'Application' },
   ];
 
   const currentViewTitle = (() => {
@@ -677,6 +739,22 @@ function App() {
                           <p style={{ fontSize: '0.8rem', marginTop: 6 }}>{t.results.enterParams}</p>
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'application' && (
+                  <div className="page-container">
+                    <div className="page-header">
+                      <h2>{tr ? 'Belediye Başvurusu' : 'Municipal Application'}</h2>
+                    </div>
+                    <div className="page-content">
+                      <ApplicationPanel
+                        projectId={currentProjectId}
+                        projectName={currentProjectName}
+                        token={token}
+                        onLogout={handleLogout}
+                      />
                     </div>
                   </div>
                 )}

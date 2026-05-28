@@ -24,6 +24,14 @@ async function migrate() {
         created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- ── Kullanıcı rol kolonu (user | municipal_officer) ─────
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS role VARCHAR(30) NOT NULL DEFAULT 'user';
+
+      -- ── Belediye personeli için belediye alanı ──────────────
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS municipality VARCHAR(100) DEFAULT NULL;
+
       CREATE TABLE IF NOT EXISTS projects (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id       UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -57,6 +65,24 @@ async function migrate() {
       );
 
       CREATE INDEX IF NOT EXISTS idx_report_drafts_project ON report_drafts(project_id);
+
+      -- ── Belediye başvuruları ─────────────────────────────────
+      CREATE TABLE IF NOT EXISTS project_applications (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id      UUID REFERENCES projects(id) ON DELETE CASCADE,
+        user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+        municipality    VARCHAR(100) NOT NULL,
+        status          VARCHAR(30) NOT NULL DEFAULT 'pending',
+        rejection_note  TEXT DEFAULT NULL,
+        applied_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        reviewed_at     TIMESTAMP DEFAULT NULL,
+        reviewed_by     UUID REFERENCES users(id) DEFAULT NULL,
+        UNIQUE(project_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_applications_user    ON project_applications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_applications_muni    ON project_applications(municipality);
+      CREATE INDEX IF NOT EXISTS idx_applications_status  ON project_applications(status);
     `);
     console.log('✅ Database tables ready');
   } catch (err) {

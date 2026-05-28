@@ -1,0 +1,374 @@
+.det-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 9100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  animation: detFadeIn 0.2s ease;
+}
+
+.det-modal {
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 32px 100px rgba(0,0,0,0.7);
+  animation: detSlideUp 0.25s ease;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.det-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.4rem 1.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+
+.det-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.det-modal__title-icon {
+  font-size: 1.8rem;
+}
+
+.det-modal__title h2 {
+  margin: 0 0 0.15rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.det-modal__title p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.det-modal__close {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.det-modal__close:hover {
+  background: rgba(255,255,255,0.12);
+  color: #f1f5f9;
+}
+
+/* ── Body ────────────────────────────────────────────────────── */
+.det-modal__body {
+  padding: 1.8rem;
+  overflow-y: auto;
+  max-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.det-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 3rem;
+  color: #64748b;
+}
+
+.det-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: detSpin 0.7s linear infinite;
+}
+
+.det-error {
+  padding: 1rem;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px;
+  color: #f87171;
+  text-align: center;
+}
+
+/* ── Meta grid ───────────────────────────────────────────────── */
+.det-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.det-meta-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+}
+
+.det-meta-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.det-meta-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.det-meta-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+/* ── Status badge ────────────────────────────────────────────── */
+.det-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  margin-top: 0.2rem;
+}
+
+.det-status--pending  { background: rgba(234,179,8,0.15);   color: #fbbf24; }
+.det-status--approved { background: rgba(16,185,129,0.15);  color: #34d399; }
+.det-status--rejected { background: rgba(239,68,68,0.15);   color: #f87171; }
+
+/* ── Rejection box ───────────────────────────────────────────── */
+.det-rejection-box {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 12px;
+  padding: 1rem 1.3rem;
+}
+
+.det-rejection-box strong {
+  color: #f87171;
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.det-rejection-box p {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* ── Section ─────────────────────────────────────────────────── */
+.det-section__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin: 0 0 0.7rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.det-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.det-table th {
+  background: rgba(37,99,235,0.12);
+  color: #93c5fd;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.det-table td {
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #cbd5e1;
+}
+
+.det-table tr:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
+.det-table__label { color: #94a3b8; }
+.det-table__value { color: #f1f5f9; font-weight: 600; text-align: right; }
+.det-table__unit  { color: #64748b; font-size: 0.78rem; text-align: center; }
+
+.det-table--layers th,
+.det-table--layers td {
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.det-table--layers td:first-child { color: #64748b; }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.det-modal__footer {
+  padding: 1.2rem 1.8rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+
+.det-review-actions {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: flex-end;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.det-btn {
+  padding: 0.7rem 1.6rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.det-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.det-btn--approve {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.4);
+}
+
+.det-btn--approve:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16,185,129,0.5);
+}
+
+.det-btn--reject {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(239,68,68,0.4);
+}
+
+.det-btn--reject:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239,68,68,0.5);
+}
+
+.det-btn--ghost {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #94a3b8;
+}
+
+.det-btn--ghost:hover:not(:disabled) {
+  background: rgba(255,255,255,0.1);
+  color: #e2e8f0;
+}
+
+/* ── Review confirm area ─────────────────────────────────────── */
+.det-review-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.det-review-confirm__text {
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.det-review-confirm__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.det-review-confirm__label span {
+  font-weight: 400;
+  color: #64748b;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.det-review-confirm__textarea {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.det-review-confirm__textarea:focus {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+}
+
+.det-review-confirm__actions {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: flex-end;
+}
+
+.det-review-error {
+  padding: 0.6rem 0.9rem;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.84rem;
+}
+
+/* ── Animations ──────────────────────────────────────────────── */
+@keyframes detFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes detSlideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes detSpin    { to { transform: rotate(360deg); } }
