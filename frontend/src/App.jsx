@@ -210,6 +210,20 @@ function App() {
   const t = translations[lang];
   const tr = lang === 'tr';
 
+  const todayLabel = new Date().toLocaleDateString(tr ? 'tr-TR' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const userInitials = (user?.fullName || 'Jet Grout')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
   useEffect(() => {
     // user is already hydrated from localStorage — no network request needed.
     // Only hit /me when a token exists but user info is somehow missing.
@@ -486,19 +500,6 @@ function App() {
     }
   };
 
-  const todayLabel = new Date().toLocaleDateString(tr ? 'tr-TR' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const userInitials = (user?.fullName || 'Jet Grout')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 
   const isLockedWorkspaceView =
     activePage === 'workspace' && (activeTab === 'soilSection' || activeTab === 'planView' || activeTab === 'report');
