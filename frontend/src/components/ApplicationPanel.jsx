@@ -13,24 +13,83 @@ const MUNICIPALITIES = [
 const STATUS_CONFIG = {
   pending: {
     label: 'Değerlendirme Aşamasında',
-    icon: '🕐',
     className: 'status-pending',
   },
   approved: {
     label: 'Kabul Edilmiştir',
-    icon: '✅',
     className: 'status-approved',
   },
   rejected: {
     label: 'Reddedildi',
-    icon: '❌',
     className: 'status-rejected',
   },
 };
 
+/* ── SVG icon components ─────────────────────────────────────── */
+const IconBuilding = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18M3 7l9-4 9 4M4 7v14M20 7v14M9 21V11h6v10" />
+  </svg>
+);
+
+const IconClipboard = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="4" rx="1" />
+  </svg>
+);
+
+const IconClock = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v6l4 2" />
+  </svg>
+);
+
+const IconCheckCircle = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <path d="m9 11 3 3L22 4" />
+  </svg>
+);
+
+const IconXCircle = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="m15 9-6 6M9 9l6 6" />
+  </svg>
+);
+
+const IconMapPin = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const IconCalendar = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+);
+
+const IconSend = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m22 2-7 20-4-9-9-4Z" />
+    <path d="M22 2 11 13" />
+  </svg>
+);
+
+const IconChevronDown = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
 export default function ApplicationPanel({ projectId, projectName, token, onLogout }) {
   const [selectedMunicipality, setSelectedMunicipality] = useState('');
-  const [application, setApplication] = useState(null); // mevcut başvuru
+  const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
@@ -95,11 +154,18 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
     });
   };
 
+  const StatusIcon = () => {
+    if (!application) return null;
+    if (application.status === 'pending')  return <IconClock />;
+    if (application.status === 'approved') return <IconCheckCircle />;
+    return <IconXCircle />;
+  };
+
   if (!projectId) {
     return (
       <div className="app-panel">
         <div className="app-panel__empty">
-          <div className="app-panel__empty-icon">📋</div>
+          <div className="app-panel__empty-icon"><IconClipboard /></div>
           <h3>Belediye Başvurusu</h3>
           <p>Başvuru yapabilmek için önce projeyi kaydedin.</p>
         </div>
@@ -121,7 +187,9 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
   return (
     <div className="app-panel">
       <div className="app-panel__header">
-        <div className="app-panel__header-icon">🏛️</div>
+        <div className="app-panel__header-icon">
+          <IconBuilding />
+        </div>
         <div>
           <h3>Belediye Başvurusu</h3>
           <p>Projenizi denetim için belediyeye gönderin</p>
@@ -131,12 +199,18 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
       {/* Mevcut başvuru varsa durumu göster */}
       {application ? (
         <div className={`app-panel__status-card ${statusConfig.className}`}>
-          <div className="app-panel__status-icon">{statusConfig.icon}</div>
+          <div className="app-panel__status-icon">
+            <StatusIcon />
+          </div>
           <div className="app-panel__status-content">
             <div className="app-panel__status-label">{statusConfig.label}</div>
             <div className="app-panel__status-meta">
-              <span className="app-panel__status-muni">📍 {application.municipality}</span>
-              <span className="app-panel__status-date">🕒 {formatDate(application.appliedAt)}</span>
+              <span className="app-panel__status-meta-item">
+                <IconMapPin /> {application.municipality}
+              </span>
+              <span className="app-panel__status-meta-item">
+                <IconCalendar /> {formatDate(application.appliedAt)}
+              </span>
             </div>
             {application.status === 'rejected' && application.rejectionNote && (
               <div className="app-panel__rejection-note">
@@ -146,7 +220,7 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
             )}
             {application.status === 'approved' && application.reviewedAt && (
               <div className="app-panel__approved-info">
-                <span>Onay Tarihi: {formatDate(application.reviewedAt)}</span>
+                <IconCalendar /> Onay Tarihi: {formatDate(application.reviewedAt)}
               </div>
             )}
           </div>
@@ -167,7 +241,7 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
                   <option key={m} value={m}>{m}</option>
                 ))}
               </select>
-              <span className="app-panel__select-arrow">▾</span>
+              <span className="app-panel__select-arrow"><IconChevronDown /></span>
             </div>
           </div>
 
@@ -183,7 +257,7 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
             }}
             disabled={loading}
           >
-            <span>📤</span>
+            <IconSend />
             Başvur
           </button>
 
@@ -197,7 +271,9 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
       {showConfirm && (
         <div className="app-panel__overlay" onClick={() => setShowConfirm(false)}>
           <div className="app-panel__confirm-modal" onClick={e => e.stopPropagation()}>
-            <div className="app-panel__confirm-icon">🏛️</div>
+            <div className="app-panel__confirm-icon">
+              <IconBuilding />
+            </div>
             <h3>Başvuruyu Onayla</h3>
             <p>
               <strong>{projectName || 'Bu proje'}</strong> için{' '}
@@ -219,7 +295,9 @@ export default function ApplicationPanel({ projectId, projectName, token, onLogo
                 onClick={handleApply}
                 disabled={loading}
               >
-                {loading ? 'Gönderiliyor...' : 'Evet, Gönder'}
+                {loading ? 'Gönderiliyor...' : (
+                  <><IconSend /> Evet, Gönder</>
+                )}
               </button>
             </div>
           </div>
