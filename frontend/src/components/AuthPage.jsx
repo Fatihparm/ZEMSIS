@@ -1,9 +1,18 @@
 import { useState } from 'react';
 import './AuthPage.css';
 
+const MUNICIPALITIES = [
+  'Bursa Büyükşehir Belediyesi',
+  'Osmangazi Belediyesi',
+  'Nilüfer Belediyesi',
+  'Kestel Belediyesi',
+];
+
 function AuthPage({ onLogin, lang, initialError = '' }) {
   const tr = lang === 'tr';
   const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [role, setRole] = useState('user'); // 'user' | 'municipal_officer'
+  const [municipality, setMunicipality] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -21,7 +30,7 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
       const url = mode === 'login' ? `${API}/login` : `${API}/register`;
       const body = mode === 'login'
         ? { email, password }
-        : { email, password, fullName };
+        : { email, password, fullName, role, municipality: role === 'municipal_officer' ? municipality : null };
 
       const res = await fetch(url, {
         method: 'POST',
@@ -82,6 +91,26 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
           </button>
         </div>
 
+        {/* Role Segmented Controller */}
+        <div className="auth-role-selector">
+          <button
+            type="button"
+            className={`auth-role-btn ${role === 'user' ? 'active' : ''}`}
+            onClick={() => setRole('user')}
+          >
+            <span className="role-icon">👤</span>
+            <span className="role-text">{tr ? 'Mühendis / Kullanıcı' : 'Engineer / User'}</span>
+          </button>
+          <button
+            type="button"
+            className={`auth-role-btn ${role === 'municipal_officer' ? 'active' : ''}`}
+            onClick={() => setRole('municipal_officer')}
+          >
+            <span className="role-icon">🏛️</span>
+            <span className="role-text">{tr ? 'Belediye Personeli' : 'Municipal Officer'}</span>
+          </button>
+        </div>
+
         {/* Form */}
         <form className="auth-form" onSubmit={handleSubmit}>
           {mode === 'register' && (
@@ -122,6 +151,25 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </div>
+
+          {mode === 'register' && role === 'municipal_officer' && (
+            <div className="auth-field">
+              <label>{tr ? 'Belediye Seçimi' : 'Municipality'}</label>
+              <div className="auth-select-wrapper">
+                <select
+                  value={municipality}
+                  onChange={(e) => setMunicipality(e.target.value)}
+                  required
+                >
+                  <option value="">{tr ? '— Belediye seçin —' : '— Select Municipality —'}</option>
+                  {MUNICIPALITIES.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <span className="auth-select-arrow">▾</span>
+              </div>
+            </div>
+          )}
 
           {error && <div className="auth-error">{error}</div>}
 

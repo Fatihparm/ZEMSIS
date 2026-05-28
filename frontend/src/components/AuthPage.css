@@ -164,3 +164,78 @@
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.78rem;
 }
+
+/* Role Selector Styles */
+.auth-role-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: var(--color-gray-50);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--color-gray-200);
+}
+
+.auth-role-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  color: var(--color-gray-500);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-role-btn .role-icon {
+  font-size: 1rem;
+}
+
+.auth-role-btn.active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: 0 4px 12px rgba(17, 62, 104, 0.15);
+}
+
+/* Custom Select Dropdown Styles */
+.auth-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.auth-select-wrapper select {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 12px;
+  background: var(--color-white);
+  color: var(--color-gray-800);
+  outline: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-select-wrapper select:focus {
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 4px rgba(80, 177, 200, 0.16);
+}
+
+.auth-select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-gray-500);
+  font-size: 0.8rem;
+}
