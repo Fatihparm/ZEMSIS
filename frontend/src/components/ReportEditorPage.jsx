@@ -439,6 +439,7 @@ function normalizeCell(cell) {
       bg: '',
       align: 'left',
       colspan: 1,
+      rowspan: 1,
       borders: { top: true, bottom: true, left: true, right: true },
     };
   }
@@ -448,6 +449,7 @@ function normalizeCell(cell) {
     bg: cell.bg ?? '',
     align: cell.align ?? 'left',
     colspan: cell.colspan ?? 1,
+    rowspan: cell.rowspan ?? 1,
     borders: {
       top: cell.borders?.top ?? true,
       bottom: cell.borders?.bottom ?? true,
@@ -464,6 +466,7 @@ function createEmptyCell() {
     bg: '',
     align: 'left',
     colspan: 1,
+    rowspan: 1,
     borders: { top: true, bottom: true, left: true, right: true },
   };
 }
@@ -622,8 +625,8 @@ function CellToolbar({ cell, onUpdate, onClose }) {
 
       <div className="cell-tb-sep" />
 
-      {/* Sütun birleştirme */}
-      <label className="cell-tb-label" title="Sütun Genişliği (Colspan)">
+      {/* Sütun birleştirme (Colspan) */}
+      <label className="cell-tb-label" title="Sütun Birleştirme (Colspan)">
         <span>⟷</span>
         <input
           type="number"
@@ -632,6 +635,19 @@ function CellToolbar({ cell, onUpdate, onClose }) {
           max={10}
           value={c.colspan}
           onChange={e => onUpdate({ colspan: Math.max(1, Math.min(10, Number(e.target.value))) })}
+        />
+      </label>
+
+      {/* Satır birleştirme (Rowspan) */}
+      <label className="cell-tb-label" title="Satır Birleştirme (Rowspan)">
+        <span>↕</span>
+        <input
+          type="number"
+          className="cell-tb-number"
+          min={1}
+          max={20}
+          value={c.rowspan}
+          onChange={e => onUpdate({ rowspan: Math.max(1, Math.min(20, Number(e.target.value))) })}
         />
       </label>
 
@@ -694,25 +710,34 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
     ? cells[selectedCell.r * tbl.cols + selectedCell.c]
     : null;
 
-  // colspan render: birleştirilmiş hücreleri atla
-  const skipped = new Set();
+  // colspan + rowspan render: 2D "occupied" haritası
+  // occupied: "r,c" → o hücreyi kaplayan asıl hücrenin konumu { r, c }
+  const occupied = new Map();
   const renderRows = Array.from({ length: tbl.rows }, (_, r) => {
     const rowCells = [];
     let c = 0;
     while (c < tbl.cols) {
-      const idx2 = r * tbl.cols + c;
-      if (skipped.has(idx2)) { c++; continue; }
-      const cell = cells[idx2];
-      const colspan = Math.min(cell.colspan || 1, tbl.cols - c);
-      // colspan > 1 ise sağdaki hücreleri atla
-      for (let k = 1; k < colspan; k++) {
-        skipped.add(r * tbl.cols + c + k);
+      // Bu pozisyon başka bir hücre tarafından kaplanmış mı?
+      if (occupied.has(`${r},${c}`)) { c++; continue; }
+
+      const cell = cells[r * tbl.cols + c];
+      const colspan = Math.min(Math.max(1, cell.colspan || 1), tbl.cols - c);
+      const rowspan = Math.min(Math.max(1, cell.rowspan || 1), tbl.rows - r);
+
+      // Kaplanan tüm (dr, dc) pozisyonları işaretle
+      for (let dr = 0; dr < rowspan; dr++) {
+        for (let dc = 0; dc < colspan; dc++) {
+          if (dr === 0 && dc === 0) continue; // asıl hücre
+          occupied.set(`${r + dr},${c + dc}`, { r, c });
+        }
       }
-      rowCells.push({ r, c, cell, colspan, idx: idx2 });
+
+      rowCells.push({ r, c, cell, colspan, rowspan, idx: r * tbl.cols + c });
       c += colspan;
     }
     return rowCells;
   });
+
 
   const bgColor = (bg) => {
     if (!bg) return undefined;
@@ -791,6 +816,7 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
                     <td
                       key={c}
                       colSpan={colspan > 1 ? colspan : undefined}
+                      rowSpan={rowspan > 1 ? rowspan : undefined}
                       style={tdStyle}
                       onClick={() => setSelectedCell({ r: cr, c })}
                     >
@@ -1141,8 +1167,8 @@ function ReportEditorPage({
           const col = i % newCols;
           if (row < t.rows && col < t.cols) {
             const old = oldCells[row * t.cols + col];
-            // Boyut değişince colspan'ı 1'e sıfırla (tutarsız birleştirme önlenir)
-            return { ...old, colspan: 1 };
+            // Boyut değişince colspan ve rowspan'ı 1'e sıfırla (tutarsız birleştirme önlenir)
+            return { ...old, colspan: 1, rowspan: 1 };
           }
           return createEmptyCell();
         });
@@ -1333,19 +1359,25 @@ function ReportEditorPage({
   const renderPreviewSectionBody = (sec, text, images, tables = [], blocks = null) => {
     // Ortak tablo ve görsel render yardımcıları
     const renderTables = () => tables.length > 0 && tables.map((tbl, tblIdx) => {
-      // colspan render için gizlenen hücreleri hesapla
-      const previewSkipped = new Set();
+      // colspan + rowspan render için 2D occupied haritası
+      const previewOccupied = new Map();
       const previewRows = Array.from({ length: tbl.rows }, (_, r) => {
         const rowCells = [];
         let c = 0;
         while (c < tbl.cols) {
-          const ci = r * tbl.cols + c;
-          if (previewSkipped.has(ci)) { c++; continue; }
-          const raw = tbl.cells[ci];
+          if (previewOccupied.has(`${r},${c}`)) { c++; continue; }
+          const raw = tbl.cells[r * tbl.cols + c];
           const cell = normalizeCell(raw);
-          const colspan = Math.min(cell.colspan || 1, tbl.cols - c);
-          for (let k = 1; k < colspan; k++) previewSkipped.add(r * tbl.cols + c + k);
-          rowCells.push({ r, c, cell, colspan });
+          const colspan = Math.min(Math.max(1, cell.colspan || 1), tbl.cols - c);
+          const rowspan = Math.min(Math.max(1, cell.rowspan || 1), tbl.rows - r);
+          // Kaplanan pozisyonları işaretle
+          for (let dr = 0; dr < rowspan; dr++) {
+            for (let dc = 0; dc < colspan; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              previewOccupied.set(`${r + dr},${c + dc}`, { r, c });
+            }
+          }
+          rowCells.push({ r, c, cell, colspan, rowspan });
           c += colspan;
         }
         return rowCells;
@@ -1358,12 +1390,13 @@ function ReportEditorPage({
               <tbody>
                 {previewRows.map((rowCells, r) => (
                   <tr key={r}>
-                    {rowCells.map(({ c, cell, colspan }) => {
+                    {rowCells.map(({ c, cell, colspan, rowspan }) => {
                       const borders = cell.borders || { top: true, bottom: true, left: true, right: true };
                       const tdStyle = {
                         background: cell.bg || (r === 0 ? '#d9d9d9' : undefined),
                         fontWeight: cell.bold ? '700' : (r === 0 ? '700' : undefined),
                         textAlign: cell.align || (r === 0 ? 'center' : 'left'),
+                        verticalAlign: rowspan > 1 ? 'middle' : undefined,
                         borderTop: borders.top ? undefined : '1px solid transparent',
                         borderBottom: borders.bottom ? undefined : '1px solid transparent',
                         borderLeft: borders.left ? undefined : '1px solid transparent',
@@ -1371,7 +1404,12 @@ function ReportEditorPage({
                         color: cell.bg === '#374151' || cell.bg === '#1E3A5F' ? '#fff' : undefined,
                       };
                       return (
-                        <td key={c} colSpan={colspan > 1 ? colspan : undefined} style={tdStyle}>
+                        <td
+                          key={c}
+                          colSpan={colspan > 1 ? colspan : undefined}
+                          rowSpan={rowspan > 1 ? rowspan : undefined}
+                          style={tdStyle}
+                        >
                           {cell.text || ''}
                         </td>
                       );
@@ -1387,6 +1425,7 @@ function ReportEditorPage({
           </p>
         </div>
       );
+
     });
 
 

@@ -774,6 +774,7 @@ function normalizeCellBackend(cell) {
       bg: '',
       align: 'left',
       colspan: 1,
+      rowspan: 1,
       borders: { top: true, bottom: true, left: true, right: true },
     };
   }
@@ -783,6 +784,7 @@ function normalizeCellBackend(cell) {
     bg: cell.bg ?? '',
     align: cell.align ?? 'left',
     colspan: cell.colspan ?? 1,
+    rowspan: cell.rowspan ?? 1,
     borders: {
       top: cell.borders?.top ?? true,
       bottom: cell.borders?.bottom ?? true,
@@ -810,23 +812,29 @@ function createUserTableBlocks(sectionKey, tables) {
 
     const rows = [];
 
-    // colspan render: birleştirilmiş sütunları takip et
+    // colspan + rowspan render: 2D occupied haritaı
+    // key: "r,c" → value: true (o pozisyon başka hücrece kaplanıyor)
+    const occupied = new Map();
+
     for (let r = 0; r < tbl.rows; r++) {
       const cells = [];
       let c = 0;
-      const skipped = new Set();
 
       while (c < tbl.cols) {
-        const ci = r * tbl.cols + c;
-        if (skipped.has(ci)) { c++; continue; }
+        // Bu pozisyon başka bir hücre tarafından kaplanıyor mu?
+        if (occupied.has(`${r},${c}`)) { c++; continue; }
 
-        const rawCell = tbl.cells[ci];
+        const rawCell = tbl.cells[r * tbl.cols + c];
         const cell = normalizeCellBackend(rawCell);
         const colspan = Math.min(Math.max(1, cell.colspan || 1), tbl.cols - c);
+        const rowspan = Math.min(Math.max(1, cell.rowspan || 1), tbl.rows - r);
 
-        // Sağdaki birleştirilmiş hücreleri atla
-        for (let k = 1; k < colspan; k++) {
-          skipped.add(r * tbl.cols + c + k);
+        // Kaplanan tüm (dr, dc) pozisyonları işaretle
+        for (let dr = 0; dr < rowspan; dr++) {
+          for (let dc = 0; dc < colspan; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            occupied.set(`${r + dr},${c + dc}`, true);
+          }
         }
 
         const cellText = String(cell.text || '');
@@ -867,6 +875,7 @@ function createUserTableBlocks(sectionKey, tables) {
           borders: cellBorders,
           verticalAlign: VerticalAlign.CENTER,
           columnSpan: colspan > 1 ? colspan : undefined,
+          rowSpan: rowspan > 1 ? rowspan : undefined,
         };
 
         if (shadingFill) {
