@@ -1210,9 +1210,188 @@
   line-height: 1.4;
 }
 
-.table-cell-input:focus {
-  background: #f0f4ff;
+.table-cell-input--bold {
+  font-weight: 700;
 }
+
+.table-cell-input--center {
+  text-align: center;
+}
+
+.table-cell-input--right {
+  text-align: right;
+}
+
+.table-cell-input:focus {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+/* ── Tablo hücre araç çubuğu ── */
+.cell-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cell-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cell-tb-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.cell-tb-btn--active {
+  background: rgba(99, 102, 241, 0.5);
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.cell-tb-btn--border-off {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.cell-tb-btn--border.cell-tb-btn--active {
+  background: rgba(99, 102, 241, 0.5);
+  opacity: 1;
+  text-decoration: none;
+}
+
+.cell-tb-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.14);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.cell-tb-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: default;
+}
+
+.cell-tb-label-text {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cell-tb-number {
+  width: 42px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 0 4px;
+  outline: none;
+}
+
+.cell-tb-number:focus {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.15);
+}
+
+/* Renk paleti */
+.cell-tb-colors {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cell-tb-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.cell-tb-color:hover {
+  transform: scale(1.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.cell-tb-color--active {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+  transform: scale(1.15);
+}
+
+.cell-tb-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cell-tb-close:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
+  color: #fff;
+}
+
+/* Hücre seçim ipucu */
+.table-card__hint {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 0.72rem;
+  color: #6366f1;
+  background: #f5f3ff;
+  border-top: 1px solid #e0e7ff;
+}
+
+/* Hizalama simge sınıfları */
+.cell-tb-align-icon {
+  display: none;
+}
+
+
 
 /* ── Tablo Ekleme Modalı ── */
 .table-modal-backdrop {

@@ -765,6 +765,40 @@ const REPORT_TABLE_SECTION_NUMBERS = {
   _results: '9', foundationSystem: '10', conclusions: '11', references: '12',
 };
 
+// Hücre nesnesini normalize et (backend)
+function normalizeCellBackend(cell) {
+  if (typeof cell === 'string' || cell == null) {
+    return {
+      text: cell || '',
+      bold: false,
+      bg: '',
+      align: 'left',
+      colspan: 1,
+      borders: { top: true, bottom: true, left: true, right: true },
+    };
+  }
+  return {
+    text: cell.text ?? '',
+    bold: cell.bold ?? false,
+    bg: cell.bg ?? '',
+    align: cell.align ?? 'left',
+    colspan: cell.colspan ?? 1,
+    borders: {
+      top: cell.borders?.top ?? true,
+      bottom: cell.borders?.bottom ?? true,
+      left: cell.borders?.left ?? true,
+      right: cell.borders?.right ?? true,
+    },
+  };
+}
+
+function hexToDocxColor(hex) {
+  if (!hex || typeof hex !== 'string') return null;
+  const clean = hex.replace('#', '');
+  if (clean.length !== 6) return null;
+  return clean.toUpperCase();
+}
+
 function createUserTableBlocks(sectionKey, tables) {
   if (!tables || !tables.length) return [];
   const sectionNumber = REPORT_TABLE_SECTION_NUMBERS[sectionKey] || '';
@@ -775,23 +809,78 @@ function createUserTableBlocks(sectionKey, tables) {
     const caption = typeof tbl.name === 'string' && tbl.name.trim() ? tbl.name.trim() : 'İsimsiz Tablo';
 
     const rows = [];
+
+    // colspan render: birleştirilmiş sütunları takip et
     for (let r = 0; r < tbl.rows; r++) {
       const cells = [];
-      for (let c = 0; c < tbl.cols; c++) {
-        const cellText = String(tbl.cells[r * tbl.cols + c] || '');
-        const isHeader = r === 0;
-        cells.push(new TableCell({
+      let c = 0;
+      const skipped = new Set();
+
+      while (c < tbl.cols) {
+        const ci = r * tbl.cols + c;
+        if (skipped.has(ci)) { c++; continue; }
+
+        const rawCell = tbl.cells[ci];
+        const cell = normalizeCellBackend(rawCell);
+        const colspan = Math.min(Math.max(1, cell.colspan || 1), tbl.cols - c);
+
+        // Sağdaki birleştirilmiş hücreleri atla
+        for (let k = 1; k < colspan; k++) {
+          skipped.add(r * tbl.cols + c + k);
+        }
+
+        const cellText = String(cell.text || '');
+        const isFirstRow = r === 0;
+
+        // Arka plan rengi
+        const bgColor = hexToDocxColor(cell.bg);
+        // İlk satır için bg belirtilmemişse D9D9D9 uygula
+        const shadingFill = bgColor || (isFirstRow ? 'D9D9D9' : null);
+
+        // Kalın: hücre ayarı OR ilk satır
+        const bold = cell.bold || isFirstRow;
+
+        // Hizalama
+        const alignMap = {
+          left: AlignmentType.LEFT,
+          center: AlignmentType.CENTER,
+          right: AlignmentType.RIGHT,
+        };
+        const alignment = alignMap[cell.align] || (isFirstRow ? AlignmentType.CENTER : AlignmentType.LEFT);
+
+        // Kenarlık stilleri
+        const b = cell.borders;
+        const borderOn = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+        const borderOff = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+        const cellBorders = {
+          top: b.top ? borderOn : borderOff,
+          bottom: b.bottom ? borderOn : borderOff,
+          left: b.left ? borderOn : borderOff,
+          right: b.right ? borderOn : borderOff,
+        };
+
+        const tableCellOptions = {
           children: [new Paragraph({
-            children: [new TextRun({ text: cellText, bold: isHeader })],
-            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: cellText, bold })],
+            alignment,
           })],
-          shading: isHeader ? { fill: 'D9D9D9' } : undefined,
+          borders: cellBorders,
           verticalAlign: VerticalAlign.CENTER,
-        }));
+          columnSpan: colspan > 1 ? colspan : undefined,
+        };
+
+        if (shadingFill) {
+          tableCellOptions.shading = { fill: shadingFill };
+        }
+
+        cells.push(new TableCell(tableCellOptions));
+        c += colspan;
       }
+
       rows.push(new TableRow({ children: cells }));
     }
 
+    // Tablo genelindeki kenarlık (hücre kenarlıkları zaten ayarlandı, tablo dış kenarlığı için de SINGLE bırak)
     blocks.push(
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -819,6 +908,7 @@ function createUserTableBlocks(sectionKey, tables) {
   });
   return blocks;
 }
+
 
 function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const dateObj = new Date();

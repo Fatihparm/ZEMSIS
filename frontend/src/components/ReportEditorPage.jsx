@@ -430,6 +430,44 @@ function getSectionTableKey(sectionKey) {
   return `${sectionKey}Tables`;
 }
 
+// Hücre nesnesini normalize et: eski string hücreleri yeni formata çevir
+function normalizeCell(cell) {
+  if (typeof cell === 'string' || cell == null) {
+    return {
+      text: cell || '',
+      bold: false,
+      bg: '',
+      align: 'left',
+      colspan: 1,
+      borders: { top: true, bottom: true, left: true, right: true },
+    };
+  }
+  return {
+    text: cell.text ?? '',
+    bold: cell.bold ?? false,
+    bg: cell.bg ?? '',
+    align: cell.align ?? 'left',
+    colspan: cell.colspan ?? 1,
+    borders: {
+      top: cell.borders?.top ?? true,
+      bottom: cell.borders?.bottom ?? true,
+      left: cell.borders?.left ?? true,
+      right: cell.borders?.right ?? true,
+    },
+  };
+}
+
+function createEmptyCell() {
+  return {
+    text: '',
+    bold: false,
+    bg: '',
+    align: 'left',
+    colspan: 1,
+    borders: { top: true, bottom: true, left: true, right: true },
+  };
+}
+
 function createEmptyTable(rows = 3, cols = 3) {
   return {
     id: `tbl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -437,7 +475,7 @@ function createEmptyTable(rows = 3, cols = 3) {
     rows,
     cols,
     // cells: flat array [row0col0, row0col1, ..., row(rows-1)col(cols-1)]
-    cells: Array(rows * cols).fill(''),
+    cells: Array(rows * cols).fill(null).map(() => createEmptyCell()),
   };
 }
 
@@ -528,6 +566,261 @@ function getBlocksForSection(sections, sectionKey, sectionDefaults) {
     return [createBlock('paragraph', String(legacyText))];
   }
   return [];
+}
+
+// ── Renk Paleti ──────────────────────────────────────────────
+const CELL_BG_COLORS = [
+  { label: 'Yok', value: '' },
+  { label: 'Başlık Grisi', value: '#D9D9D9' },
+  { label: 'Açık Mavi', value: '#DBEAFE' },
+  { label: 'Açık Yeşil', value: '#D1FAE5' },
+  { label: 'Açık Sarı', value: '#FEF9C3' },
+  { label: 'Açık Pembe', value: '#FCE7F3' },
+  { label: 'Açık Mor', value: '#EDE9FE' },
+  { label: 'Koyu Gri', value: '#374151' },
+  { label: 'Lacivert', value: '#1E3A5F' },
+];
+
+// ── CellToolbar bileşeni ──────────────────────────────────────
+function CellToolbar({ cell, onUpdate, onClose }) {
+  const c = normalizeCell(cell);
+
+  const toggleBorder = (side) => {
+    onUpdate({ borders: { ...c.borders, [side]: !c.borders[side] } });
+  };
+
+  return (
+    <div className="cell-toolbar" onMouseDown={e => e.preventDefault()}>
+      {/* Kalın */}
+      <button
+        type="button"
+        className={`cell-tb-btn${c.bold ? ' cell-tb-btn--active' : ''}`}
+        title="Kalın"
+        onClick={() => onUpdate({ bold: !c.bold })}
+      >
+        <strong>B</strong>
+      </button>
+
+      <div className="cell-tb-sep" />
+
+      {/* Hizalama */}
+      {[
+        { a: 'left', icon: '⬅', title: 'Sola Hizala' },
+        { a: 'center', icon: '↔', title: 'Ortala' },
+        { a: 'right', icon: '➡', title: 'Sağa Hizala' },
+      ].map(({ a, icon, title }) => (
+        <button
+          key={a}
+          type="button"
+          className={`cell-tb-btn${c.align === a ? ' cell-tb-btn--active' : ''}`}
+          title={title}
+          onClick={() => onUpdate({ align: a })}
+        >
+          {icon}
+        </button>
+      ))}
+
+      <div className="cell-tb-sep" />
+
+      {/* Sütun birleştirme */}
+      <label className="cell-tb-label" title="Sütun Genişliği (Colspan)">
+        <span>⟷</span>
+        <input
+          type="number"
+          className="cell-tb-number"
+          min={1}
+          max={10}
+          value={c.colspan}
+          onChange={e => onUpdate({ colspan: Math.max(1, Math.min(10, Number(e.target.value))) })}
+        />
+      </label>
+
+      <div className="cell-tb-sep" />
+
+      {/* Kenarlar */}
+      <span className="cell-tb-label-text">Kenar:</span>
+      {[
+        { side: 'top', icon: '↑', title: 'Üst Kenar' },
+        { side: 'bottom', icon: '↓', title: 'Alt Kenar' },
+        { side: 'left', icon: '←', title: 'Sol Kenar' },
+        { side: 'right', icon: '→', title: 'Sağ Kenar' },
+      ].map(({ side, icon, title }) => (
+        <button
+          key={side}
+          type="button"
+          className={`cell-tb-btn cell-tb-btn--border${c.borders[side] ? ' cell-tb-btn--active' : ' cell-tb-btn--border-off'}`}
+          title={title}
+          onClick={() => toggleBorder(side)}
+        >
+          {icon}
+        </button>
+      ))}
+
+      <div className="cell-tb-sep" />
+
+      {/* Arka Plan Rengi */}
+      <span className="cell-tb-label-text">Dolgu:</span>
+      <div className="cell-tb-colors">
+        {CELL_BG_COLORS.map(({ label, value }) => (
+          <button
+            key={value}
+            type="button"
+            className={`cell-tb-color${c.bg === value ? ' cell-tb-color--active' : ''}`}
+            title={label}
+            style={{ background: value || '#fff', border: value === '' ? '1px dashed #94a3b8' : undefined }}
+            onClick={() => onUpdate({ bg: value })}
+          >
+            {value === '' && <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>∅</span>}
+          </button>
+        ))}
+      </div>
+
+      <button type="button" className="cell-tb-close" onClick={onClose} title="Kapat">✕</button>
+    </div>
+  );
+}
+
+// ── TableCardEditor bileşeni ──────────────────────────────────
+function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemove, onUpdateCell }) {
+  const [selectedCell, setSelectedCell] = useState(null); // { r, c }
+
+  const cells = tbl.cells.map(normalizeCell);
+
+  const handleCellUpdate = (r, c, patch) => {
+    onUpdateCell(r * tbl.cols + c, patch);
+  };
+
+  const selectedCellData = selectedCell
+    ? cells[selectedCell.r * tbl.cols + selectedCell.c]
+    : null;
+
+  // colspan render: birleştirilmiş hücreleri atla
+  const skipped = new Set();
+  const renderRows = Array.from({ length: tbl.rows }, (_, r) => {
+    const rowCells = [];
+    let c = 0;
+    while (c < tbl.cols) {
+      const idx2 = r * tbl.cols + c;
+      if (skipped.has(idx2)) { c++; continue; }
+      const cell = cells[idx2];
+      const colspan = Math.min(cell.colspan || 1, tbl.cols - c);
+      // colspan > 1 ise sağdaki hücreleri atla
+      for (let k = 1; k < colspan; k++) {
+        skipped.add(r * tbl.cols + c + k);
+      }
+      rowCells.push({ r, c, cell, colspan, idx: idx2 });
+      c += colspan;
+    }
+    return rowCells;
+  });
+
+  const bgColor = (bg) => {
+    if (!bg) return undefined;
+    return bg;
+  };
+
+  const borderStyle = (borders) => {
+    const b = borders || { top: true, bottom: true, left: true, right: true };
+    return {
+      borderTop: b.top ? undefined : '1px solid transparent',
+      borderBottom: b.bottom ? undefined : '1px solid transparent',
+      borderLeft: b.left ? undefined : '1px solid transparent',
+      borderRight: b.right ? undefined : '1px solid transparent',
+    };
+  };
+
+  return (
+    <div className="table-card">
+      <div className="table-card__header">
+        <span className="table-card__caption-num">Tablo {getTableCaptionNumber(sectionKey, idx)}</span>
+        <input
+          type="text"
+          className="table-card__name-input"
+          value={tbl.name || ''}
+          onChange={e => onUpdateName(e.target.value)}
+          placeholder="Tablo başlığı girin..."
+        />
+        <div className="table-card__resize">
+          <label>Satır</label>
+          <input
+            type="number"
+            min={1} max={20}
+            value={tbl.rows}
+            onChange={e => onResize(Math.max(1, Math.min(20, Number(e.target.value))), tbl.cols)}
+          />
+          <label>Sütun</label>
+          <input
+            type="number"
+            min={1} max={10}
+            value={tbl.cols}
+            onChange={e => onResize(tbl.rows, Math.max(1, Math.min(10, Number(e.target.value))))}
+          />
+        </div>
+        <button
+          type="button"
+          className="image-remove-btn"
+          onClick={onRemove}
+        >
+          Kaldır
+        </button>
+      </div>
+
+      {/* Araç Çubuğu */}
+      {selectedCell && selectedCellData && (
+        <CellToolbar
+          cell={selectedCellData}
+          onUpdate={(patch) => handleCellUpdate(selectedCell.r, selectedCell.c, patch)}
+          onClose={() => setSelectedCell(null)}
+        />
+      )}
+
+      <div className="table-card__grid-wrap">
+        <table className="table-card__grid">
+          <tbody>
+            {renderRows.map((rowCells, r) => (
+              <tr key={r}>
+                {rowCells.map(({ r: cr, c, cell, colspan, idx: cellIdx }) => {
+                  const isSelected = selectedCell?.r === cr && selectedCell?.c === c;
+                  const tdStyle = {
+                    background: bgColor(cell.bg) || (r === 0 ? '#eef2ff' : '#fff'),
+                    ...borderStyle(cell.borders),
+                    outline: isSelected ? '2px solid #6366f1' : undefined,
+                    outlineOffset: isSelected ? '-2px' : undefined,
+                  };
+                  return (
+                    <td
+                      key={c}
+                      colSpan={colspan > 1 ? colspan : undefined}
+                      style={tdStyle}
+                      onClick={() => setSelectedCell({ r: cr, c })}
+                    >
+                      <textarea
+                        className={`table-cell-input${cell.bold ? ' table-cell-input--bold' : ''}${cell.align !== 'left' ? ` table-cell-input--${cell.align}` : ''}`}
+                        value={cell.text}
+                        onChange={e => handleCellUpdate(cr, c, { text: e.target.value })}
+                        onFocus={() => setSelectedCell({ r: cr, c })}
+                        rows={1}
+                        style={{
+                          fontWeight: cell.bold ? '700' : undefined,
+                          textAlign: cell.align || 'left',
+                          background: 'transparent',
+                        }}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {selectedCell && (
+        <p className="table-card__hint">
+          💡 Seçili hücre: Satır {selectedCell.r + 1}, Sütun {selectedCell.c + 1} — Araç çubuğundan biçimlendirin
+        </p>
+      )}
+    </div>
+  );
 }
 
 // ── BlockEditor bileşeni ──────────────────────────────────────
@@ -822,12 +1115,17 @@ function ReportEditorPage({
     );
   };
 
-  const handleUpdateTableCell = (sectionKey, tableId, cellIndex, value) => {
+  const handleUpdateTableCell = (sectionKey, tableId, cellIndex, patch) => {
     updateSectionTables(sectionKey, prev =>
       prev.map(t => {
         if (t.id !== tableId) return t;
-        const cells = [...t.cells];
-        cells[cellIndex] = value;
+        const cells = t.cells.map(normalizeCell);
+        // patch: string (sadece metin) veya nesne (kısmi güncelleme)
+        if (typeof patch === 'string') {
+          cells[cellIndex] = { ...cells[cellIndex], text: patch };
+        } else {
+          cells[cellIndex] = { ...cells[cellIndex], ...patch };
+        }
         return { ...t, cells };
       })
     );
@@ -837,14 +1135,16 @@ function ReportEditorPage({
     updateSectionTables(sectionKey, prev =>
       prev.map(t => {
         if (t.id !== tableId) return t;
-        const oldCells = t.cells;
-        const newCells = Array(newRows * newCols).fill('').map((_, i) => {
+        const oldCells = t.cells.map(normalizeCell);
+        const newCells = Array(newRows * newCols).fill(null).map((_, i) => {
           const row = Math.floor(i / newCols);
           const col = i % newCols;
           if (row < t.rows && col < t.cols) {
-            return oldCells[row * t.cols + col] || '';
+            const old = oldCells[row * t.cols + col];
+            // Boyut değişince colspan'ı 1'e sıfırla (tutarsız birleştirme önlenir)
+            return { ...old, colspan: 1 };
           }
-          return '';
+          return createEmptyCell();
         });
         return { ...t, rows: newRows, cols: newCols, cells: newCells };
       })
@@ -1032,27 +1332,63 @@ function ReportEditorPage({
 
   const renderPreviewSectionBody = (sec, text, images, tables = [], blocks = null) => {
     // Ortak tablo ve görsel render yardımcıları
-    const renderTables = () => tables.length > 0 && tables.map((tbl, tblIdx) => (
-      <div className="preview-user-table-wrap" key={tbl.id}>
-        <div className="preview-user-table-scroll">
-          <table className="preview-user-table">
-            <tbody>
-              {Array.from({ length: tbl.rows }, (_, r) => (
-                <tr key={r}>
-                  {Array.from({ length: tbl.cols }, (_, c) => (
-                    <td key={c}>{tbl.cells[r * tbl.cols + c] || ''}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    const renderTables = () => tables.length > 0 && tables.map((tbl, tblIdx) => {
+      // colspan render için gizlenen hücreleri hesapla
+      const previewSkipped = new Set();
+      const previewRows = Array.from({ length: tbl.rows }, (_, r) => {
+        const rowCells = [];
+        let c = 0;
+        while (c < tbl.cols) {
+          const ci = r * tbl.cols + c;
+          if (previewSkipped.has(ci)) { c++; continue; }
+          const raw = tbl.cells[ci];
+          const cell = normalizeCell(raw);
+          const colspan = Math.min(cell.colspan || 1, tbl.cols - c);
+          for (let k = 1; k < colspan; k++) previewSkipped.add(r * tbl.cols + c + k);
+          rowCells.push({ r, c, cell, colspan });
+          c += colspan;
+        }
+        return rowCells;
+      });
+
+      return (
+        <div className="preview-user-table-wrap" key={tbl.id}>
+          <div className="preview-user-table-scroll">
+            <table className="preview-user-table">
+              <tbody>
+                {previewRows.map((rowCells, r) => (
+                  <tr key={r}>
+                    {rowCells.map(({ c, cell, colspan }) => {
+                      const borders = cell.borders || { top: true, bottom: true, left: true, right: true };
+                      const tdStyle = {
+                        background: cell.bg || (r === 0 ? '#d9d9d9' : undefined),
+                        fontWeight: cell.bold ? '700' : (r === 0 ? '700' : undefined),
+                        textAlign: cell.align || (r === 0 ? 'center' : 'left'),
+                        borderTop: borders.top ? undefined : '1px solid transparent',
+                        borderBottom: borders.bottom ? undefined : '1px solid transparent',
+                        borderLeft: borders.left ? undefined : '1px solid transparent',
+                        borderRight: borders.right ? undefined : '1px solid transparent',
+                        color: cell.bg === '#374151' || cell.bg === '#1E3A5F' ? '#fff' : undefined,
+                      };
+                      return (
+                        <td key={c} colSpan={colspan > 1 ? colspan : undefined} style={tdStyle}>
+                          {cell.text || ''}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="preview-user-table-caption">
+            <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
+            {tbl.name || 'İsimsiz Tablo'}
+          </p>
         </div>
-        <p className="preview-user-table-caption">
-          <strong>Tablo {getTableCaptionNumber(sec.key, tblIdx)}.</strong>{' '}
-          {tbl.name || 'İsimsiz Tablo'}
-        </p>
-      </div>
-    ));
+      );
+    });
+
 
     const renderImages = () => images.length > 0 && (
       <div className="preview-image-grid">
@@ -1265,61 +1601,16 @@ function ReportEditorPage({
               {tables.length > 0 && (
                 <div className="table-list">
                   {tables.map((tbl, idx) => (
-                    <div className="table-card" key={tbl.id}>
-                      <div className="table-card__header">
-                        <span className="table-card__caption-num">Tablo {getTableCaptionNumber(sec.key, idx)}</span>
-                        <input
-                          type="text"
-                          className="table-card__name-input"
-                          value={tbl.name || ''}
-                          onChange={e => handleUpdateTableName(sec.key, tbl.id, e.target.value)}
-                          placeholder="Tablo başlığı girin..."
-                        />
-                        <div className="table-card__resize">
-                          <label>Satır</label>
-                          <input
-                            type="number"
-                            min={1} max={20}
-                            value={tbl.rows}
-                            onChange={e => handleResizeTable(sec.key, tbl.id, Math.max(1, Math.min(20, Number(e.target.value))), tbl.cols)}
-                          />
-                          <label>Sütun</label>
-                          <input
-                            type="number"
-                            min={1} max={10}
-                            value={tbl.cols}
-                            onChange={e => handleResizeTable(sec.key, tbl.id, tbl.rows, Math.max(1, Math.min(10, Number(e.target.value))))}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          className="image-remove-btn"
-                          onClick={() => handleRemoveTable(sec.key, tbl.id)}
-                        >
-                          Kaldır
-                        </button>
-                      </div>
-                      <div className="table-card__grid-wrap">
-                        <table className="table-card__grid">
-                          <tbody>
-                            {Array.from({ length: tbl.rows }, (_, r) => (
-                              <tr key={r}>
-                                {Array.from({ length: tbl.cols }, (_, c) => (
-                                  <td key={c}>
-                                    <textarea
-                                      className="table-cell-input"
-                                      value={tbl.cells[r * tbl.cols + c] || ''}
-                                      onChange={e => handleUpdateTableCell(sec.key, tbl.id, r * tbl.cols + c, e.target.value)}
-                                      rows={1}
-                                    />
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    <TableCardEditor
+                      key={tbl.id}
+                      tbl={tbl}
+                      idx={idx}
+                      sectionKey={sec.key}
+                      onUpdateName={(name) => handleUpdateTableName(sec.key, tbl.id, name)}
+                      onResize={(rows, cols) => handleResizeTable(sec.key, tbl.id, rows, cols)}
+                      onRemove={() => handleRemoveTable(sec.key, tbl.id)}
+                      onUpdateCell={(cellIdx, patch) => handleUpdateTableCell(sec.key, tbl.id, cellIdx, patch)}
+                    />
                   ))}
                 </div>
               )}
@@ -1409,64 +1700,20 @@ function ReportEditorPage({
               {tables.length > 0 && (
                 <div className="table-list">
                   {tables.map((tbl, idx) => (
-                    <div className="table-card" key={tbl.id}>
-                      <div className="table-card__header">
-                        <span className="table-card__caption-num">Tablo {getTableCaptionNumber(sec.key, idx)}</span>
-                        <input
-                          type="text"
-                          className="table-card__name-input"
-                          value={tbl.name || ''}
-                          onChange={e => handleUpdateTableName(sec.key, tbl.id, e.target.value)}
-                          placeholder="Tablo başlığı girin..."
-                        />
-                        <div className="table-card__resize">
-                          <label>Satır</label>
-                          <input
-                            type="number"
-                            min={1} max={20}
-                            value={tbl.rows}
-                            onChange={e => handleResizeTable(sec.key, tbl.id, Math.max(1, Math.min(20, Number(e.target.value))), tbl.cols)}
-                          />
-                          <label>Sütun</label>
-                          <input
-                            type="number"
-                            min={1} max={10}
-                            value={tbl.cols}
-                            onChange={e => handleResizeTable(sec.key, tbl.id, tbl.rows, Math.max(1, Math.min(10, Number(e.target.value))))}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          className="image-remove-btn"
-                          onClick={() => handleRemoveTable(sec.key, tbl.id)}
-                        >
-                          Kaldır
-                        </button>
-                      </div>
-                      <div className="table-card__grid-wrap">
-                        <table className="table-card__grid">
-                          <tbody>
-                            {Array.from({ length: tbl.rows }, (_, r) => (
-                              <tr key={r}>
-                                {Array.from({ length: tbl.cols }, (_, c) => (
-                                  <td key={c}>
-                                    <textarea
-                                      className="table-cell-input"
-                                      value={tbl.cells[r * tbl.cols + c] || ''}
-                                      onChange={e => handleUpdateTableCell(sec.key, tbl.id, r * tbl.cols + c, e.target.value)}
-                                      rows={1}
-                                    />
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    <TableCardEditor
+                      key={tbl.id}
+                      tbl={tbl}
+                      idx={idx}
+                      sectionKey={sec.key}
+                      onUpdateName={(name) => handleUpdateTableName(sec.key, tbl.id, name)}
+                      onResize={(rows, cols) => handleResizeTable(sec.key, tbl.id, rows, cols)}
+                      onRemove={() => handleRemoveTable(sec.key, tbl.id)}
+                      onUpdateCell={(cellIdx, patch) => handleUpdateTableCell(sec.key, tbl.id, cellIdx, patch)}
+                    />
                   ))}
                 </div>
               )}
+
               {images.length > 0 && (
                 <div className="image-list">
                   {images.map((img, idx) => (
