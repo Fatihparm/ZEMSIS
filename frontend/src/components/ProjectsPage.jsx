@@ -1,6 +1,42 @@
 import { useState, useEffect } from 'react';
 import './ProjectsPage.css';
 
+/* ── SVG Icon Components ─────────────────────────────────── */
+const IconPlus = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+const IconAlertTriangle = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+    <path d="M12 9v4M12 17h.01" />
+  </svg>
+);
+
+const IconFolder = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const IconFolderOpen = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+const IconTrash = () => (
+  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </svg>
+);
+
 function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProject, onLogout }) {
   const tr = lang === 'tr';
   const [projects, setProjects] = useState([]);
@@ -104,14 +140,14 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
           </span>
           {onNewProject && (
             <button className="page-header-btn" onClick={onNewProject}>
-              ➕ {tr ? 'Yeni Proje' : 'New Project'}
+              <IconPlus /> {tr ? 'Yeni Proje' : 'New Project'}
             </button>
           )}
         </div>
       </div>
 
       <div className="page-content">
-        {error && <div className="page-error">⚠️ {error}</div>}
+        {error && <div className="page-error"><IconAlertTriangle /> {error}</div>}
 
         {loading ? (
           <div className="projects-loading">
@@ -120,7 +156,7 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
           </div>
         ) : projects.length === 0 ? (
           <div className="projects-empty">
-            <span className="empty-icon">📁</span>
+            <span className="empty-icon"><IconFolder /></span>
             <p>{tr ? 'Henüz kayıtlı proje yok' : 'No saved projects yet'}</p>
             <p className="empty-hint">
               {tr
@@ -143,7 +179,7 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
 
                 <div className="project-card-actions">
                   <button className="project-btn load" onClick={() => handleLoad(project.id)}>
-                    {tr ? '📂 Yükle' : '📂 Load'}
+                    <IconFolderOpen /> {tr ? 'Yükle' : 'Load'}
                   </button>
                   {deleteId === project.id ? (
                     <div className="delete-confirm">
@@ -157,7 +193,7 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
                     </div>
                   ) : (
                     <button className="project-btn delete" onClick={() => setDeleteId(project.id)}>
-                      🗑️
+                      <IconTrash />
                     </button>
                   )}
                 </div>

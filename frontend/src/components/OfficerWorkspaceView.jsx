@@ -453,7 +453,11 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
               <div className="owv-report-meta-item">
                 <span className="owv-report-meta-label">Hesap Sonuçları</span>
                 <span className={`owv-report-meta-value owv-report-meta-badge ${results ? 'owv-report-meta-badge--ok' : 'owv-report-meta-badge--missing'}`}>
-                  {results ? '✓ Mevcut' : '✗ Yok'}
+                  {results ? (
+                    <><IconCheckCircle /> Mevcut</>
+                  ) : (
+                    <><IconAlertTriangle /> Yok</>
+                  )}
                 </span>
               </div>
               <div className="owv-report-meta-item">

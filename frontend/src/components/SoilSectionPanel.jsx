@@ -527,6 +527,67 @@ function SoilSectionPanel({
                     </div>
                 )}
                 </div>
+
+                {/* ── Layer list ── */}
+                <div className="ssp-layer-list">
+                    {layers.map((layer, index) => {
+                        const colors = SOIL_COLORS_VISUAL[layer.soilType] || SOIL_COLORS_VISUAL.kil;
+                        const { start, end } = getDepthRange(index);
+                        return (
+                            <div
+                                key={layer.id}
+                                className={`ssp-layer-row${popupLayerId === layer.id ? ' ssp-layer-row--active' : ''}`}
+                                style={{ borderLeft: `4px solid ${colors.accent}` }}
+                                draggable={!readOnly}
+                                onDragStart={e => onDragStart(e, index)}
+                                onDragEnter={() => onDragEnter(null, index)}
+                                onDragEnd={onDragEnd}
+                                onDragOver={onDragOver}
+                                onClick={e => handleLayerClick(e, layer.id)}
+                            >
+                                <div className="ssp-layer-row-drag" title={readOnly ? '' : (tr ? 'Sürükle' : 'Drag')}>
+                                    {readOnly ? null : '⠿'}
+                                </div>
+                                <div className="ssp-layer-row-info">
+                                    <div className="ssp-layer-row-name">
+                                        <span className="ssp-layer-row-index">{index + 1}</span>
+                                        {getSoilName(layer.soilType)}
+                                    </div>
+                                    <div className="ssp-layer-row-meta">
+                                        <span>{start}m – {end}m</span>
+                                        <span style={{ marginLeft: 8 }}>{layer.thickness} m</span>
+                                    </div>
+                                </div>
+                                {!readOnly && (
+                                    <div className="ssp-layer-row-actions">
+                                        <input
+                                            type="number"
+                                            className="ssp-layer-thickness-input"
+                                            value={layer.thickness}
+                                            min={0.5} max={50} step={0.5}
+                                            title={tr ? 'Kalınlık (m)' : 'Thickness (m)'}
+                                            onClick={e => e.stopPropagation()}
+                                            onChange={e => updateLayer(layer.id, 'thickness', parseFloat(e.target.value) || 0.5)}
+                                        />
+                                        <button
+                                            className="ssp-layer-remove-btn"
+                                            title={tr ? 'Tabakayı Sil' : 'Remove Layer'}
+                                            disabled={layers.length <= 1}
+                                            onClick={e => { e.stopPropagation(); removeLayer(layer.id); }}
+                                        >×</button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* ── Add Layer button ── */}
+                {!readOnly && (
+                    <button className="ssp-add-layer-btn" onClick={addLayer}>
+                        + {t.addLayer || (tr ? 'Tabaka Ekle' : 'Add Layer')}
+                    </button>
+                )}
             </div>
 
             {/* ── Right panel: Cross-Section View ── */}

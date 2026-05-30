@@ -80,8 +80,9 @@
 }
 
 .quick-action-card span {
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 42px;
   height: 42px;
   margin-bottom: 14px;
@@ -89,6 +90,13 @@
   background: rgba(255, 255, 255, 0.12);
   font-size: 1rem;
   font-weight: 700;
+}
+
+.quick-action-card span svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  flex-shrink: 0;
 }
 
 .quick-action-card p {
