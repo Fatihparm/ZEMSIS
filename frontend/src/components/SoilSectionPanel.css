@@ -382,12 +382,10 @@
 
 /* ── Layer list (new) ── */
 .ssp-layer-list {
-  flex: 1;
   padding: 8px 10px 4px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 0;
 }
 
 .ssp-layer-row {
