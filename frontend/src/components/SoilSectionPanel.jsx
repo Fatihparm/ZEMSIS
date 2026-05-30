@@ -37,6 +37,7 @@ function SoilSectionPanel({
     layers,
     onChange,
     parameters,
+    onParameterChange,
     lang,
     extraParams = {},
     onExtraParamsChange,
@@ -418,6 +419,54 @@ function SoilSectionPanel({
                         {totalThickness.toFixed(1)} m
                     </span>
                 </div>
+
+                {/* ── Column Geometry inputs (D, s, H) ── */}
+                {!readOnly && onParameterChange && (
+                    <div className="ssp-col-geom-card">
+                        <div className="ssp-col-geom-title">
+                            <span className="ssp-col-geom-icon">⬡</span>
+                            {tr ? 'Kolon Geometrisi' : 'Column Geometry'}
+                        </div>
+                        <div className="ssp-col-geom-grid">
+                            <div className="ssp-col-geom-row">
+                                <label>D <span>{tr ? 'Çap' : 'Diam.'}</span></label>
+                                <div className="ssp-extra-input">
+                                    <input
+                                        type="number"
+                                        value={parameters.D ?? 0.6}
+                                        min={0.3} max={3.0} step={0.05}
+                                        onChange={e => onParameterChange({ target: { name: 'D', value: e.target.value } })}
+                                    />
+                                    <span>m</span>
+                                </div>
+                            </div>
+                            <div className="ssp-col-geom-row">
+                                <label>s <span>{tr ? 'Aralık' : 'Spacing'}</span></label>
+                                <div className="ssp-extra-input">
+                                    <input
+                                        type="number"
+                                        value={parameters.s ?? 1.6}
+                                        min={0.5} max={10} step={0.1}
+                                        onChange={e => onParameterChange({ target: { name: 's', value: e.target.value } })}
+                                    />
+                                    <span>m</span>
+                                </div>
+                            </div>
+                            <div className="ssp-col-geom-row">
+                                <label>H <span>{tr ? 'Uzunluk' : 'Length'}</span></label>
+                                <div className="ssp-extra-input">
+                                    <input
+                                        type="number"
+                                        value={parameters.H ?? 12}
+                                        min={1} max={50} step={0.5}
+                                        onChange={e => onParameterChange({ target: { name: 'H', value: e.target.value } })}
+                                    />
+                                    <span>m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Foundation & Fill inputs */}
                 <div className="ssp-extra-params">

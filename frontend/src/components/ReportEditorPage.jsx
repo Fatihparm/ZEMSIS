@@ -803,7 +803,7 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
           <tbody>
             {renderRows.map((rowCells, r) => (
               <tr key={r}>
-                {rowCells.map(({ r: cr, c, cell, colspan, idx: cellIdx }) => {
+                {rowCells.map(({ r: cr, c, cell, colspan, rowspan, idx: cellIdx }) => {
                   const isSelected = selectedCell?.r === cr && selectedCell?.c === c;
                   const tdStyle = {
                     background: bgColor(cell.bg) || (r === 0 ? '#eef2ff' : '#fff'),
