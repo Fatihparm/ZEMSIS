@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { API_URL } from '../config';
 import SoilSectionPanel from './SoilSectionPanel';
 import ResultCard from './ResultCard';
 import './OfficerWorkspaceView.css';
-
-const API_URL = '/api';
 
 // ── Translations ──────────────────────────────────────────────────────────────
 const soilTranslations = {

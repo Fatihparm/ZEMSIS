@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config';
 import './ProjectsPage.css';
 
 /* ── SVG Icon Components ─────────────────────────────────── */
@@ -44,7 +45,7 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState(null);
 
-  const API = '/api/projects';
+  const API = `${API_URL}/projects`;
 
   const fetchProjects = async () => {
     setLoading(true);

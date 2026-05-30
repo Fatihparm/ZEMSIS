@@ -461,71 +461,79 @@ function SoilSectionPanel({
                     {popupLayer && (
                         <div className="ssp-popup" ref={popupRef}
                             style={{ top: popupPos.y, left: popupPos.x }}>
-                            <div className="ssp-popup-row">
-                                <label>{tr ? 'Zemin Tipi' : 'Soil Type'}</label>
-                                <select value={popupLayer.soilType}
-                                    onChange={e => updateLayer(popupLayerId, 'soilType', e.target.value)}>
-                                    {SOIL_TYPES.map(type => (
-                                        <option key={type} value={type}>{getSoilName(type)}</option>
-                                    ))}
-                                </select>
+                            <div className="ssp-popup-header">
+                                <span className="ssp-popup-title">
+                                    {tr ? 'Tabaka Özellikleri' : 'Layer Properties'} (#{layers.indexOf(popupLayer) + 1})
+                                </span>
+                                <button className="ssp-popup-close" onClick={() => setPopupLayerId(null)} title={tr ? 'Kapat' : 'Close'}>×</button>
                             </div>
+                            <div className="ssp-popup-body">
+                                <div className="ssp-popup-row">
+                                    <label>{tr ? 'Zemin Tipi' : 'Soil Type'}</label>
+                                    <select value={popupLayer.soilType}
+                                        onChange={e => updateLayer(popupLayerId, 'soilType', e.target.value)}>
+                                        {SOIL_TYPES.map(type => (
+                                            <option key={type} value={type}>{getSoilName(type)}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                        <div className="ssp-popup-divider" />
+                                <div className="ssp-popup-divider" />
 
-                        <div className="ssp-popup-section-title">Mohr-Coulomb</div>
+                                <div className="ssp-popup-section-title">Mohr-Coulomb</div>
 
-                        <div className="ssp-popup-row">
-                            <label>γ <span>{tr ? 'Birim Ağırlık' : 'Unit Weight'}</span></label>
-                            <div className="ssp-popup-input">
-                                <input type="number" value={popupLayer.gamma}
-                                    onChange={e => updateLayer(popupLayerId, 'gamma', parseFloat(e.target.value) || 0)}
-                                    min={10} max={30} step={0.5} />
-                                <span>kN/m³</span>
+                                <div className="ssp-popup-row">
+                                    <label>γ <span>{tr ? 'Birim Hacim Ağırlık' : 'Unit Weight'}</span></label>
+                                    <div className="ssp-popup-input">
+                                        <input type="number" value={popupLayer.gamma}
+                                            onChange={e => updateLayer(popupLayerId, 'gamma', parseFloat(e.target.value) || 0)}
+                                            min={10} max={30} step={0.5} />
+                                        <span>kN/m³</span>
+                                    </div>
+                                </div>
+
+                                <div className="ssp-popup-row">
+                                    <label>φ <span>{tr ? 'Sürtünme Açısı' : 'Friction Angle'}</span></label>
+                                    <div className="ssp-popup-input">
+                                        <input type="number" value={popupLayer.phi}
+                                            onChange={e => updateLayer(popupLayerId, 'phi', parseFloat(e.target.value) || 0)}
+                                            min={0} max={45} step={1} />
+                                        <span>°</span>
+                                    </div>
+                                </div>
+
+                                <div className="ssp-popup-row">
+                                    <label>c <span>{tr ? 'Kohezyon' : 'Cohesion'}</span></label>
+                                    <div className="ssp-popup-input">
+                                        <input type="number" value={popupLayer.cohesion}
+                                            onChange={e => updateLayer(popupLayerId, 'cohesion', parseFloat(e.target.value) || 0)}
+                                            min={0} max={5000} step={5} />
+                                        <span>kPa</span>
+                                    </div>
+                                </div>
+
+                                <div className="ssp-popup-row">
+                                    <label>E <span>{tr ? 'Elastisite' : 'Elasticity'}</span></label>
+                                    <div className="ssp-popup-input">
+                                        <input type="number" value={popupLayer.elasticity}
+                                            onChange={e => updateLayer(popupLayerId, 'elasticity', parseFloat(e.target.value) || 0)}
+                                            min={1000} max={500000} step={1000} />
+                                        <span>kN/m²</span>
+                                    </div>
+                                </div>
+
+                                <div className="ssp-popup-row">
+                                    <label>ν <span>{tr ? 'Poisson Oranı' : 'Poisson Ratio'}</span></label>
+                                    <div className="ssp-popup-input">
+                                        <input type="number" value={popupLayer.poisson}
+                                            onChange={e => updateLayer(popupLayerId, 'poisson', parseFloat(e.target.value) || 0)}
+                                            min={0.1} max={0.5} step={0.05} />
+                                        <span>—</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <div className="ssp-popup-row">
-                            <label>φ <span>{tr ? 'Sürtünme Açısı' : 'Friction Angle'}</span></label>
-                            <div className="ssp-popup-input">
-                                <input type="number" value={popupLayer.phi}
-                                    onChange={e => updateLayer(popupLayerId, 'phi', parseFloat(e.target.value) || 0)}
-                                    min={0} max={45} step={1} />
-                                <span>°</span>
-                            </div>
-                        </div>
-
-                        <div className="ssp-popup-row">
-                            <label>c <span>{tr ? 'Kohezyon' : 'Cohesion'}</span></label>
-                            <div className="ssp-popup-input">
-                                <input type="number" value={popupLayer.cohesion}
-                                    onChange={e => updateLayer(popupLayerId, 'cohesion', parseFloat(e.target.value) || 0)}
-                                    min={0} max={5000} step={5} />
-                                <span>kPa</span>
-                            </div>
-                        </div>
-
-                        <div className="ssp-popup-row">
-                            <label>E <span>{tr ? 'Elastisite' : 'Elasticity'}</span></label>
-                            <div className="ssp-popup-input">
-                                <input type="number" value={popupLayer.elasticity}
-                                    onChange={e => updateLayer(popupLayerId, 'elasticity', parseFloat(e.target.value) || 0)}
-                                    min={1000} max={500000} step={1000} />
-                                <span>kN/m²</span>
-                            </div>
-                        </div>
-
-                        <div className="ssp-popup-row">
-                            <label>ν <span>{tr ? 'Poisson' : 'Poisson'}</span></label>
-                            <div className="ssp-popup-input">
-                                <input type="number" value={popupLayer.poisson}
-                                    onChange={e => updateLayer(popupLayerId, 'poisson', parseFloat(e.target.value) || 0)}
-                                    min={0.1} max={0.5} step={0.05} />
-                                <span>—</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    )}
                 </div>
 
                 {/* ── Layer list ── */}

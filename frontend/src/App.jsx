@@ -11,6 +11,7 @@ import { generatePdfReport, parsePdfReport } from './utils/pdfReport';
 import ReportEditorPage from './components/ReportEditorPage';
 import ApplicationPanel from './components/ApplicationPanel';
 import OfficerPortal from './components/OfficerPortal';
+import { API_URL } from './config';
 import './App.css';
 
 /* ── SVG Icon Components ──────────────────────────────────────── */
@@ -121,8 +122,6 @@ const IconDownload = () => (
     <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
-
-const API_URL = '/api';
 
 const translations = {
   en: {

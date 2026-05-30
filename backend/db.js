@@ -13,8 +13,9 @@ pool.on('error', (err) => {
  * Run the initial migration — creates tables if they don't exist.
  */
 async function migrate() {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,7 +90,7 @@ async function migrate() {
     console.error('❌ Migration failed:', err.message);
     throw err;
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 

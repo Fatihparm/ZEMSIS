@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_URL } from '../config';
 import './AuthPage.css';
 
 const MUNICIPALITIES = [
@@ -19,7 +20,7 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
   const [error, setError] = useState(initialError);
   const [loading, setLoading] = useState(false);
 
-  const API = '/api/auth';
+  const API = `${API_URL}/auth`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_URL } from '../config';
 import './SaveProjectModal.css';
 
 function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, projectData, onLogout }) {
@@ -9,7 +10,7 @@ function SaveProjectModal({ lang, token, currentProjectId, onSave, onClose, proj
   const [error, setError] = useState('');
   const [saveMode, setSaveMode] = useState(currentProjectId ? 'update' : 'new');
 
-  const API = '/api/projects';
+  const API = `${API_URL}/projects`;
 
   const handleSave = async (e) => {
     e.preventDefault();

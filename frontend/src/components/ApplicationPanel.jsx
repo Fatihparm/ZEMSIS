@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_URL } from '../config';
 import './ApplicationPanel.css';
-
-const API_URL = '/api';
 
 const MUNICIPALITIES = [
   'Bursa Büyükşehir Belediyesi',

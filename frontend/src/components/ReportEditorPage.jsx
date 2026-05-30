@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { API_URL } from '../config';
 import LockedDataTable from './LockedDataTable';
 import './ReportEditorPage.css';
-
-const API_URL = '/api';
 
 // ── Rapor bölümleri tanımı ────────────────────────────────────
 // type: 'cover'   → basit form alanları (kapak sayfası)

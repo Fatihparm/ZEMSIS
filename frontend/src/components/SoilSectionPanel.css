@@ -179,74 +179,125 @@
 .ssp-popup {
   position: fixed;
   z-index: 5000;
-  width: 290px;
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
-  border-radius: 18px;
-  box-shadow: var(--shadow-lg);
+  width: 300px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ssp-popup-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 16px 20px;
   background: var(--color-gray-50);
   border-bottom: 1px solid var(--color-gray-200);
 }
 
 .ssp-popup-title {
   color: var(--color-primary);
-  font-weight: 700;
-  font-size: 0.8rem;
+  font-weight: 800;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
 }
 
 .ssp-popup-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .ssp-popup-del,
 .ssp-popup-close {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 8px;
   background: var(--color-gray-100);
-  color: var(--color-gray-500);
+  color: var(--color-gray-600);
+  font-weight: bold;
+  font-size: 1rem;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ssp-popup-close:hover {
+  background: var(--color-gray-200);
+  color: var(--color-gray-800);
+  transform: scale(1.05);
 }
 
 .ssp-popup-body {
   display: grid;
-  gap: 10px;
-  padding: 14px 16px 16px;
+  gap: 12px;
+  padding: 20px;
 }
 
 .ssp-popup-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+}
+
+.ssp-popup-row label {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-gray-700);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ssp-popup-row label span {
+  font-size: 0.68rem;
+  color: var(--color-gray-400);
+  font-weight: 500;
+  margin-top: 2px;
 }
 
 .ssp-popup-row select {
   flex: 1;
-  padding: 8px 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--color-gray-800);
+  background: var(--color-white);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.ssp-popup-row select:focus {
+  border-color: var(--color-secondary);
+}
+
+.ssp-popup-input input {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ssp-popup-input input:focus {
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px rgba(80, 177, 200, 0.12);
 }
 
 .ssp-popup-divider {
   height: 1px;
   background: var(--color-gray-200);
+  margin: 4px 0;
 }
 
 .ssp-popup-section-title {
   color: var(--color-gray-400);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.74rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .ssp-right {

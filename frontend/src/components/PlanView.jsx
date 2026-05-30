@@ -83,6 +83,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     const vertices = activePolygon ? activePolygon.vertices : [];
     const isClosed = activePolygon ? activePolygon.isClosed : false;
     const [drawingMode, setDrawingMode] = useState('draw'); // draw | rectangle | select | section
+    const [infoExpanded, setInfoExpanded] = useState(true);
     const [selectedVertex, setSelectedVertex] = useState(null);
     const [hoveredVertex, setHoveredVertex] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -479,7 +480,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         }
 
         // ── Rectangle preview ──
-        if (drawingMode === 'rectangle' && rectStart && !isClosed) {
+        if (drawingMode === 'rectangle' && rectStart) {
             const pS = worldToScreen(rectStart.x, rectStart.y, metrics);
             const pM = worldToScreen(mouseWorld.x, mouseWorld.y, metrics);
             ctx.strokeStyle = 'rgba(255, 152, 0, 0.5)';
@@ -971,7 +972,6 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                     setActivePolygonId(newId);
                 }
             } else if (drawingMode === 'rectangle') {
-                if (activePolygon && !isClosed) return;
                 const world = screenToWorld(sx, sy, metrics);
                 const wx = snapToGrid(world.x);
                 const wy = snapToGrid(world.y);
@@ -1265,6 +1265,14 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         }
     };
 
+    // Finish drawing without closing — leaves polyline open
+    const handleFinishOpenPolyline = useCallback(() => {
+        if (activePolygon && !activePolygon.isClosed && activePolygon.vertices.length >= 2) {
+            // Deselect active polygon so next click starts a new one
+            setActivePolygonId(null);
+        }
+    }, [activePolygon]);
+
     const handleDeleteVertex = () => {
         if (selectedVertex !== null && activePolygon && activePolygon.vertices.length > 0) {
             pushUndo();
@@ -1327,6 +1335,9 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
             ) {
                 e.preventDefault();
                 handleRedo();
+            } else if (e.key === 'Escape') {
+                // ESC: finish open polyline without closing
+                handleFinishOpenPolyline();
             } else if (!e.ctrlKey && !e.metaKey) {
                 // WASD panning
                 switch (e.key.toLowerCase()) {
@@ -1353,7 +1364,22 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleUndo, handleRedo]);
+    }, [handleUndo, handleRedo, handleFinishOpenPolyline]);
+
+    // Double-click: finish polyline open (draw mode)
+    const handleDoubleClick = useCallback((e) => {
+        if (drawingMode !== 'draw') return;
+        if (!activePolygon || activePolygon.isClosed) return;
+        if (activePolygon.vertices.length < 3) return;
+        e.preventDefault();
+        // Remove the last vertex that was added by the preceding mousedown of this dblclick
+        setPolygons(prev => prev.map(p =>
+            p.id === activePolygonId
+                ? { ...p, vertices: p.vertices.slice(0, -1) }
+                : p
+        ));
+        setActivePolygonId(null);
+    }, [drawingMode, activePolygon, activePolygonId]);
 
     // ── Computed info ──
     const area = polygons.reduce((sum, p) => p.isClosed && p.vertices.length >= 3 ? sum + polygonArea(p.vertices) : sum, 0);
@@ -1418,6 +1444,12 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         <button className="toolbar-btn icon-btn" onClick={handleClose} disabled={isClosed || vertices.length < 3}
                             data-tooltip={tr ? 'Poligonu kapat' : 'Close polygon'}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2" /></svg>
+                        </button>
+                        <button className="toolbar-btn icon-btn"
+                            onClick={handleFinishOpenPolyline}
+                            disabled={!activePolygon || activePolygon.isClosed || vertices.length < 2}
+                            data-tooltip={tr ? 'Çizimi bitir (açık bırak) — ESC veya çift tık' : 'Finish polyline (leave open) — ESC or double-click'}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /><line x1="20" y1="12" x2="4" y2="12" /></svg>
                         </button>
                         <button className="toolbar-btn icon-btn" onClick={handleUndo} disabled={undoStack.length === 0}
                             data-tooltip={tr ? 'Geri al (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
@@ -1551,6 +1583,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseUp}
                         onContextMenu={handleContextMenu}
+                        onDoubleClick={handleDoubleClick}
                     />
 
                     {/* Coordinate display */}
@@ -1560,31 +1593,53 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         <span className="coord-zoom">🔍 {(zoom * 100).toFixed(0)}%</span>
                     </div>
 
-                    {/* Info overlay */}
+                    {/* Info overlay — collapsible */}
                     {polygons.some(p => p.isClosed && p.vertices.length >= 3) && (
-                        <div className="plan-info-overlay">
-                            <div className="plan-info-item">
-                                <span className="info-icon">📐</span>
-                                <span className="info-label">{tr ? 'Alan' : 'Area'}</span>
-                                <span className="info-value">{area.toFixed(1)} m²</span>
-                            </div>
-                            <div className="plan-info-item">
-                                <span className="info-icon">📏</span>
-                                <span className="info-label">{tr ? 'Çevre' : 'Perimeter'}</span>
-                                <span className="info-value">{perimeter.toFixed(1)} m</span>
-                            </div>
-                            <div className="plan-info-item">
-                                <span className="info-icon">🔴</span>
-                                <span className="info-label">{tr ? 'Kolon' : 'Columns'}</span>
-                                <span className="info-value">{totalColumns}</span>
-                            </div>
-                            <div className="plan-info-item">
-                                <span className="info-icon">📊</span>
-                                <span className="info-label">Ar</span>
-                                <span className="info-value">{Ar.toFixed(1)}%</span>
+                        <div className={`plan-info-overlay ${infoExpanded ? 'info-expanded' : 'info-collapsed'}`}>
+                            <button
+                                className="plan-info-toggle"
+                                onClick={() => setInfoExpanded(v => !v)}
+                                title={infoExpanded ? (tr ? 'Gizle' : 'Hide') : (tr ? 'Göster' : 'Show')}
+                            >
+                                <span className="plan-info-toggle-label">
+                                    {tr ? '📊 Bilgi' : '📊 Info'}
+                                </span>
+                                <svg
+                                    className="plan-info-chevron"
+                                    width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" strokeWidth="2.5"
+                                    strokeLinecap="round" strokeLinejoin="round"
+                                >
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                            </button>
+                            <div className="plan-info-body">
+                                <div className="plan-info-inner">
+                                    <div className="plan-info-item">
+                                        <span className="info-icon">📐</span>
+                                        <span className="info-label">{tr ? 'Alan' : 'Area'}</span>
+                                        <span className="info-value">{area.toFixed(1)} m²</span>
+                                    </div>
+                                    <div className="plan-info-item">
+                                        <span className="info-icon">📏</span>
+                                        <span className="info-label">{tr ? 'Çevre' : 'Perimeter'}</span>
+                                        <span className="info-value">{perimeter.toFixed(1)} m</span>
+                                    </div>
+                                    <div className="plan-info-item">
+                                        <span className="info-icon">🔴</span>
+                                        <span className="info-label">{tr ? 'Kolon' : 'Columns'}</span>
+                                        <span className="info-value">{totalColumns}</span>
+                                    </div>
+                                    <div className="plan-info-item">
+                                        <span className="info-icon">📊</span>
+                                        <span className="info-label">Ar</span>
+                                        <span className="info-value">{Ar.toFixed(1)}%</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
+
 
                     {/* Section mode hint — 3 aşama */}
                     {drawingMode === 'section' && !sectionStart && (

@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_URL } from '../config';
 import ApplicationDetailModal from './ApplicationDetailModal';
 import OfficerWorkspaceView from './OfficerWorkspaceView';
 import './OfficerPortal.css';
-
-const API_URL = '/api';
 
 const STATUS_CONFIG = {
   pending:  { label: 'Bekliyor',      cls: 'op-badge--pending'  },

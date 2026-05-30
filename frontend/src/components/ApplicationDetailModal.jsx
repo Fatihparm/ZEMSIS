@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config';
 import './ApplicationDetailModal.css';
-
-const API_URL = '/api';
 
 const STATUS_CONFIG = {
   pending:  { label: 'Değerlendirme Aşamasında', cls: 'det-status--pending'  },
