@@ -136,8 +136,25 @@ function SoilSectionPanel({
     const handleLayerClick = (e, layerId) => {
         if (readOnly) return; // read-only modda popup açılmaz
         const rect = e.currentTarget.getBoundingClientRect();
-        // Position popup to the right of the clicked layer
-        setPopupPos({ x: rect.right + 8, y: rect.top });
+        // Popup yüksekliği tahmini (~380px)
+        const POPUP_HEIGHT = 380;
+        const POPUP_WIDTH = 300;
+        const viewportH = window.innerHeight;
+        const viewportW = window.innerWidth;
+
+        // Dikey: tıklanan satırın üstüne hizala; ekrandan taşıyorsa yukarı kaydır
+        let top = rect.top;
+        if (top + POPUP_HEIGHT > viewportH - 8) {
+            top = Math.max(8, viewportH - POPUP_HEIGHT - 8);
+        }
+
+        // Yatay: sağda yer varsa sağa, yoksa sola aç
+        let left = rect.right + 8;
+        if (left + POPUP_WIDTH > viewportW - 8) {
+            left = rect.left - POPUP_WIDTH - 8;
+        }
+
+        setPopupPos({ x: left, y: top });
         setPopupLayerId(popupLayerId === layerId ? null : layerId);
     };
 
