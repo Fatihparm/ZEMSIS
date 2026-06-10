@@ -37,6 +37,9 @@
   font-weight: 700;
   color: #f1f5f9;
   letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .report-project-tag {
@@ -66,6 +69,9 @@
   border-radius: 6px;
   font-weight: 600;
   transition: opacity 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .save-status--saving { color: #94a3b8; }
@@ -83,6 +89,9 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-save-draft:hover:not(:disabled) {
@@ -106,12 +115,26 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-preview:hover {
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
   transform: translateY(-1px);
+}
+
+.btn-preview--active {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #a5b4fc;
+}
+
+.btn-preview--active:hover {
+  background: rgba(99, 102, 241, 0.35);
+  color: #c7d2fe;
 }
 
 .btn-generate {
@@ -172,6 +195,9 @@
   background: #fffbeb;
   border-bottom: 1px solid #fde68a;
   color: #d97706;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ── Layout ── */
@@ -181,6 +207,11 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  transition: grid-template-columns 0.25s ease;
+}
+
+.report-layout--panel-open {
+  grid-template-columns: 260px 1fr 360px;
 }
 
 /* ── Nav ── */
@@ -286,6 +317,9 @@
   padding: 1px 6px;
   border-radius: 4px;
   width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .nav-badge.locked {
@@ -370,6 +404,9 @@
   padding: 3px 10px;
   border-radius: 20px;
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .section-type-badge.editable {
@@ -404,6 +441,9 @@
   font-size: 0.78rem;
   margin: 0 0 14px 0;
   line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ── Cover Form ── */
@@ -624,6 +664,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 9px 14px;
   border-radius: 10px;
   background: #0f172a;
@@ -2113,3 +2154,311 @@
   line-height: 1.4;
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   Sağ Panel: Dinamik Bölüm Önizleme Paneli
+   ═══════════════════════════════════════════════════════════ */
+
+.report-preview-panel {
+  display: flex;
+  flex-direction: column;
+  background: #f0f4f9;
+  border-left: 1px solid #dbe4f0;
+  overflow: hidden;
+  animation: panelSlideIn 0.22s ease-out;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Panel başlığı */
+.report-preview-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+.report-preview-panel__header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #93c5fd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.report-preview-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.report-preview-panel__close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+/* Kağıt arka planı scroll alanı */
+.report-preview-panel__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* A4 kağıt görünümü */
+.report-preview-panel__a4 {
+  width: 100%;
+  max-width: 310px;
+  min-height: 440px;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.08),
+    0 6px 20px rgba(15, 23, 42, 0.10),
+    0 20px 40px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #dbe4f0;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Kağıt soluk gölge efekti */
+.report-preview-panel__a4::before {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 4px;
+  right: 4px;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  border-radius: 0 0 4px 4px;
+  filter: blur(4px);
+  z-index: -1;
+}
+
+/* Üst bilgi (üst band) */
+.report-preview-panel__a4-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 7px;
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 2px solid #1e3a5f;
+  flex-shrink: 0;
+}
+
+.report-preview-panel__a4-logo {
+  max-height: 20px;
+  max-width: 60px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.report-preview-panel__a4-title {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: #1e3a5f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* İnce ayırıcı çizgi */
+.report-preview-panel__a4-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #1e3a5f 0%, #3b82f6 50%, #1e3a5f 100%);
+  flex-shrink: 0;
+  opacity: 0.18;
+}
+
+/* İçerik alanı */
+.report-preview-panel__a4-body {
+  flex: 1;
+  padding: 12px 14px 10px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: #111827;
+  overflow: hidden;
+}
+
+/* Alt bilgi */
+.report-preview-panel__a4-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid #dbe4f0;
+  font-size: 6.5pt;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.report-preview-panel__a4-footer-logo {
+  max-height: 14px;
+  max-width: 50px;
+  object-fit: contain;
+  opacity: 0.6;
+}
+
+/* Kapak bölümü önizleme */
+.panel-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 8px;
+}
+
+.panel-cover__logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.panel-cover__logo {
+  max-height: 50px;
+  max-width: 100px;
+  object-fit: contain;
+}
+
+.panel-cover__eyebrow {
+  margin: 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #1d4ed8;
+  text-transform: uppercase;
+}
+
+.panel-cover__title {
+  margin: 4px 0 8px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.panel-cover__fields {
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel-cover__field {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 7.5pt;
+}
+
+.panel-cover__field dt {
+  color: #64748b;
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.panel-cover__field dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 700;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Panel içindeki bölüm başlığı */
+.panel-section__heading {
+  margin: 0 0 8px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 9pt;
+  font-weight: 700;
+  color: #1e3a5f;
+  border-bottom: 1px solid #dbe4f0;
+  padding-bottom: 5px;
+}
+
+/* Panel içindeki paragrafları daha küçük yap */
+.report-preview-panel__a4-body .preview-paragraph {
+  font-size: 8pt;
+  margin-bottom: 7px;
+  text-indent: 0.8em;
+}
+
+.report-preview-panel__a4-body .preview-subheading,
+.report-preview-panel__a4-body .preview-sideheading {
+  font-size: 8pt;
+  margin: 6px 0 4px;
+  padding-left: 0.3cm;
+}
+
+/* Panel içindeki tablo */
+.report-preview-panel__a4-body .preview-user-table {
+  font-size: 7pt;
+}
+
+/* Panel içindeki görseller tek kolonlu */
+.report-preview-panel__a4-body .preview-image-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.report-preview-panel__a4-body .preview-image-card__frame {
+  min-height: 80px;
+  max-height: 120px;
+}
+
+/* Responsive: geniş ekranda panel göster, darda gizle */
+@media (max-width: 1200px) {
+  .report-layout--panel-open {
+    grid-template-columns: 260px 1fr;
+  }
+
+  .report-preview-panel {
+    display: none;
+  }
+}

@@ -1,130 +1,201 @@
-# 🏗️ ZEMSIS
+# 🏗️ ZEMSIS — Zemin Sistemleri Tasarım ve Analiz Aracı
 
-Zemin Sistemleri Tasarım ve Analiz Aracı. React frontend ve Node.js/PostgreSQL backend mimarisi ile geliştirilmiş tam donanımlı bir mühendislik aracıdır.
+ZEMSIS, modern geoteknik mühendisliği hesaplamaları, CAD tabanlı etkileşimli çizim modülü, zemin profil analizi, dinamik rapor hazırlama editörü ve belediye onay/başvuru portalını tek bir çatı altında birleştiren, React frontend ve Node.js/PostgreSQL backend mimarisi üzerine kurulu tam donanımlı bir mühendislik ve denetim platformudur.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Node](https://img.shields.io/badge/node-v18%2B-brightgreen)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
 
-## 📋 Özellikler
+---
 
-- ✅ **Jet Grout Hesaplamaları**: Kolon geometrisi, tekil/grup taşıma kapasitesi ve oturma analizleri.
-- ✅ **Etkileşimli Çizim Modülü (PlanView)**: Zoom, pan, poligon çizimi, kesit hattı belirleme araçları.
-- ✅ **DXF Ayrıştırıcı (DxfParser)**: Gerçek dünya profesyonel CAD (.dxf) projelerinden çember ve poligon okuma/işleme.
-- ✅ **Gelişmiş Zemin ve Kesit Görünümü (SoilSectionPanel)**: Tek sayfada birleştirilmiş zemin tabakası yönetimi, kalınlık düzenleme ve detaylı Mohr-Coulomb parametreleri girişi.
-- ✅ **Undo/Redo Sistemi**: Çizim modülünde geri/ileri alma olanaklarıyla esnek çalışma (Ctrl+Z / Ctrl+Y).
-- ✅ **Kullanıcı Doğrulama ve Proje Yönetimi**: PostgreSQL entegrasyonu ile kullanıcı oluşturma, proje kaydetme/yükleme, geçmiş projeleri yönetme.
-- ✅ **Modern & Responsive Arayüz**: Dinamik araç çubukları, interaktif araç ipuçları (tooltips), Poppins/Inter font aileleriyle şık tipografi ve Glassmorphism dokunuşları.
+## 📋 Öne Çıkan Özellikler
 
-## 🚀 Kurulum
+### 1. 📊 Geoteknik & Jet Grout Analizleri
+* **Kolon Geometrisi & Alan Dağılımı**: Kolon çapı ($D$), yerleşim aralığı ($s$) ve zemin iyileştirme derinliğine ($H$) bağlı kolon alanı ($A_{jet}$) ve alan değiştirme oranları ($a$).
+* **Taşıma Kapasitesi & Oturma Analizi**: Tekil ve grup bazında taşıma kapasitesi, uç dirençleri ve çevre sürtünmeleri ($Q_s$, $Q_u$). Mohr-Coulomb parametreleri ile iyileştirilmiş zemin modülü ($E_{iyileştirilmiş}$) ve oturma ($s$) analizleri.
+* **Derinliğe Göre Gerilme Grafiği**: Zemin katmanları boyunca derinlikle değişen net gerilme ve taşıma kapasitesi kontrolünü gösteren dinamik grafikler (`StressChart`).
 
-### Gereksinimler
-- Node.js v18+
-- npm v9+
-- PostgreSQL
-- PostgreSQL için boş bir veritabanı (örn. `jet_grout_db`)
+### 2. ✏️ Etkileşimli Çizim Modülü (`PlanView`)
+* **Tasarım Paneli**: Zoom, pan, kılavuz çizgiler (grid), koordinat takibi ve dinamik jet-grout yerleşim araçları.
+* **Undo/Redo Sistemi**: Çizimler üzerinde tam kontrol sağlayan geri alma (Ctrl+Z) ve ileri alma (Ctrl+Y) mekanizması.
+* **Kesit Hattı Belirleme**: Zemin profil kesitini çıkarmak için çizim alanı üzerinden kesit çizgisi çekme aracı.
 
-### Backend Kurulumu
-```bash
-cd backend
-npm install
-```
-Backend kök dizininde bir `.env` dosyası oluşturarak PostgreSQL bağlantı bilgilerinizi ve JWT anahtarınızı ekleyin:
-```env
-PORT=3001
-DB_USER=postgres
-DB_HOST=localhost
-DB_NAME=jet_grout_db
-DB_PASSWORD=sifreniz
-DB_PORT=5432
-JWT_SECRET=gizli_anahtariniz
-```
+### 3. 📐 Gelişmiş Zemin & Kesit Görünümü (`SoilSectionPanel` & `CrossSectionView`)
+* **Çok Katmanlı Zemin Yapısı**: Kum, kil, silt ve kaya tabakalarının kalınlık, birim hacim ağırlık ($\gamma$), içsel sürtünme açısı ($\phi$), kohezyon ($c$), elastisite modülü ($E_s$) ve Poisson oranı ($\nu$) parametreleriyle eklenip yönetilmesi.
+* **Yeraltı Suyu Seviyesi**: Yeraltı su seviyesinin (YASS) derinliğe bağlı olarak ayarlanması ve efektif gerilme hesaplarının otomatik güncellenmesi.
+* **İnteraktif Kesit Çizimi**: Belirlenen kesit hattı boyunca zemin katmanlarını ve kolonları görselleştiren dinamik enkesit görünümü.
 
-### Frontend Kurulumu
-```bash
-cd frontend
-npm install
-```
+### 4. 📂 Profesyonel CAD Entegrasyonu (`DxfParser`)
+* **DXF Import**: Gerçek dünya AutoCAD ve benzeri CAD projelerinden (`.dxf` uzantılı) çember, poligon ve noktaları okuyarak koordinatları doğrudan platforma aktarma ve işleme kapasitesi.
 
-## 💻 Çalıştırma
+### 5. ✍️ Rapor Editörü & DOCX Rapor Oluşturucu (`ReportEditorPage` & `reports.js`)
+* **Zengin Rapor Taslak Editörü**: Giriş, Mevcut Zemin Araştırmaları, Depremsellik (TBDY-2018 ve AFAD verileri uyumlu), Önerilen Temel Sistemi gibi 12 ana bölümden oluşan detaylı rapor editörü.
+* **Blok Bazlı Zengin İçerik**: Rapor bölümlerine dinamik olarak alt başlıklar, paragraflar, özel resimler (görsel açıklamalarıyla) ve özel tablolar ekleyebilme.
+* **Kurumsal Word Raporu (.docx)**: Tek tıkla projenin hesaplama sonuçlarını, zemin tabakalarını, çizim görsellerini ve kullanıcı yorumlarını kurumsal antetli bir şablonda Microsoft Word belgesi olarak indirme.
 
-### Backend'i Başlat (Terminal 1)
-```bash
-cd backend
-npm run dev
-```
-Backend http://localhost:3001 adresinde çalışacaktır.
+### 6. 🏛️ Belediye Başvuru & Onay Portalı (`OfficerPortal` & `applications.js`)
+* **Proje Gönderimi**: Tasarlanan projelerin ilgili belediyelere (örn. Bursa Büyükşehir, Osmangazi, Nilüfer, Kestel) resmi onay için gönderilmesi.
+* **Yetkili Denetimi**: Belediye personellerinin (`municipal_officer` rolü), kendi bölgelerine gelen başvuruları görebildiği, projeyi salt-okunur (kilitli) modda detaylıca inceleyebildiği portal.
+* **Karar Mekanizması**: Projeyi onaylama veya eksiklikleri belirterek gerekçeli karar (ret notu) ile iade etme. Onaylanan veya bekleyen projelere ait resmi hesap raporunu doğrudan belediye panelinden indirebilme.
 
-### Frontend'i Başlat (Terminal 2)
-```bash
-cd frontend
-npm run dev
-```
-Frontend http://localhost:5173 adresinde çalışacaktır.
+---
 
-## 📊 Uygulanan Formüller
+## 🛠️ Teknolojik Altyapı
+
+* **Frontend**: React 19, Vite, Canvas API, CSS Variables, Modern Font Aileleri (Poppins & Inter).
+* **Backend**: Node.js, Express.js.
+* **Veritabanı**: PostgreSQL (Bağlantı havuzu `pg` pool, otomatik şema migrasyonları).
+* **Güvenlik**: JWT (JsonWebToken), şifreleme için `bcrypt` ve rol tabanlı yetkilendirme (mühendis/belediye görevlisi).
+* **Word Rapor Kütüphanesi**: `docx` kütüphanesi (Word şablonları, özel hizalanmış tablolar ve görsel gömmeler için).
+* **Konteynerleştirme**: Docker & Docker Compose.
+
+---
+
+## 🚀 Kurulum ve Çalıştırma
+
+Platformu çalıştırmak için yerel kurulumu veya Docker ile hızlı ayağa kaldırma yöntemini tercih edebilirsiniz.
+
+### Yöntem A: Docker Compose ile Hızlı Başlangıç (Önerilen)
+
+Sisteminizde Docker ve Docker Compose yüklü ise, tek bir komutla Frontend, Backend ve PostgreSQL veritabanını ayağa kaldırabilirsiniz:
+
+1. Proje kök dizininde terminali açın:
+   ```bash
+   docker-compose up --build
+   ```
+2. Servisler ayağa kalktıktan sonra tarayıcınızdan erişin:
+   - **Frontend**: [http://localhost:3000](http://localhost:3000)
+   - **Backend API**: [http://localhost:3001](http://localhost:3001)
+   - **PostgreSQL Veritabanı**: Local port `5433` üzerinden erişilebilir durumdadır.
+
+---
+
+### Yöntem B: Adım Adım Yerel Kurulum
+
+#### 1. Gereksinimler
+* Node.js v18 veya üzeri
+* npm v9 veya üzeri
+* PostgreSQL 15+ kurulu ve çalışır durumda olması
+
+#### 2. Veritabanı Hazırlığı
+PostgreSQL sunucunuzda boş bir veritabanı oluşturun (örneğin: `jet_grout_db`).
+
+#### 3. Backend Yapılandırması ve Başlatma
+1. `backend` klasörüne geçin ve bağımlılıkları yükleyin:
+   ```bash
+   cd backend
+   npm install
+   ```
+2. `backend` klasörü içinde `.env` dosyası oluşturun ve bilgileri düzenleyin:
+   ```env
+   PORT=3001
+   DB_USER=postgres
+   DB_HOST=localhost
+   DB_NAME=jet_grout_db
+   DB_PASSWORD=sifreniz
+   DB_PORT=5432
+   JWT_SECRET=gizli_jwt_anahtari_2026
+   ```
+3. Veritabanı migrasyonlarını çalıştırın ve API sunucusunu başlatın:
+   ```bash
+   npm run dev
+   ```
+   API sunucusu [http://localhost:3001](http://localhost:3001) adresinde çalışmaya başlayacak ve gerekli tabloları veritabanında otomatik olarak oluşturacaktır (`migrate.js` vasıtasıyla).
+
+#### 4. Frontend Yapılandırması ve Başlatma
+1. `frontend` klasörüne geçin ve bağımlılıkları yükleyin:
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+2. Frontend geliştirme sunucusunu başlatın:
+   ```bash
+   npm run dev
+   ```
+3. Arayüze [http://localhost:5173](http://localhost:5173) adresinden erişebilirsiniz.
+
+---
+
+## 📊 Uygulanan Mühendislik Formülleri
 
 ### Kolon Geometrisi
 | Formül | Açıklama |
-|--------|----------|
-| `Ajet = π·D²/4` | Jet-grout kolon alanı |
-| `a = Ajet/s²` | Alan değiştirme oranı |
+| :--- | :--- |
+| $A_{jet} = \frac{\pi \cdot D^2}{4}$ | Jet-grout kolon alanı ($m^2$) |
+| $a = \frac{A_{jet}}{s^2}$ | Kare yerleşim için alan değiştirme (iyileştirme) oranı |
 
-### Taşıma Kapasitesi
+### Taşıma Kapasitesi (Tekil ve Grup)
 | Formül | Açıklama |
-|--------|----------|
-| `Qs = α·cu·π·D·H` | Çevre sürtünme kapasitesi |
-| `Qu = Nc·cu·Ap` | Uç direnci |
-| `Qemn = Qu/γRsb + Qs/γRu` | Emniyetli kapasite |
+| :--- | :--- |
+| $Q_s = \alpha \cdot c_u \cdot \pi \cdot D \cdot H$ | Kolon çevre sürtünme taşıma kapasitesi ($kN$) |
+| $Q_u = N_c \cdot c_u \cdot A_p$ | Kolon uç direnci kapasitesi ($kN$) |
+| $Q_{emn} = \frac{Q_u}{\gamma_{Rsb}} + \frac{Q_s}{\gamma_{Ru}}$ | Taşıma kapasitesi emniyetli değeri ($kN$) |
 
-### Malzeme Parametreleri
+### Malzeme Tasarım Parametreleri
 | Formül | Açıklama |
-|--------|----------|
-| `σjet_tasarım = σjet/FS` | Tasarım basınç dayanımı |
-| `Ejg = 300·σjet_tasarım` | Elastisite modülü |
-| `cjet = σjet_tasarım × 0.4` | Kohezyon değeri |
+| :--- | :--- |
+| $\sigma_{jet\_tasarım} = \frac{\sigma_{jet}}{FS}$ | Jet-grout tasarımı basınç mukavemeti ($kPa$) |
+| $E_{jg} = 300 \cdot \sigma_{jet\_tasarım}$ | Jet-grout kolonu elastisite modülü ($kPa$) |
+| $c_{jet} = \sigma_{jet\_tasarım} \cdot 0.4$ | Jet-grout kolonu eşdeğer kohezyonu ($kPa$) |
 
-### İyileştirilmiş Zemin
+### İyileştirilmiş Zemin Özellikleri & Oturma
 | Formül | Açıklama |
-|--------|----------|
-| `cu_iyileştirilmiş = a·cjet + (1-a)·cu` | İyileştirilmiş kohezyon |
-| `E_iyileştirilmiş = Ejg·a + Es·(1-a)` | İyileştirilmiş modül |
-| `δ = qnet·L / E_iyileştirilmiş` | Oturma miktarı |
+| :--- | :--- |
+| $c_{u\_iyileştirilmiş} = a \cdot c_{jet} + (1-a) \cdot c_u$ | Eşdeğer iyileştirilmiş kohezyon dayanımı ($kPa$) |
+| $E_{iyileştirilmiş} = E_{jg} \cdot a + E_s \cdot (1-a)$ | Eşdeğer iyileştirilmiş zemin modülü ($kPa$) |
+| $\delta = \frac{q_{net} \cdot L}{E_{iyileştirilmiş}}$ | Jet-grout blok bölgesindeki elastik oturma miktarı ($m$) |
 
-## 📁 Proje Yapısı
+---
+
+## 📁 Proje Klasör Yapısı
 
 ```text
 Jet-Grout/
 ├── backend/
-│   ├── index.js           # Express API ve Auth sunucusu
-│   ├── calculations.js    # Geoteknik hesaplama fonksiyonları
+│   ├── index.js               # Express API sunucusu & endpoint tanımları
+│   ├── calculations.js        # Geoteknik, katman ve gerilme hesaplama motoru
+│   ├── auth.js                # JWT doğrulama ve kullanıcı yetkilendirme işlemleri
+│   ├── projects.js            # Proje oluşturma, okuma, güncelleme ve silme (CRUD)
+│   ├── reports.js             # Word (.docx) rapor şablonu oluşturma servisi
+│   ├── applications.js        # Belediye proje başvuruları ve onay süreçleri API'si
+│   ├── db.js                  # PostgreSQL havuz bağlantısı ve migrasyon yönetimi
+│   ├── migrate.js             # DB tabloları ilklendirme scripti
+│   ├── Dockerfile             # Backend imaj kurulum dosyası
 │   └── package.json
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx        # Ana React Router yapısı
-│   │   ├── App.css        # Global stiller (Poppins, Inter vb.)
-│   │   └── components/    # UI Bileşenleri (PlanView, SoilSectionPanel, vb.)
-│   ├── index.html
+│   │   ├── App.jsx            # Ana React Router ve uygulama iskeleti
+│   │   ├── App.css            # Global stiller ve Glassmorphism değişkenleri
+│   │   ├── index.css          # Temel sayfa sıfırlamaları
+│   │   ├── components/        # Yeniden kullanılabilir UI Bileşenleri
+│   │   │   ├── PlanView.jsx            # Canvas tabanlı interaktif yerleşim modülü
+│   │   │   ├── SoilSectionPanel.jsx    # Zemin katman editörü ve görsel arayüzü
+│   │   │   ├── CrossSectionView.jsx    # Zemin-kolon enkesit çizim paneli
+│   │   │   ├── ReportEditorPage.jsx    # Rapor taslak ve içerik düzenleme sayfası
+│   │   │   ├── OfficerPortal.jsx       # Belediye personeli başvuru yönetim portalı
+│   │   │   ├── AuthPage.jsx            # Giriş / Kayıt sayfası
+│   │   │   ├── Dashboard.jsx           # Projeler ve hızlı erişim ana sayfası
+│   │   │   └── StressChart.jsx         # Derinliğe bağlı gerilme değişim grafiği
+│   │   └── utils/
+│   ├── Dockerfile             # Nginx tabanlı frontend sunucu imajı
 │   └── package.json
 │
-└── README.md
+├── docker-compose.yml         # Frontend, Backend ve PostgreSQL orkestrasyonu
+└── README.md                  # Proje dokümantasyonu (Bu dosya)
 ```
 
-## 🛠️ Teknolojiler
-
-- **Frontend:** React 19, Vite, Canvas API
-- **Backend:** Node.js, Express
-- **Veritabanı & Güvenlik:** PostgreSQL, `pg`, `bcrypt`, `jsonwebtoken`
-- **Styling:** Vanilla CSS, CSS Variables, Modern Typography (Poppins & Inter)
+---
 
 ## 📜 Lisans
 
-MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+Bu proje **MIT Lisansı** ile lisanslanmıştır. Detaylı bilgi için proje kök dizinindeki `LICENSE` (varsa) dosyasını inceleyebilirsiniz.
 
 ## 👨‍💻 Geliştirici
 
 Fatih - 2026
 
 ---
+⭐ Projeyi beğendiyseniz yıldız vermeyi unutmayın!
 
-⭐ Bu proje faydalı olduysa yıldız vermeyi unutmayın!

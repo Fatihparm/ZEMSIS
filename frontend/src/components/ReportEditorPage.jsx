@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { API_URL } from '../config';
 import LockedDataTable from './LockedDataTable';
 import './ReportEditorPage.css';
@@ -10,7 +10,7 @@ import './ReportEditorPage.css';
 const SECTIONS = [
   {
     key: 'cover',
-    icon: '📋',
+    icon: 'cover',
     label: 'Kapak Bilgileri',
     type: 'cover',
     allowImages: false,
@@ -743,6 +743,8 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
   const [anchorCell, setAnchorCell] = useState(null);  // drag başlangıcı {r,c}
   const [dragCell, setDragCell]     = useState(null);  // drag sonu {r,c}
   const [isDragging, setIsDragging] = useState(false);
+  const [editingCell, setEditingCell] = useState(null); // {r,c} — çift tıkla düzenleme modu
+  const textareaRefs = useRef({});  // key: "r,c" → textarea DOM node
 
   const cells = tbl.cells.map(normalizeCell);
 
@@ -800,10 +802,31 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
   // Mouse drag seçim işleyicileri
   const handleMouseDown = (r, c, e) => {
     if (e.button !== 0) return;
+    // Eğer bu hücre zaten düzenleme modundaysa, tıklamayı textarea'ya bırak
+    if (editingCell?.r === r && editingCell?.c === c) return;
     e.preventDefault();
+    setEditingCell(null);  // başka hücre düzenleme modundan çık
     setAnchorCell({ r, c });
     setDragCell({ r, c });
     setIsDragging(true);
+  };
+
+  // Çift tıkla düzenleme moduna gir
+  const handleDoubleClick = (r, c) => {
+    setEditingCell({ r, c });
+    setAnchorCell({ r, c });
+    setDragCell({ r, c });
+    setIsDragging(false);
+    // Bir sonraki render döngüsünde textarea'ya focus ver
+    requestAnimationFrame(() => {
+      const ta = textareaRefs.current[`${r},${c}`];
+      if (ta) {
+        ta.focus();
+        // Cursor'u metnin sonuna taşı
+        const len = ta.value.length;
+        ta.setSelectionRange(len, len);
+      }
+    });
   };
 
   const handleMouseEnter = (r, c) => {
@@ -903,7 +926,7 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
                     outlineOffset: inSel ? '-2px' : undefined,
                     cursor: 'cell',
                   };
-                  return (
+                   return (
                     <td
                       key={c}
                       colSpan={colspan > 1 ? colspan : undefined}
@@ -911,18 +934,24 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
                       style={tdStyle}
                       onMouseDown={(e) => handleMouseDown(cr, c, e)}
                       onMouseEnter={() => handleMouseEnter(cr, c)}
+                      onDoubleClick={() => handleDoubleClick(cr, c)}
                     >
                       <textarea
+                        ref={el => { textareaRefs.current[`${cr},${c}`] = el; }}
                         className={`table-cell-input${cell.bold ? ' table-cell-input--bold' : ''}${cell.align !== 'left' ? ` table-cell-input--${cell.align}` : ''}`}
                         value={cell.text}
+                        readOnly={!(editingCell?.r === cr && editingCell?.c === c)}
                         onChange={e => handleCellUpdate(cr, c, { text: e.target.value })}
                         onFocus={() => { setAnchorCell({ r: cr, c }); setDragCell({ r: cr, c }); }}
+                        onBlur={() => setEditingCell(null)}
                         rows={1}
                         style={{
                           fontWeight: cell.bold ? '700' : undefined,
                           textAlign: cell.align || 'left',
                           background: 'transparent',
-                          cursor: 'text',
+                          cursor: (editingCell?.r === cr && editingCell?.c === c) ? 'text' : 'cell',
+                          pointerEvents: (editingCell?.r === cr && editingCell?.c === c) ? 'auto' : 'none',
+                          userSelect: (editingCell?.r === cr && editingCell?.c === c) ? 'text' : 'none',
                         }}
                       />
                     </td>
@@ -935,9 +964,11 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
       </div>
       {anchorCell && (
         <p className="table-card__hint">
-          {selectedCount > 1
-            ? `✦ ${selectedCount} hücre seçili — Toolbar'dan biçimlendirin veya ⊞ Birleştir ile tek hücre yapın`
-            : `💡 Seçili: Satır ${anchorCell.r + 1}, Sütun ${anchorCell.c + 1} — Sürükleyerek birden fazla hücre seçebilirsiniz`
+          {editingCell
+            ? `✏️ Düzenleme modu — Satır ${editingCell.r + 1}, Sütun ${editingCell.c + 1} — Çıkmak için hücre dışına tıklayın`
+            : selectedCount > 1
+              ? `✦ ${selectedCount} hücre seçili — Toolbar'dan biçimlendirin veya ⊞ Birleştir ile tek hücre yapın`
+              : `💡 Seçili: Satır ${anchorCell.r + 1}, Sütun ${anchorCell.c + 1} — Sürükle: çoklu seç • Çift tıkla: yazı yaz`
           }
         </p>
       )}
@@ -1141,7 +1172,7 @@ function ReportEditorPage({
   const [sections, setSections] = useState({});
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [generating, setGenerating] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false); // sağ panel açık/kapalı
   // tableModalState: null | { sectionKey, tableId (null=new), rows, cols }
   const [tableModalState, setTableModalState] = useState(null);
   // Daraltılmış ana bölümler (section key'lerin Set'i)
@@ -1155,24 +1186,32 @@ function ReportEditorPage({
   });
   const previewLogoSrc = getPreviewLogoSrc(sections);
 
+  // Escape ile paneli kapat
   useEffect(() => {
     if (!previewOpen) return undefined;
-
     const onKeyDown = event => {
-      if (event.key === 'Escape') {
-        setPreviewOpen(false);
-      }
+      if (event.key === 'Escape') setPreviewOpen(false);
     };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-    };
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [previewOpen]);
+
+  // Aktif bölümün önizleme verisini hesapla (panel için)
+  const activeSec = useMemo(() => SECTIONS.find(s => s.key === activeSection), [activeSection]);
+  const activePreviewEntry = useMemo(() => {
+    if (!activeSec) return null;
+    return {
+      ...activeSec,
+      text: (sections[activeSec.key] ?? sectionDefaults[activeSec.key] ?? '').toString(),
+      blocks: Array.isArray(sections[getSectionBlocksKey(activeSec.key)])
+        ? sections[getSectionBlocksKey(activeSec.key)]
+        : null,
+      images: getPreviewImages(sections, activeSec.key),
+      tables: Array.isArray(sections[getSectionTableKey(activeSec.key)])
+        ? sections[getSectionTableKey(activeSec.key)]
+        : [],
+    };
+  }, [activeSec, sections, sectionDefaults]);
 
   const updateSectionImages = useCallback((sectionKey, updater) => {
     setSections(prev => {
@@ -1455,33 +1494,6 @@ function ReportEditorPage({
   };
 
   // ── Aktif bölümü render et ────────────────────────────────────
-  const previewSectionEntries = SECTIONS.filter(sec => sec.type !== 'cover').map(sec => ({
-    ...sec,
-    text: (sections[sec.key] ?? sectionDefaults[sec.key] ?? '').toString(),
-    blocks: Array.isArray(sections[getSectionBlocksKey(sec.key)])
-      ? sections[getSectionBlocksKey(sec.key)]
-      : null,
-    images: getPreviewImages(sections, sec.key),
-    tables: Array.isArray(sections[getSectionTableKey(sec.key)]) ? sections[getSectionTableKey(sec.key)] : [],
-  }));
-
-  const previewTableRows = buildPreviewTableRows({ sections, sectionDefaults, parameters, results });
-  const previewFigureRows = buildPreviewFigureRows({ sections, sectionDefaults });
-
-  // Kullanıcı tanımlı tabloları önizleme tablolar listesine ekle
-  const userTableRows = [];
-  const sectionOrderForTables = SECTIONS.filter(s => s.allowImages || s.key === '_results');
-  for (const sec of sectionOrderForTables) {
-    const tbls = Array.isArray(sections[getSectionTableKey(sec.key)]) ? sections[getSectionTableKey(sec.key)] : [];
-    tbls.forEach((tbl, idx) => {
-      const captionNum = getTableCaptionNumber(sec.key, idx);
-      userTableRows.push({
-        section: sec.key,
-        label: `Tablo ${captionNum}. ${tbl.name || 'İsimsiz Tablo'}`,
-      });
-    });
-  }
-
   const renderPreviewSectionBody = (sec, text, images, tables = [], blocks = null) => {
     // Ortak tablo ve görsel render yardımcıları
     const renderTables = () => tables.length > 0 && tables.map((tbl, tblIdx) => {
@@ -1647,7 +1659,8 @@ function ReportEditorPage({
       return (
         <div className="cover-form">
           <p className="section-desc">
-            📄 Bu bilgiler raporun kapak sayfasında görünecektir.
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Bu bilgiler raporun kapak sayfasında görünecektir.
           </p>
           <div className="cover-grid">
             {COVER_FIELDS.map(f => (
@@ -1745,7 +1758,8 @@ function ReportEditorPage({
                 </div>
                 <div className="media-actions-group">
                   <label className="image-upload-button">
-                    📷 Görsel Ekle
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Görsel Ekle
                     <input
                       type="file"
                       accept="image/*"
@@ -1846,7 +1860,8 @@ function ReportEditorPage({
                 </div>
                 <div className="media-actions-group">
                   <label className="image-upload-button">
-                    📷 Görsel Ekle
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Görsel Ekle
                     <input
                       type="file"
                       accept="image/*"
@@ -1931,9 +1946,21 @@ function ReportEditorPage({
 
   const saveStatusLabel = {
     idle: '',
-    saving: '💾 Kaydediliyor...',
-    saved: '✅ Taslak kaydedildi',
-    error: '❌ Kayıt hatası',
+    saving: 'Kaydediliyor...',
+    saved: 'Taslak kaydedildi',
+    error: 'Kayıt hatası',
+  }[saveStatus];
+  const saveStatusIcon = {
+    idle: null,
+    saving: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    ),
+    saved: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    ),
+    error: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    ),
   }[saveStatus];
 
   return (
@@ -1941,13 +1968,17 @@ function ReportEditorPage({
       {/* ── Top Bar ── */}
       <div className="report-top-bar">
         <div className="report-title-group">
-          <h2>📄 Rapor Editörü</h2>
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Rapor Editörü
+          </h2>
           {projectName && <span className="report-project-tag">{projectName}</span>}
         </div>
 
         <div className="report-actions">
           {saveStatus !== 'idle' && (
             <span className={`save-status save-status--${saveStatus}`}>
+              {saveStatusIcon}
               {saveStatusLabel}
             </span>
           )}
@@ -1956,14 +1987,16 @@ function ReportEditorPage({
             onClick={handleManualSave}
             disabled={!projectId || saveStatus === 'saving'}
           >
-            💾 Taslak Kaydet
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Taslak Kaydet
           </button>
           <button
-            className="btn-preview"
+            className={`btn-preview${previewOpen ? ' btn-preview--active' : ''}`}
             type="button"
-            onClick={() => setPreviewOpen(true)}
+            onClick={() => setPreviewOpen(v => !v)}
           >
-            👁️ Önizleme
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Önizleme
           </button>
           <button
             className="btn-generate"
@@ -1974,123 +2007,16 @@ function ReportEditorPage({
             {generating ? (
               <><span className="spinner" /> Oluşturuluyor...</>
             ) : (
-              '⬇️ Word Raporu İndir'
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Word Raporu İndir
+              </>
             )}
           </button>
         </div>
       </div>
 
-      {previewOpen && (
-        <div className="preview-modal-backdrop" onClick={() => setPreviewOpen(false)}>
-          <div className="preview-modal" onClick={e => e.stopPropagation()}>
-            <div className="preview-modal__toolbar">
-              <div>
-                <p className="preview-modal__eyebrow">HTML tabanlı rapor önizlemesi</p>
-                <h3>Word dosyası oluşturmadan raporu görüntüle</h3>
-              </div>
-              <button
-                type="button"
-                className="preview-modal__close"
-                onClick={() => setPreviewOpen(false)}
-              >
-                Kapat
-              </button>
-            </div>
-
-            <div className="preview-modal__content">
-              <PreviewPage
-                className="preview-page--cover"
-                title="Kapak Önizleme"
-                subtitle="Rapor başlangıç sayfası"
-                logoSrc={previewLogoSrc}
-                dateStr={previewDateStr}
-              >
-                <div className="preview-cover">
-                  <div className="preview-cover__logo">
-                    <img src={previewLogoSrc} alt="Logo" />
-                  </div>
-                  <div className="preview-cover__content">
-                    <p className="preview-cover__eyebrow">PROJE RAPORU</p>
-                    <h2>{sectionDefaults.projectName}</h2>
-                    <dl className="preview-cover__grid">
-                      {COVER_FIELDS.filter(field => field.key !== 'projectName').map(field => (
-                        <div key={field.key}>
-                          <dt>{field.label}</dt>
-                          <dd>{String(sections[field.key] ?? sectionDefaults[field.key] ?? '—').trim() || '—'}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                </div>
-              </PreviewPage>
-
-              <PreviewPage
-                title="İçindekiler"
-                subtitle="Rapor bölüm sıralaması"
-                logoSrc={previewLogoSrc}
-                dateStr={previewDateStr}
-              >
-                <ul className="preview-list">
-                  {SECTIONS.filter(sec => sec.key !== 'cover').map(sec => (
-                    <li key={sec.key}>
-                      <span>{sec.label}</span>
-                      <span>{sec.type === 'locked' ? 'Sistem verisi' : 'Düzenlenebilir metin'}</span>
-                    </li>
-                  ))}
-                </ul>
-              </PreviewPage>
-
-              <PreviewPage
-                title="Tablolar Listesi"
-                subtitle="Oluşturulan tablo başlıkları"
-                logoSrc={previewLogoSrc}
-                dateStr={previewDateStr}
-              >
-                <div className="preview-catalog">
-                  {[...previewTableRows, ...userTableRows].length > 0 ? [...previewTableRows, ...userTableRows].map((item, i) => (
-                    <div className="preview-catalog__item" key={`${item.section}-${item.label}-${i}`}>
-                      <span>{item.label}</span>
-                      <small>{SECTIONS.find(sec => sec.key === item.section)?.label || item.section}</small>
-                    </div>
-                  )) : (
-                    <p className="preview-paragraph preview-paragraph--empty">Bu önizlemede tablo yok.</p>
-                  )}
-                </div>
-              </PreviewPage>
-
-              <PreviewPage
-                title="Şekiller Listesi"
-                subtitle="Görsel ve çizim başlıkları"
-                logoSrc={previewLogoSrc}
-                dateStr={previewDateStr}
-              >
-                <div className="preview-catalog">
-                  {previewFigureRows.length > 0 ? previewFigureRows.map(item => (
-                    <div className="preview-catalog__item" key={`${item.section}-${item.label}`}>
-                      <span>{item.label}</span>
-                      <small>{SECTIONS.find(sec => sec.key === item.section)?.label || item.section}</small>
-                    </div>
-                  )) : (
-                    <p className="preview-paragraph preview-paragraph--empty">Bu önizlemede şekil yok.</p>
-                  )}
-                </div>
-              </PreviewPage>
-
-              {previewSectionEntries.map(sec => (
-                <PreviewPage
-                  key={sec.key}
-                  title={sec.label}
-                  subtitle={`Bölüm ${sec.number || ''}`.trim()}
-                  logoSrc={previewLogoSrc}
-                  dateStr={previewDateStr}
-                >
-                  {renderPreviewSectionBody(sec, sec.text, sec.images, sec.tables, sec.blocks)}
-                </PreviewPage>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal önizleme kaldırıldı — yerine sağ panel kullanılıyor */}
 
       {/* ── Tablo Ekleme Modalı ── */}
       {tableModalState && (
@@ -2176,19 +2102,21 @@ function ReportEditorPage({
       {/* ── Uyarılar ── */}
       {noProject && (
         <div className="report-alert report-alert--warn">
-          ⚠️ Projeyi kaydetmeden taslak kaydedilemez ve rapor oluşturulamaz.
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Projeyi kaydetmeden taslak kaydedilemez ve rapor oluşturulamaz.
           Lütfen önce projeyi kaydedin.
         </div>
       )}
       {noResults && (
         <div className="report-alert report-alert--warn">
-          ⚠️ Hesaplama sonuçları bulunamadı. Kilitli veriler raporda boş görünecek.
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Hesaplama sonuçları bulunamadı. Kilitli veriler raporda boş görünecek.
           Lütfen "Parametreler" sekmesinde hesaplama yapın.
         </div>
       )}
 
       {/* ── Ana İçerik ── */}
-      <div className="report-layout">
+      <div className={`report-layout${previewOpen ? ' report-layout--panel-open' : ''}`}>
         {/* Sol: Bölüm Navigasyonu */}
         <nav className="report-nav">
           <p className="report-nav-label">RAPOR BÖLÜMLERİ</p>
@@ -2202,12 +2130,31 @@ function ReportEditorPage({
               `}
               onClick={() => setActiveSection(sec.key)}
             >
-              <span className="nav-num">{sec.icon}</span>
+              <span className="nav-num">
+                {sec.icon === 'cover' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                ) : sec.icon}
+              </span>
               <div className="nav-text">
                 <span className="nav-label">{sec.label}</span>
-                {sec.type === 'locked' && <span className="nav-badge locked">🔒 Kilitli</span>}
-                {sec.type === 'wysiwyg' && <span className="nav-badge editable">✏️ Düzenle</span>}
-                {sec.type === 'cover' && <span className="nav-badge cover">📋 Form</span>}
+                {sec.type === 'locked' && (
+                  <span className="nav-badge locked">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Kilitli
+                  </span>
+                )}
+                {sec.type === 'wysiwyg' && (
+                  <span className="nav-badge editable">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Düzenle
+                  </span>
+                )}
+                {sec.type === 'cover' && (
+                  <span className="nav-badge cover">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Form
+                  </span>
+                )}
               </div>
             </button>
           ))}
@@ -2266,13 +2213,22 @@ function ReportEditorPage({
                   )}
                   <h3>{sec.label}</h3>
                   {sec.type === 'wysiwyg' && (
-                    <div className="section-type-badge editable">✏️ Kullanıcı Girişi</div>
+                    <div className="section-type-badge editable">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Kullanıcı Girişi
+                    </div>
                   )}
                   {sec.type === 'locked' && (
-                    <div className="section-type-badge locked">🔒 Sistem Verisi — Salt Okunur</div>
+                    <div className="section-type-badge locked">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Sistem Verisi — Salt Okunur
+                    </div>
                   )}
                   {sec.type === 'cover' && (
-                    <div className="section-type-badge cover">📋 Kapak Formu</div>
+                    <div className="section-type-badge cover">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      Kapak Formu
+                    </div>
                   )}
                 </>
               );
@@ -2283,6 +2239,90 @@ function ReportEditorPage({
             {renderSectionContent()}
           </div>
         </main>
+
+        {/* ── Sağ: Dinamik Önizleme Paneli ── */}
+        {previewOpen && (
+          <aside className="report-preview-panel">
+            <div className="report-preview-panel__header">
+              <div className="report-preview-panel__header-left">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Aktif Bölüm Önizleme</span>
+              </div>
+              <button
+                type="button"
+                className="report-preview-panel__close"
+                onClick={() => setPreviewOpen(false)}
+                title="Önizlemeyi kapat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div className="report-preview-panel__scroll">
+              {/* Aktif bölümün A4 mini sayfası */}
+              {activePreviewEntry && (
+                <div className="report-preview-panel__a4">
+                  {/* A4 Üst bilgi */}
+                  <div className="report-preview-panel__a4-topbar">
+                    <img src={previewLogoSrc} alt="Logo" className="report-preview-panel__a4-logo" />
+                    <span className="report-preview-panel__a4-title">
+                      {activePreviewEntry.type === 'cover' ? sectionDefaults.projectName : activePreviewEntry.label}
+                    </span>
+                  </div>
+
+                  {/* Ayırıcı çizgi */}
+                  <div className="report-preview-panel__a4-divider" />
+
+                  {/* İçerik */}
+                  <div className="report-preview-panel__a4-body preview-page__body">
+                    {activePreviewEntry.type === 'cover' ? (
+                      // Kapak önizleme
+                      <div className="panel-cover">
+                        <div className="panel-cover__logo-wrap">
+                          <img src={previewLogoSrc} alt="Logo" className="panel-cover__logo" />
+                        </div>
+                        <p className="panel-cover__eyebrow">PROJE RAPORU</p>
+                        <h2 className="panel-cover__title">{sectionDefaults.projectName || '—'}</h2>
+                        <dl className="panel-cover__fields">
+                          {COVER_FIELDS.filter(f => f.key !== 'projectName').map(f => {
+                            const val = String(sections[f.key] ?? sectionDefaults[f.key] ?? '').trim();
+                            if (!val) return null;
+                            return (
+                              <div key={f.key} className="panel-cover__field">
+                                <dt>{f.label}</dt>
+                                <dd>{val}</dd>
+                              </div>
+                            );
+                          })}
+                        </dl>
+                      </div>
+                    ) : (
+                      // Normal bölüm önizleme
+                      <>
+                        {activePreviewEntry.type !== 'locked' && (
+                          <h3 className="panel-section__heading">{activePreviewEntry.label}</h3>
+                        )}
+                        {renderPreviewSectionBody(
+                          activePreviewEntry,
+                          activePreviewEntry.text,
+                          activePreviewEntry.images,
+                          activePreviewEntry.tables,
+                          activePreviewEntry.blocks
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* A4 Alt bilgi */}
+                  <div className="report-preview-panel__a4-footer">
+                    <img src={previewLogoSrc} alt="Logo" className="report-preview-panel__a4-footer-logo" />
+                    <span>{previewDateStr}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );
