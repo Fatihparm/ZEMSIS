@@ -352,8 +352,16 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
         ctx.setLineDash([]);
 
         // ── Jet Grout Columns along section ──
-        const colTopY = yScale(0);  // starts at ground surface
+        // Kolon tepesi: temel varsa temel tabanından (zemin yüzeyinde), yoksa tam zemin yüzeyinden başlar.
+        // Her halükarda kolonlar zemin yüzeyinin ÜSTÜNE taşamaz — clipping ile sınırlandırılır.
+        const colTopY = surfaceY;  // kolonlar zemin yüzeyinden başlar
         const colHeight = hScale(H);
+
+        // Kolonları zemin yüzeyi altıyla sınırlandır (taşmayı önle)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(offsetX, surfaceY, chartW, offsetY + chartH - surfaceY);
+        ctx.clip();
 
         sectionCols.forEach((col) => {
             const colCenterX = xScale(col.t);
@@ -409,6 +417,9 @@ function SectionCutView({ sectionLine, columns, parameters, soilLayers, lang, se
                 ctx.stroke();
             }
         });
+
+        // Clipping bölgesini geri al
+        ctx.restore();
 
         // ── Dimension line: D on first column ──
         if (sectionCols.length > 0) {

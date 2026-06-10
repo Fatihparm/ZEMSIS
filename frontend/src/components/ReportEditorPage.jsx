@@ -440,6 +440,7 @@ function normalizeCell(cell) {
       colspan: 1,
       rowspan: 1,
       borders: { top: true, bottom: true, left: true, right: true },
+      _hidden: false,
     };
   }
   return {
@@ -450,11 +451,12 @@ function normalizeCell(cell) {
     colspan: cell.colspan ?? 1,
     rowspan: cell.rowspan ?? 1,
     borders: {
-      top: cell.borders?.top ?? true,
+      top:    cell.borders?.top    ?? true,
       bottom: cell.borders?.bottom ?? true,
-      left: cell.borders?.left ?? true,
-      right: cell.borders?.right ?? true,
+      left:   cell.borders?.left   ?? true,
+      right:  cell.borders?.right  ?? true,
     },
+    _hidden: cell._hidden ?? false,
   };
 }
 
@@ -467,6 +469,7 @@ function createEmptyCell() {
     colspan: 1,
     rowspan: 1,
     borders: { top: true, bottom: true, left: true, right: true },
+    _hidden: false,
   };
 }
 
@@ -583,22 +586,32 @@ const CELL_BG_COLORS = [
   { label: 'Lacivert', value: '#1E3A5F' },
 ];
 
-// ── CellToolbar bileşeni ──────────────────────────────────────
-function CellToolbar({ cell, onUpdate, onClose }) {
+// ── CellToolbar bileşeni (tek & çoklu seçim) ───────────────────
+function CellToolbar({ cell, selectedCount, onUpdate, onBulkUpdate, onMergeCells, onClose }) {
   const c = normalizeCell(cell);
+  const isMulti = selectedCount > 1;
 
   const toggleBorder = (side) => {
-    onUpdate({ borders: { ...c.borders, [side]: !c.borders[side] } });
+    if (isMulti) {
+      onBulkUpdate({ borders: { top: true, bottom: true, left: true, right: true, [side]: !c.borders[side] } });
+    } else {
+      onUpdate({ borders: { ...c.borders, [side]: !c.borders[side] } });
+    }
   };
 
   return (
     <div className="cell-toolbar" onMouseDown={e => e.preventDefault()}>
+      {/* Çoklu seçim badge */}
+      {isMulti && (
+        <span className="cell-tb-multi-badge">{selectedCount} hücre</span>
+      )}
+
       {/* Kalın */}
       <button
         type="button"
         className={`cell-tb-btn${c.bold ? ' cell-tb-btn--active' : ''}`}
         title="Kalın"
-        onClick={() => onUpdate({ bold: !c.bold })}
+        onClick={() => isMulti ? onBulkUpdate({ bold: !c.bold }) : onUpdate({ bold: !c.bold })}
       >
         <strong>B</strong>
       </button>
@@ -616,7 +629,7 @@ function CellToolbar({ cell, onUpdate, onClose }) {
           type="button"
           className={`cell-tb-btn${c.align === a ? ' cell-tb-btn--active' : ''}`}
           title={title}
-          onClick={() => onUpdate({ align: a })}
+          onClick={() => isMulti ? onBulkUpdate({ align: a }) : onUpdate({ align: a })}
         >
           {icon}
         </button>
@@ -624,33 +637,49 @@ function CellToolbar({ cell, onUpdate, onClose }) {
 
       <div className="cell-tb-sep" />
 
-      {/* Sütun birleştirme (Colspan) */}
-      <label className="cell-tb-label" title="Sütun Birleştirme (Colspan)">
-        <span>⟷</span>
-        <input
-          type="number"
-          className="cell-tb-number"
-          min={1}
-          max={10}
-          value={c.colspan}
-          onChange={e => onUpdate({ colspan: Math.max(1, Math.min(10, Number(e.target.value))) })}
-        />
-      </label>
+      {/* Hücre Birleştir — sadece çoklu seçimde */}
+      {isMulti && (
+        <>
+          <button
+            type="button"
+            className="cell-tb-btn cell-tb-btn--merge"
+            title="Seçili hücreleri birleştir"
+            onClick={onMergeCells}
+          >
+            ⊞ Birleştir
+          </button>
+          <div className="cell-tb-sep" />
+        </>
+      )}
 
-      {/* Satır birleştirme (Rowspan) */}
-      <label className="cell-tb-label" title="Satır Birleştirme (Rowspan)">
-        <span>↕</span>
-        <input
-          type="number"
-          className="cell-tb-number"
-          min={1}
-          max={20}
-          value={c.rowspan}
-          onChange={e => onUpdate({ rowspan: Math.max(1, Math.min(20, Number(e.target.value))) })}
-        />
-      </label>
-
-      <div className="cell-tb-sep" />
+      {/* Tek hücre: colspan + rowspan */}
+      {!isMulti && (
+        <>
+          <label className="cell-tb-label" title="Sütun Birleştirme (Colspan)">
+            <span>⟷</span>
+            <input
+              type="number"
+              className="cell-tb-number"
+              min={1}
+              max={10}
+              value={c.colspan}
+              onChange={e => onUpdate({ colspan: Math.max(1, Math.min(10, Number(e.target.value))) })}
+            />
+          </label>
+          <label className="cell-tb-label" title="Satır Birleştirme (Rowspan)">
+            <span>↕</span>
+            <input
+              type="number"
+              className="cell-tb-number"
+              min={1}
+              max={20}
+              value={c.rowspan}
+              onChange={e => onUpdate({ rowspan: Math.max(1, Math.min(20, Number(e.target.value))) })}
+            />
+          </label>
+          <div className="cell-tb-sep" />
+        </>
+      )}
 
       {/* Kenarlar */}
       <span className="cell-tb-label-text">Kenar:</span>
@@ -683,7 +712,7 @@ function CellToolbar({ cell, onUpdate, onClose }) {
             className={`cell-tb-color${c.bg === value ? ' cell-tb-color--active' : ''}`}
             title={label}
             style={{ background: value || '#fff', border: value === '' ? '1px dashed #94a3b8' : undefined }}
-            onClick={() => onUpdate({ bg: value })}
+            onClick={() => isMulti ? onBulkUpdate({ bg: value }) : onUpdate({ bg: value })}
           >
             {value === '' && <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>∅</span>}
           </button>
@@ -695,66 +724,127 @@ function CellToolbar({ cell, onUpdate, onClose }) {
   );
 }
 
+// ── Yardımcı: seçim dikdörtgenindeki tüm {r,c} çiftlerini döndür
+function getSelectionRect(anchor, drag) {
+  if (!anchor || !drag) return new Set();
+  const r0 = Math.min(anchor.r, drag.r);
+  const r1 = Math.max(anchor.r, drag.r);
+  const c0 = Math.min(anchor.c, drag.c);
+  const c1 = Math.max(anchor.c, drag.c);
+  const set = new Set();
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1; c++)
+      set.add(`${r},${c}`);
+  return { set, r0, r1, c0, c1 };
+}
+
 // ── TableCardEditor bileşeni ──────────────────────────────────
-function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemove, onUpdateCell }) {
-  const [selectedCell, setSelectedCell] = useState(null); // { r, c }
+function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemove, onUpdateCell, onBulkUpdateCells, onMergeCells }) {
+  const [anchorCell, setAnchorCell] = useState(null);  // drag başlangıcı {r,c}
+  const [dragCell, setDragCell]     = useState(null);  // drag sonu {r,c}
+  const [isDragging, setIsDragging] = useState(false);
 
   const cells = tbl.cells.map(normalizeCell);
+
+  // Seçili hücre kümesi (anchor → drag dikdörtgeni)
+  const selRect = getSelectionRect(anchorCell, dragCell);
+  const selSet  = selRect.set || new Set();
+  const isInSelection = (r, c) => selSet.has(`${r},${c}`);
+  const selectedCount  = selSet.size;
+
+  // Toolbar için anchor hücre datası
+  const anchorCellData = anchorCell ? cells[anchorCell.r * tbl.cols + anchorCell.c] : null;
 
   const handleCellUpdate = (r, c, patch) => {
     onUpdateCell(r * tbl.cols + c, patch);
   };
 
-  const selectedCellData = selectedCell
-    ? cells[selectedCell.r * tbl.cols + selectedCell.c]
-    : null;
+  // Seçili tüm hücrelere toplu güncelleme
+  const handleBulkUpdate = (patch) => {
+    const indices = [];
+    selSet.forEach(key => {
+      const [r, c] = key.split(',').map(Number);
+      indices.push(r * tbl.cols + c);
+    });
+    onBulkUpdateCells(indices, patch);
+  };
+
+  // Seçili dikdörtgeni gerçekten birleştir
+  const handleMerge = () => {
+    if (!selRect || selRect.set.size < 2) return;
+    const { r0, r1, c0, c1 } = selRect;
+    const combinedText = [];
+    for (let r = r0; r <= r1; r++)
+      for (let c = c0; c <= c1; c++) {
+        const t = cells[r * tbl.cols + c]?.text?.trim();
+        if (t) combinedText.push(t);
+      }
+    const mergedText = combinedText.join(' ');
+    const spanR = r1 - r0 + 1;
+    const spanC = c1 - c0 + 1;
+    const patchMap = {};
+    for (let r = r0; r <= r1; r++)
+      for (let c = c0; c <= c1; c++) {
+        const i = r * tbl.cols + c;
+        if (r === r0 && c === c0) {
+          patchMap[i] = { text: mergedText, colspan: spanC, rowspan: spanR, align: 'center', _hidden: false };
+        } else {
+          patchMap[i] = { text: '', colspan: 1, rowspan: 1, _hidden: true };
+        }
+      }
+    onMergeCells(patchMap);
+    setAnchorCell({ r: r0, c: c0 });
+    setDragCell({ r: r0, c: c0 });
+  };
+
+  // Mouse drag seçim işleyicileri
+  const handleMouseDown = (r, c, e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    setAnchorCell({ r, c });
+    setDragCell({ r, c });
+    setIsDragging(true);
+  };
+
+  const handleMouseEnter = (r, c) => {
+    if (isDragging) setDragCell({ r, c });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
 
   // colspan + rowspan render: 2D "occupied" haritası
-  // occupied: "r,c" → o hücreyi kaplayan asıl hücrenin konumu { r, c }
   const occupied = new Map();
   const renderRows = Array.from({ length: tbl.rows }, (_, r) => {
     const rowCells = [];
     let c = 0;
     while (c < tbl.cols) {
-      // Bu pozisyon başka bir hücre tarafından kaplanmış mı?
       if (occupied.has(`${r},${c}`)) { c++; continue; }
-
       const cell = cells[r * tbl.cols + c];
+      // _hidden hücreler render edilmez (birleştirme sonrası gizlenen)
+      if (cell._hidden) { c++; continue; }
       const colspan = Math.min(Math.max(1, cell.colspan || 1), tbl.cols - c);
       const rowspan = Math.min(Math.max(1, cell.rowspan || 1), tbl.rows - r);
-
-      // Kaplanan tüm (dr, dc) pozisyonları işaretle
-      for (let dr = 0; dr < rowspan; dr++) {
-        for (let dc = 0; dc < colspan; dc++) {
-          if (dr === 0 && dc === 0) continue; // asıl hücre
-          occupied.set(`${r + dr},${c + dc}`, { r, c });
-        }
-      }
-
-      rowCells.push({ r, c, cell, colspan, rowspan, idx: r * tbl.cols + c });
+      for (let dr = 0; dr < rowspan; dr++)
+        for (let dc = 0; dc < colspan; dc++)
+          if (!(dr === 0 && dc === 0)) occupied.set(`${r + dr},${c + dc}`, { r, c });
+      rowCells.push({ r, c, cell, colspan, rowspan });
       c += colspan;
     }
     return rowCells;
   });
 
-
-  const bgColor = (bg) => {
-    if (!bg) return undefined;
-    return bg;
-  };
-
   const borderStyle = (borders) => {
     const b = borders || { top: true, bottom: true, left: true, right: true };
     return {
-      borderTop: b.top ? undefined : '1px solid transparent',
+      borderTop:    b.top    ? undefined : '1px solid transparent',
       borderBottom: b.bottom ? undefined : '1px solid transparent',
-      borderLeft: b.left ? undefined : '1px solid transparent',
-      borderRight: b.right ? undefined : '1px solid transparent',
+      borderLeft:   b.left   ? undefined : '1px solid transparent',
+      borderRight:  b.right  ? undefined : '1px solid transparent',
     };
   };
 
   return (
-    <div className="table-card">
+    <div className="table-card" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
       <div className="table-card__header">
         <span className="table-card__caption-num">Tablo {getTableCaptionNumber(sectionKey, idx)}</span>
         <input
@@ -780,36 +870,38 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
             onChange={e => onResize(tbl.rows, Math.max(1, Math.min(10, Number(e.target.value))))}
           />
         </div>
-        <button
-          type="button"
-          className="image-remove-btn"
-          onClick={onRemove}
-        >
+        <button type="button" className="image-remove-btn" onClick={onRemove}>
           Kaldır
         </button>
       </div>
 
-      {/* Araç Çubuğu */}
-      {selectedCell && selectedCellData && (
+      {/* Araç Çubuğu — seçim varsa göster */}
+      {anchorCell && anchorCellData && (
         <CellToolbar
-          cell={selectedCellData}
-          onUpdate={(patch) => handleCellUpdate(selectedCell.r, selectedCell.c, patch)}
-          onClose={() => setSelectedCell(null)}
+          cell={anchorCellData}
+          selectedCount={selectedCount}
+          onUpdate={(patch) => handleCellUpdate(anchorCell.r, anchorCell.c, patch)}
+          onBulkUpdate={handleBulkUpdate}
+          onMergeCells={handleMerge}
+          onClose={() => { setAnchorCell(null); setDragCell(null); }}
         />
       )}
 
       <div className="table-card__grid-wrap">
-        <table className="table-card__grid">
+        <table className="table-card__grid" style={{ userSelect: 'none' }}>
           <tbody>
             {renderRows.map((rowCells, r) => (
               <tr key={r}>
-                {rowCells.map(({ r: cr, c, cell, colspan, rowspan, idx: cellIdx }) => {
-                  const isSelected = selectedCell?.r === cr && selectedCell?.c === c;
+                {rowCells.map(({ r: cr, c, cell, colspan, rowspan }) => {
+                  const inSel = isInSelection(cr, c);
                   const tdStyle = {
-                    background: bgColor(cell.bg) || (r === 0 ? '#eef2ff' : '#fff'),
+                    background: inSel
+                      ? (cell.bg ? cell.bg : (cr === 0 ? '#dde4ff' : '#eef2ff'))
+                      : (cell.bg || (cr === 0 ? '#eef2ff' : '#fff')),
                     ...borderStyle(cell.borders),
-                    outline: isSelected ? '2px solid #6366f1' : undefined,
-                    outlineOffset: isSelected ? '-2px' : undefined,
+                    outline:       inSel ? '2px solid #6366f1' : undefined,
+                    outlineOffset: inSel ? '-2px' : undefined,
+                    cursor: 'cell',
                   };
                   return (
                     <td
@@ -817,18 +909,20 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
                       colSpan={colspan > 1 ? colspan : undefined}
                       rowSpan={rowspan > 1 ? rowspan : undefined}
                       style={tdStyle}
-                      onClick={() => setSelectedCell({ r: cr, c })}
+                      onMouseDown={(e) => handleMouseDown(cr, c, e)}
+                      onMouseEnter={() => handleMouseEnter(cr, c)}
                     >
                       <textarea
                         className={`table-cell-input${cell.bold ? ' table-cell-input--bold' : ''}${cell.align !== 'left' ? ` table-cell-input--${cell.align}` : ''}`}
                         value={cell.text}
                         onChange={e => handleCellUpdate(cr, c, { text: e.target.value })}
-                        onFocus={() => setSelectedCell({ r: cr, c })}
+                        onFocus={() => { setAnchorCell({ r: cr, c }); setDragCell({ r: cr, c }); }}
                         rows={1}
                         style={{
                           fontWeight: cell.bold ? '700' : undefined,
                           textAlign: cell.align || 'left',
                           background: 'transparent',
+                          cursor: 'text',
                         }}
                       />
                     </td>
@@ -839,9 +933,12 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
           </tbody>
         </table>
       </div>
-      {selectedCell && (
+      {anchorCell && (
         <p className="table-card__hint">
-          💡 Seçili hücre: Satır {selectedCell.r + 1}, Sütun {selectedCell.c + 1} — Araç çubuğundan biçimlendirin
+          {selectedCount > 1
+            ? `✦ ${selectedCount} hücre seçili — Toolbar'dan biçimlendirin veya ⊞ Birleştir ile tek hücre yapın`
+            : `💡 Seçili: Satır ${anchorCell.r + 1}, Sütun ${anchorCell.c + 1} — Sürükleyerek birden fazla hücre seçebilirsiniz`
+          }
         </p>
       )}
     </div>
@@ -1176,6 +1273,36 @@ function ReportEditorPage({
     );
   };
 
+  // Birden fazla hücreyi aynı anda güncelle (toplu format)
+  const handleBulkUpdateTableCells = (sectionKey, tableId, cellIndices, patch) => {
+    updateSectionTables(sectionKey, prev =>
+      prev.map(t => {
+        if (t.id !== tableId) return t;
+        const cells = t.cells.map(normalizeCell);
+        cellIndices.forEach(i => {
+          if (i >= 0 && i < cells.length) cells[i] = { ...cells[i], ...patch };
+        });
+        return { ...t, cells };
+      })
+    );
+  };
+
+  // Seçili hücre grubunu gerçekten birleştir (patchMap: { [cellIndex]: patchObj })
+  const handleMergeTableCells = (sectionKey, tableId, patchMap) => {
+    updateSectionTables(sectionKey, prev =>
+      prev.map(t => {
+        if (t.id !== tableId) return t;
+        const cells = t.cells.map(normalizeCell);
+        Object.entries(patchMap).forEach(([i, patch]) => {
+          const idx = Number(i);
+          if (idx >= 0 && idx < cells.length) cells[idx] = { ...cells[idx], ...patch };
+        });
+        return { ...t, cells };
+      })
+    );
+  };
+
+
   const handleImageFiles = async (sectionKey, files) => {
     if (!files?.length) return;
     const section = SECTIONS.find(s => s.key === sectionKey);
@@ -1367,6 +1494,8 @@ function ReportEditorPage({
           if (previewOccupied.has(`${r},${c}`)) { c++; continue; }
           const raw = tbl.cells[r * tbl.cols + c];
           const cell = normalizeCell(raw);
+          // _hidden hücreler önizlemede de atlanır (birleştirme sonrası)
+          if (cell._hidden) { c++; continue; }
           const colspan = Math.min(Math.max(1, cell.colspan || 1), tbl.cols - c);
           const rowspan = Math.min(Math.max(1, cell.rowspan || 1), tbl.rows - r);
           // Kaplanan pozisyonları işaretle
@@ -1648,6 +1777,8 @@ function ReportEditorPage({
                       onResize={(rows, cols) => handleResizeTable(sec.key, tbl.id, rows, cols)}
                       onRemove={() => handleRemoveTable(sec.key, tbl.id)}
                       onUpdateCell={(cellIdx, patch) => handleUpdateTableCell(sec.key, tbl.id, cellIdx, patch)}
+                      onBulkUpdateCells={(indices, patch) => handleBulkUpdateTableCells(sec.key, tbl.id, indices, patch)}
+                      onMergeCells={(patchMap) => handleMergeTableCells(sec.key, tbl.id, patchMap)}
                     />
                   ))}
                 </div>
@@ -1747,6 +1878,8 @@ function ReportEditorPage({
                       onResize={(rows, cols) => handleResizeTable(sec.key, tbl.id, rows, cols)}
                       onRemove={() => handleRemoveTable(sec.key, tbl.id)}
                       onUpdateCell={(cellIdx, patch) => handleUpdateTableCell(sec.key, tbl.id, cellIdx, patch)}
+                      onBulkUpdateCells={(indices, patch) => handleBulkUpdateTableCells(sec.key, tbl.id, indices, patch)}
+                      onMergeCells={(patchMap) => handleMergeTableCells(sec.key, tbl.id, patchMap)}
                     />
                   ))}
                 </div>

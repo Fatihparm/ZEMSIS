@@ -253,11 +253,17 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange, ext
         ctx.setLineDash([]);
 
         // ── JET GROUT KOLONLARI ──
+        // Kolonları zemin yüzeyi altıyla sınırlandır (taşmayı önle)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(offsetX, surfaceY, chartW, offsetY + chartH - surfaceY);
+        ctx.clip();
+
         for (let i = 0; i < numCols; i++) {
             const colCenterX = s / 2 + i * s;
             const colLeft = xScale(colCenterX - D / 2);
             const colWidth = wScale(D);
-            const colTop = yScale(0);
+            const colTop = surfaceY;  // kolonlar zemin yüzeyinden başlar
             const colHeight = hScale(H);
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -293,6 +299,9 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange, ext
                 ctx.stroke();
             }
         }
+
+        // Clipping bölgesini geri al
+        ctx.restore();
 
         // ── BOYUT ÇİZGİLERİ (D ve s) ──
         const col1CenterX = s / 2;
