@@ -438,29 +438,15 @@ function App() {
   };
 
   const handleNewProject = () => {
-    setCurrentProjectId(null);
-    setCurrentProjectName('');
-    setParameters({ ...defaultParameters });
-    setSoilLayers([...defaultSoilLayers]);
-    setUnits({ ...defaultUnits });
-    setResults(null);
-    setLayerResults(null);
-    setExtraParams({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
     drawingDataRef.current = null;
+    resetWorkspace();
     setActivePage('workspace');
     setActiveTab('parameters');
   };
 
   const handleImportDxf = () => {
-    setCurrentProjectId(null);
-    setCurrentProjectName('');
-    setParameters({ ...defaultParameters });
-    setSoilLayers([...defaultSoilLayers]);
-    setUnits({ ...defaultUnits });
-    setResults(null);
-    setLayerResults(null);
-    setExtraParams({ foundationThickness: 0.5, fillHeight: 0, waterTable: 3 });
     drawingDataRef.current = null;
+    resetWorkspace();
     setPendingDxfImport(true);
     setActivePage('workspace');
     setActiveTab('planView');
@@ -843,7 +829,7 @@ function App() {
                         </div>
                       ) : (
                         <div className="no-results">
-                          <p>Results</p>
+                          <p>{t.results.title}</p>
                           <p>{t.results.noResults}</p>
                           <p style={{ fontSize: '0.8rem', marginTop: 6 }}>{t.results.enterParams}</p>
                         </div>

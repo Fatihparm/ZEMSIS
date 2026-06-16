@@ -75,7 +75,7 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [token]); // token değişince (re-login) projeleri yeniden yükle
 
   const handleDelete = async (id) => {
     try {

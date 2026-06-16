@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_URL } from '../config';
+import { MUNICIPALITIES } from '../constants';
 import './ApplicationPanel.css';
-
-const MUNICIPALITIES = [
-  'Bursa Büyükşehir Belediyesi',
-  'Osmangazi Belediyesi',
-  'Nilüfer Belediyesi',
-  'Kestel Belediyesi',
-];
 
 const STATUS_CONFIG = {
   pending: {

@@ -9,6 +9,12 @@ RUN npm install
 
 COPY . .
 
+# VITE_API_URL: Docker build sırasında geçilebilir.
+# Geçilmezse boş kalır → config.js localhost:3001'i fallback olarak kullanır.
+# Production'da: docker build --build-arg VITE_API_URL=/api .
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 # Production stage

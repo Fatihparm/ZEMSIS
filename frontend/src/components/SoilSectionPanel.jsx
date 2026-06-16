@@ -56,7 +56,7 @@ function SoilSectionPanel({
     // Extra visual params (local, synced)
     const [localFoundation, setLocalFoundation] = useState(extraParams?.foundationThickness ?? 0.5);
     const [localFill, setLocalFill] = useState(extraParams?.fillHeight ?? 0);
-    const [waterTable, setWaterTable] = useState(3);
+    const [waterTable, setWaterTable] = useState(extraParams?.waterTable ?? 3);
     const [groundSurface, setGroundSurface] = useState(0);
 
     // Drag & Drop refs

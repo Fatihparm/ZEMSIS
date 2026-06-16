@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { API_URL } from '../config';
+import { MUNICIPALITIES } from '../constants';
 import './AuthPage.css';
 
-const MUNICIPALITIES = [
-  'Bursa Büyükşehir Belediyesi',
-  'Osmangazi Belediyesi',
-  'Nilüfer Belediyesi',
-  'Kestel Belediyesi',
-];
 
 function AuthPage({ onLogin, lang, initialError = '' }) {
   const tr = lang === 'tr';

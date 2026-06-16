@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const calculations = require('./calculations');
 const { migrate } = require('./db');
 const { router: authRouter } = require('./auth');
@@ -12,15 +14,54 @@ const applicationsRouter = require('./applications');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// ── Security headers ────────────────────────────────────────
+app.use(helmet());
+
+// ── CORS — sadece izin verilen originlere ───────────────────
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Postman / curl gibi origin'siz isteklere izin ver (development)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy violation'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json({ limit: '50mb' }));
 
+// ── Rate Limiting ────────────────────────────────────────────
+// Auth endpoint'leri için sıkı limit
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 dakika
+  max: 20,                   // 15 dakikada en fazla 20 istek
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later.' }
+});
+
+// Hesaplama endpoint'leri için genel limit
+const calcLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 dakika
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Rate limit exceeded.' }
+});
+
 // ── Auth & Project & Report & Application routes ─────────────────
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/applications', applicationsRouter);
+app.use('/api/calculate', calcLimiter);
+app.use('/api/calculate-layers', calcLimiter);
 
 // ── Health check ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -140,10 +181,11 @@ app.get('/api/defaults', (req, res) => {
 // ── Soil type defaults ──────────────────────────────────────
 app.get('/api/soil-defaults', (req, res) => {
   res.json({
-    kum: { gamma: 17, phi: 35, cohesion: 5, elasticity: 30000, poisson: 0.25 },
-    kil: { gamma: 18, phi: 15, cohesion: 80, elasticity: 25000, poisson: 0.3 },
-    silt: { gamma: 19, phi: 28, cohesion: 10, elasticity: 35000, poisson: 0.25 },
-    kaya: { gamma: 22, phi: 15, cohesion: 3000, elasticity: 300000, poisson: 0.2 }
+    kum:   { gamma: 17, phi: 35, cohesion: 5,    elasticity: 30000,  poisson: 0.25 },
+    kil:   { gamma: 18, phi: 15, cohesion: 80,   elasticity: 25000,  poisson: 0.3  },
+    silt:  { gamma: 19, phi: 28, cohesion: 10,   elasticity: 35000,  poisson: 0.25 },
+    kaya:  { gamma: 22, phi: 15, cohesion: 3000, elasticity: 300000, poisson: 0.2  },
+    cakil: { gamma: 20, phi: 40, cohesion: 0,    elasticity: 50000,  poisson: 0.2  }
   });
 });
 
