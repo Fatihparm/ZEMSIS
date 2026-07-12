@@ -377,6 +377,36 @@
 
   .ssp-left {
     width: 100%;
+    max-height: 320px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+}
+
+@media (max-width: 768px) {
+  .ssp-left {
+    max-height: 280px;
+  }
+
+  .ssp-popup {
+    width: calc(100vw - 32px);
+    max-width: 340px;
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 480px) {
+  .ssp-left {
+    max-height: 240px;
+  }
+
+  .ssp-extra-row {
+    flex-wrap: wrap;
+  }
+
+  .ssp-col-geom-row {
+    flex-wrap: wrap;
   }
 }
 

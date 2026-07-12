@@ -449,3 +449,40 @@
 @keyframes detFadeIn  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes detSlideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes detSpin    { to { transform: rotate(360deg); } }
+
+/* ── Mobile Responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .det-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .det-modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .det-modal__header {
+    padding: 1rem 1.2rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .det-modal__title-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .det-modal__header {
+    padding: 0.85rem 1rem;
+  }
+
+  .det-review-confirm__actions {
+    flex-direction: column;
+  }
+}

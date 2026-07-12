@@ -479,3 +479,28 @@
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Mobile Responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-panel {
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .app-panel__header {
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .app-panel__header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-panel {
+    padding: 0.75rem;
+  }
+}

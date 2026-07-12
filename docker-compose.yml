@@ -23,7 +23,7 @@ services:
       - PORT=3001
       - DATABASE_URL=postgresql://postgres:root@db:5432/jet-grout-calc
       - JWT_SECRET=jg-calc-secret-key-2026-change-in-production
-      - ALLOWED_ORIGINS=http://localhost:3000
+      - ALLOWED_ORIGINS=http://localhost:3000,https://zemin.depremzeminsorgulama.com,http://zemin.depremzeminsorgulama.com
     depends_on:
       db:
         condition: service_healthy
@@ -34,8 +34,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
       POSTGRES_DB: jet-grout-calc
-    ports:
-      - "5433:5432"
+    # ports kaldırıldı — DB sadece Docker internal network'ten erişilebilir
+    # Dışarıdan bağlanmak için: docker compose exec db psql -U postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

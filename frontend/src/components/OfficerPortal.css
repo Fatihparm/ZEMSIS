@@ -523,3 +523,104 @@
 }
 
 @keyframes opSpin { to { transform: rotate(360deg); } }
+
+/* ── Mobile Responsive ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .op-root {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .op-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .op-user-card {
+    width: 100%;
+  }
+
+  .op-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .op-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .op-toolbar__search {
+    min-width: unset;
+  }
+
+  .op-toolbar__filters {
+    gap: 0.3rem;
+  }
+
+  /* Table → card layout on mobile */
+  .op-table-wrapper {
+    border-radius: 12px;
+  }
+
+  .op-table thead {
+    display: none;
+  }
+
+  .op-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 0.5rem;
+  }
+
+  .op-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .op-table td {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .op-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin-bottom: 2px;
+  }
+
+  .op-action-btns {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .op-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .op-stat {
+    padding: 0.85rem 1rem;
+  }
+
+  .op-stat__value {
+    font-size: 1.6rem;
+  }
+
+  .op-filter-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
+  }
+
+  .op-inspect-btn,
+  .op-detail-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
+  }
+}

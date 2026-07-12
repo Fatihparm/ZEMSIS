@@ -7,7 +7,7 @@ import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
 import ProjectsPage from './components/ProjectsPage';
 import SaveProjectModal from './components/SaveProjectModal';
-import { generatePdfReport, parsePdfReport } from './utils/pdfReport';
+import { parsePdfReport } from './utils/pdfReport';
 import ReportEditorPage from './components/ReportEditorPage';
 import ApplicationPanel from './components/ApplicationPanel';
 import OfficerPortal from './components/OfficerPortal';
@@ -115,13 +115,6 @@ const IconLogOut = () => (
   </svg>
 );
 
-const IconDownload = () => (
-  <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
 
 const translations = {
   en: {
@@ -312,7 +305,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pendingDxfImport, setPendingDxfImport] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const fileInputRef = useRef(null);
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   const toKPa = (value, unit) => unit === 'MPa' ? value * 1000 : value;
   const t = translations[lang];
@@ -473,6 +469,11 @@ function App() {
     drawingDataRef.current = data;
   };
 
+  const handleNavClick = (fn) => {
+    fn();
+    closeSidebar();
+  };
+
   if (!token) {
     return <AuthPage onLogin={handleLogin} lang={lang} initialError={authError} />;
   }
@@ -481,13 +482,15 @@ function App() {
   if (user?.role === 'municipal_officer') {
     return (
       <div className="dashboard-container">
-        <nav className="sidebar">
+        {sidebarOpen && <div className="sidebar-overlay open" onClick={closeSidebar} />}
+        <nav className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <div className="sidebar-logo" title="ZEMSIS">
             <img src="/zemsis-logo-beyaz.png" alt="ZEMSIS Logo Beyaz" className="sidebar-logo-img" style={{ width: "64px", height: "auto" }} />
             <div className="sidebar-logo-text">
               <strong>ZEMSIS</strong>
               <span>Belediye Portalı</span>
             </div>
+            <button className="sidebar-close-btn" onClick={closeSidebar} title="Menüyü Kapat">✕</button>
           </div>
           <div className="user-profile-card">
             <div className="avatar-circle">
@@ -513,9 +516,16 @@ function App() {
         </nav>
         <main className="dashboard-main">
           <div className="top-bar">
-            <div>
-              <h2>Proje Başvuruları</h2>
-              <p>Belediyenize gelen başvuruları denetleyin.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} title="Menüyü Aç">
+                <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                  <line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+              <div>
+                <h2>Proje Başvuruları</h2>
+                <p>Belediyenize gelen başvuruları denetleyin.</p>
+              </div>
             </div>
             <div className="top-bar-actions">
               <img src="/btu-logo.png" alt="BTU Logo" style={{ height: "40px", objectFit: "contain", marginRight: "1rem" }} />
@@ -566,15 +576,6 @@ function App() {
     return tr ? 'Jet grout tasarim paneli.' : 'Jet grout design dashboard.';
   })();
 
-  const handleExportPdf = async () => {
-    try {
-      const projectData = getProjectData();
-      await generatePdfReport(projectData, lang);
-    } catch (err) {
-      alert(tr ? 'Rapor olusturulurken hata olustu: ' + err.message : 'Error generating report: ' + err.message);
-    }
-  };
-
   const handleImportPdfClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
@@ -600,13 +601,15 @@ function App() {
 
   return (
     <div className="dashboard-container">
-      <nav className="sidebar">
+      {sidebarOpen && <div className="sidebar-overlay open" onClick={closeSidebar} />}
+      <nav className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo" title="ZEMSIS">
           <img src="/zemsis-logo-beyaz.png" alt="ZEMSIS Logo Beyaz" className="sidebar-logo-img" style={{ width: "64px", height: "auto" }} />
           <div className="sidebar-logo-text">
             <strong>ZEMSIS</strong>
             <span>Engineering Suite</span>
           </div>
+          <button className="sidebar-close-btn" onClick={closeSidebar} title="Menüyü Kapat">✕</button>
         </div>
 
         <div className="user-profile-card">
@@ -622,7 +625,7 @@ function App() {
             <button
               key={item.key}
               className={`nav-item ${activePage === item.key ? 'active' : ''}`}
-              onClick={() => setActivePage(item.key)}
+              onClick={() => handleNavClick(() => setActivePage(item.key))}
               title={item.label}
             >
               <span className="menu-icon"><item.Icon /></span>
@@ -641,7 +644,7 @@ function App() {
                 <button
                   key={tab.key}
                   className={`nav-item sub-nav-item ${activeTab === tab.key ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => handleNavClick(() => setActiveTab(tab.key))}
                   title={tab.label}
                 >
                   <span className="menu-icon"><tab.Icon /></span>
@@ -679,20 +682,19 @@ function App() {
 
       <main className="dashboard-main">
         <div className={`top-bar ${isLockedWorkspaceView ? 'top-bar-compact' : ''}`}>
-          <div>
-            <h2>{currentViewTitle}</h2>
-            <p>{currentViewDescription}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} title="Menüyü Aç">
+              <svg viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                <line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div>
+              <h2>{currentViewTitle}</h2>
+              <p>{currentViewDescription}</p>
+            </div>
           </div>
           <div className="top-bar-actions">
-            {activePage === 'workspace' && (
-              <button
-                className="top-bar-btn export-pdf-btn"
-                onClick={handleExportPdf}
-                title={tr ? 'PDF Raporu Olarak İndir (İçeri aktarılabilir)' : 'Download PDF Report (Importable)'}
-              >
-                <IconDownload /> {tr ? 'Rapor Al' : 'Export PDF'}
-              </button>
-            )}
+
             <img src="/btu-logo.png" alt="BTU Logo" style={{ height: "40px", objectFit: "contain", marginRight: "1rem" }} />
             <div className="date-tag">{todayLabel}</div>
           </div>

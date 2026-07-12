@@ -239,3 +239,32 @@
   color: var(--color-gray-500);
   font-size: 0.8rem;
 }
+
+/* ── Mobile Responsive ───────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 20px;
+    border-radius: 20px;
+  }
+
+  .auth-brand h1 {
+    font-size: 1.5rem;
+  }
+
+  .auth-brand-logo {
+    width: 72px;
+  }
+
+  .auth-role-btn {
+    font-size: 0.76rem;
+    padding: 8px 4px;
+  }
+
+  .auth-field input {
+    padding: 11px 12px;
+  }
+
+  .auth-submit {
+    padding: 12px 16px;
+  }
+}

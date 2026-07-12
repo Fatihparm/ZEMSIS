@@ -378,3 +378,54 @@
     display: none;
   }
 }
+
+@media (max-width: 768px) {
+  .plan-view-header {
+    padding: 8px 10px 8px;
+  }
+
+  .plan-toolbar {
+    gap: 4px;
+  }
+
+  .toolbar-btn {
+    min-height: 32px;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    border-radius: 10px;
+  }
+
+  .toolbar-param input {
+    width: 48px;
+    padding: 5px 6px;
+  }
+
+  .plan-coord-display {
+    right: 10px;
+    bottom: 10px;
+    font-size: 0.72rem;
+    padding: 7px 10px;
+  }
+
+  .plan-info-overlay {
+    top: 10px;
+    right: 10px;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-view-header h3 {
+    font-size: 0.82rem;
+  }
+
+  .toolbar-btn {
+    min-height: 30px;
+    padding: 4px 7px;
+    font-size: 0.74rem;
+  }
+
+  .plan-coord-display {
+    display: none;
+  }
+}

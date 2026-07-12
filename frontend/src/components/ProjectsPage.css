@@ -158,15 +158,37 @@
   font-size: 0.8rem;
 }
 
-.page-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .page-error svg {
   width: 16px;
   height: 16px;
   stroke: currentColor;
   flex-shrink: 0;
+}
+
+/* ── Mobile Responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .project-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .project-card-header {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .project-card-actions {
+    flex-wrap: wrap;
+  }
+
+  .project-btn.load {
+    flex: unset;
+    width: 100%;
+  }
 }
