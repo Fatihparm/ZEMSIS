@@ -20,10 +20,10 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - PORT=3001
-      - DATABASE_URL=postgresql://postgres:root@db:5432/jet-grout-calc
-      - JWT_SECRET=jg-calc-secret-key-2026-change-in-production
-      - ALLOWED_ORIGINS=http://localhost:3000,https://zemin.depremzeminsorgulama.com,http://zemin.depremzeminsorgulama.com
+      PORT: "3001"
+      DATABASE_URL: "postgresql://postgres:root@db:5432/jet-grout-calc"
+      JWT_SECRET: "jg-calc-secret-key-2026-change-in-production"
+      ALLOWED_ORIGINS: "http://localhost:3000,https://zemin.depremzeminsorgulama.com,http://zemin.depremzeminsorgulama.com"
     depends_on:
       db:
         condition: service_healthy
