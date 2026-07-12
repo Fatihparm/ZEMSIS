@@ -31,9 +31,16 @@
   background: var(--color-gray-50);
 }
 
+/* Boolean item — biraz daha yüksek */
+.result-item--bool {
+  padding: 10px 14px;
+}
+
 .result-label {
   color: var(--color-gray-600);
   font-size: 0.88rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .result-value {
@@ -41,10 +48,117 @@
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 0.98rem;
   font-weight: 700;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .result-unit {
-  margin-left: 6px;
+  margin-left: 4px;
   color: var(--color-gray-400);
   font-weight: 500;
+}
+
+/* ── #1 Boolean badge ── */
+.result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.result-badge--ok {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.result-badge--fail {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.result-badge-text {
+  font-size: 0.82rem;
+}
+
+/* ── #4 Kapasite progress bar ── */
+.result-value-with-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  min-width: 120px;
+}
+
+.result-progress-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: var(--color-gray-200);
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.result-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease, background 0.3s ease;
+}
+
+.result-progress-label {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── #8 Auto tag ── */
+.result-auto-tag {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: var(--font-body, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── #9 Oturma limit badge ── */
+.result-value-with-limit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.result-limit-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.result-limit--ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.result-limit--fail {
+  background: #fef3c7;
+  color: #92400e;
 }

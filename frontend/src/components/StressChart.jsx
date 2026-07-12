@@ -10,7 +10,35 @@ const soilColors = {
     cakil: { fill: 'rgba(188, 170, 134, 0.35)', border: '#bcaa86' }
 };
 
-function StressChart({ layers, lang }) {
+/**
+ * #6 — Efektif gerilme (σ'v = σv - u) hesabı
+ * Yeraltı suyu seviyesinin altındaki katmanlar için u = γw × (depth - waterTable)
+ */
+function computeEffectiveStress(layers, waterTable) {
+    const gammaw = 9.81; // kN/m³
+    return layers.map(layer => {
+        // Katmanın orta derinliği
+        const bottomDepth = layer.endDepth;
+        const u = waterTable > 0 && bottomDepth > waterTable
+            ? gammaw * (bottomDepth - waterTable)
+            : 0;
+        const effectiveBottom = Math.max(0, layer.stressAtBottom - u);
+
+        const topDepth = layer.startDepth;
+        const uTop = waterTable > 0 && topDepth > waterTable
+            ? gammaw * (topDepth - waterTable)
+            : 0;
+        const effectiveTop = Math.max(0, layer.stressAtTop - uTop);
+
+        return {
+            ...layer,
+            effectiveStressAtTop: parseFloat(effectiveTop.toFixed(2)),
+            effectiveStressAtBottom: parseFloat(effectiveBottom.toFixed(2))
+        };
+    });
+}
+
+function StressChart({ layers, lang, waterTable = 0 }) {
     const canvasRef = useRef(null);
 
     useEffect(() => {
@@ -29,14 +57,20 @@ function StressChart({ layers, lang }) {
         const W = rect.width;
         const H = rect.height;
 
-        // Padding
-        const pad = { top: 30, right: 30, bottom: 50, left: 70 };
+        // Padding — legend için alt padding artırıldı
+        const pad = { top: 30, right: 30, bottom: 70, left: 70 };
         const chartW = W - pad.left - pad.right;
         const chartH = H - pad.top - pad.bottom;
 
-        // Max değerler
+        // #6 — Efektif gerilme hesapla
+        const layersWithEffective = computeEffectiveStress(layers, waterTable);
+
+        // Max değerler — toplam ve efektif gerilmenin maksimumunu al
         const maxDepth = layers[layers.length - 1].endDepth;
-        const maxStress = Math.max(...layers.map(l => l.stressAtBottom)) * 1.15;
+        const maxStress = Math.max(
+            ...layers.map(l => l.stressAtBottom),
+            ...layersWithEffective.map(l => l.stressAtBottom)
+        ) * 1.15;
 
         // Scale fonksiyonları
         const xScale = (stress) => pad.left + (stress / maxStress) * chartW;
@@ -80,6 +114,24 @@ function StressChart({ layers, lang }) {
                 ctx.fillText(name, pad.left + chartW - 6, midY);
             }
         });
+
+        // ── Yeraltı suyu çizgisi ──
+        if (waterTable > 0 && waterTable < maxDepth) {
+            const gwY = yScale(waterTable);
+            ctx.strokeStyle = '#42a5f5';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(pad.left, gwY);
+            ctx.lineTo(pad.left + chartW, gwY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#42a5f5';
+            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`GW ${waterTable.toFixed(1)}m`, pad.left + 4, gwY - 8);
+        }
 
         // ── Eksenler ──
         ctx.strokeStyle = 'rgba(255,255,255,0.3)';
@@ -159,38 +211,80 @@ function StressChart({ layers, lang }) {
         ctx.fillText(depthLabel, 0, 0);
         ctx.restore();
 
-        // ── Gerilme çizgisi ──
-        // Noktalar: her katmanın üst ve altı
-        const points = [];
-        points.push({ x: 0, y: 0 }); // yüzey
-
+        // ── Toplam gerilme çizgisi (σv) ──
+        const totalPoints = [{ x: 0, y: 0 }];
         layers.forEach((layer) => {
-            points.push({ x: layer.stressAtTop, y: layer.startDepth });
-            points.push({ x: layer.stressAtBottom, y: layer.endDepth });
+            totalPoints.push({ x: layer.stressAtTop, y: layer.startDepth });
+            totalPoints.push({ x: layer.stressAtBottom, y: layer.endDepth });
         });
 
-        // Gradient dolgu (çizgi altı)
+        // Gradient dolgu — toplam gerilme
         const gradient = ctx.createLinearGradient(pad.left, pad.top, pad.left + chartW * 0.6, pad.top);
-        gradient.addColorStop(0, 'rgba(79, 195, 247, 0.2)');
+        gradient.addColorStop(0, 'rgba(79, 195, 247, 0.18)');
         gradient.addColorStop(1, 'rgba(79, 195, 247, 0.02)');
 
         ctx.beginPath();
         ctx.moveTo(xScale(0), yScale(0));
-        points.forEach(p => ctx.lineTo(xScale(p.x), yScale(p.y)));
-        ctx.lineTo(xScale(0), yScale(points[points.length - 1].y));
+        totalPoints.forEach(p => ctx.lineTo(xScale(p.x), yScale(p.y)));
+        ctx.lineTo(xScale(0), yScale(totalPoints[totalPoints.length - 1].y));
         ctx.closePath();
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Çizgi
+        // Çizgi — toplam gerilme
         ctx.beginPath();
-        ctx.moveTo(xScale(points[0].x), yScale(points[0].y));
-        points.forEach(p => ctx.lineTo(xScale(p.x), yScale(p.y)));
+        ctx.moveTo(xScale(totalPoints[0].x), yScale(totalPoints[0].y));
+        totalPoints.forEach(p => ctx.lineTo(xScale(p.x), yScale(p.y)));
         ctx.strokeStyle = '#4fc3f7';
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        // Noktalar
+        // ── #6 Efektif gerilme çizgisi (σ'v) ──
+        if (waterTable > 0) {
+            const effPoints = [{ x: 0, y: 0 }];
+            layersWithEffective.forEach((layer) => {
+                effPoints.push({ x: layer.effectiveStressAtTop, y: layer.startDepth });
+                effPoints.push({ x: layer.effectiveStressAtBottom, y: layer.endDepth });
+            });
+
+            // Gradient dolgu — efektif gerilme
+            const effGradient = ctx.createLinearGradient(pad.left, pad.top, pad.left + chartW * 0.6, pad.top);
+            effGradient.addColorStop(0, 'rgba(102, 187, 106, 0.12)');
+            effGradient.addColorStop(1, 'rgba(102, 187, 106, 0.01)');
+
+            ctx.beginPath();
+            ctx.moveTo(xScale(0), yScale(0));
+            effPoints.forEach(p => ctx.lineTo(xScale(p.x), yScale(p.y)));
+            ctx.lineTo(xScale(0), yScale(effPoints[effPoints.length - 1].y));
+            ctx.closePath();
+            ctx.fillStyle = effGradient;
+            ctx.fill();
+
+            // Çizgi — efektif gerilme (kesikli)
+            ctx.beginPath();
+            ctx.moveTo(xScale(effPoints[0].x), yScale(effPoints[0].y));
+            effPoints.forEach(p => ctx.lineTo(xScale(p.x), yScale(p.y)));
+            ctx.strokeStyle = '#66bb6a';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Efektif gerilme noktaları
+            layersWithEffective.forEach((layer) => {
+                const cx = xScale(layer.effectiveStressAtBottom);
+                const cy = yScale(layer.endDepth);
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#66bb6a';
+                ctx.fill();
+                ctx.strokeStyle = '#0d1b2a';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+
+        // ── Toplam gerilme noktaları ──
         layers.forEach((layer) => {
             const cx = xScale(layer.stressAtBottom);
             const cy = yScale(layer.endDepth);
@@ -211,7 +305,39 @@ function StressChart({ layers, lang }) {
             ctx.fillText(`${layer.stressAtBottom}`, cx + 7, cy - 2);
         });
 
-    }, [layers, lang]);
+        // ── #6 Legend ──
+        const legendY = pad.top + chartH + 48;
+        ctx.font = '10px Inter, system-ui, sans-serif';
+        ctx.textBaseline = 'middle';
+
+        // Toplam gerilme
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, legendY);
+        ctx.lineTo(pad.left + 20, legendY);
+        ctx.stroke();
+        ctx.fillStyle = '#4fc3f7';
+        ctx.textAlign = 'left';
+        ctx.fillText(lang === 'tr' ? 'σv (Toplam)' : 'σv (Total)', pad.left + 26, legendY);
+
+        // Efektif gerilme (yalnızca YASS > 0 ise)
+        if (waterTable > 0) {
+            const leg2x = pad.left + 110;
+            ctx.strokeStyle = '#66bb6a';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 3]);
+            ctx.beginPath();
+            ctx.moveTo(leg2x, legendY);
+            ctx.lineTo(leg2x + 20, legendY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#66bb6a';
+            ctx.fillText(lang === 'tr' ? "σ'v (Efektif)" : "σ'v (Effective)", leg2x + 26, legendY);
+        }
+
+    }, [layers, lang, waterTable]);
 
     if (!layers || layers.length === 0) return null;
 

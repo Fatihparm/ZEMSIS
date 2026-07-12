@@ -390,6 +390,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
+      const maxMm = parseFloat(parameters.maxSettlementMm) || null;
       const convertedParams = {
         ...parameters,
         sigmaJet: toKPa(parseFloat(parameters.sigmaJet), units.sigmaJet),
@@ -397,7 +398,10 @@ function App() {
         Ejg: toKPa(parseFloat(parameters.Ejg), units.Ejg),
         cu: toKPa(parseFloat(parameters.cu), units.cu),
         qtemel: toKPa(parseFloat(parameters.qtemel), units.qtemel),
-        qnet: toKPa(parseFloat(parameters.qnet), units.qnet)
+        qnet: toKPa(parseFloat(parameters.qnet), units.qnet),
+        // #9 — izin verilen max oturma sınırları
+        maxSettlementMm: maxMm,
+        maxSettlementCm: maxMm ? maxMm / 10 : null,
       };
       const response = await fetch(`${API_URL}/calculate`, {
         method: 'POST',
@@ -417,6 +421,7 @@ function App() {
       setLoading(false);
     }
   };
+
 
   const toggleLanguage = () => setLang(prev => prev === 'en' ? 'tr' : 'en');
 
@@ -743,6 +748,41 @@ function App() {
                     </div>
                     <div className="page-content">
                       {error && <div className="page-error">Warning: {error}</div>}
+
+                      {/* ── #2 Anlık Önizleme Kartı ── */}
+                      {(() => {
+                        const D = parseFloat(parameters.D) || 0;
+                        const s = parseFloat(parameters.s) || 1;
+                        const H = parseFloat(parameters.H) || 0;
+                        const Ajet = D > 0 ? (Math.PI * D * D / 4) : 0;
+                        const Ar = s > 0 ? (Ajet / (s * s)) : 0;
+                        const arOk = Ar >= 0.15 && Ar <= 0.50;
+                        return (
+                          <div className="param-preview-bar">
+                            <div className="param-preview-item">
+                              <span className="param-preview-label">A<sub>jet</sub></span>
+                              <span className="param-preview-value">{Ajet.toFixed(4)} m²</span>
+                            </div>
+                            <div className="param-preview-sep" />
+                            <div className="param-preview-item">
+                              <span className="param-preview-label">A<sub>r</sub></span>
+                              <span className={`param-preview-value${arOk ? '' : ' param-preview-warn'}`}>{(Ar * 100).toFixed(1)}%</span>
+                              {!arOk && D > 0 && <span className="param-preview-hint">{tr ? '(Tip. %15–50)' : '(Typ. 15–50%)'}</span>}
+                            </div>
+                            <div className="param-preview-sep" />
+                            <div className="param-preview-item">
+                              <span className="param-preview-label">D/s</span>
+                              <span className="param-preview-value">{s > 0 ? (D / s).toFixed(2) : '—'}</span>
+                            </div>
+                            <div className="param-preview-sep" />
+                            <div className="param-preview-item">
+                              <span className="param-preview-label">H</span>
+                              <span className="param-preview-value">{H} m</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       <div className="params-grid">
                         <div className="param-card">
                           <h3>{t.geometry.title}</h3>
@@ -754,7 +794,20 @@ function App() {
                         </div>
                         <div className="param-card">
                           <h3>{t.soil.title}</h3>
-                          {layerResults && <div className="sync-info">{tr ? 'Zemin tabakalarindan aktarildi' : 'Synced from soil layers'}</div>}
+                          {/* #7 — Senkronizasyon detayı */}
+                          {layerResults && (
+                            <div className="sync-info sync-info--detail">
+                              <span className="sync-info-icon">🔗</span>
+                              <span>
+                                {tr ? 'Zemin tabakalarından aktarıldı' : 'Synced from soil layers'}
+                                <span className="sync-info-sub">
+                                  {tr
+                                    ? ` — cu = ${layerResults.summary?.cohesionAvg?.value?.toFixed(1) ?? '?'} kPa, Es = ${layerResults.summary?.elasticityAvg?.value?.toFixed(0) ?? '?'} kPa`
+                                    : ` — cu = ${layerResults.summary?.cohesionAvg?.value?.toFixed(1) ?? '?'} kPa, Es = ${layerResults.summary?.elasticityAvg?.value?.toFixed(0) ?? '?'} kPa`}
+                                </span>
+                              </span>
+                            </div>
+                          )}
                           <div className="param-card-form">
                             <InputField label={t.soil.cu} name="cu" value={parameters.cu} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.cu} onUnitChange={handleUnitChange} placeholder="25" min={5} max={200} tooltip={t.soil.cuTip} />
                             <InputField label={t.soil.Es} name="Es" value={parameters.Es} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.Es} onUnitChange={handleUnitChange} placeholder="10" min={1} max={1000} step={1} tooltip={t.soil.EsTip} />
@@ -770,13 +823,57 @@ function App() {
                             <InputField label={t.jetgrout.materialFs} name="Fs" value={parameters.Fs} onChange={handleInputChange} unit="-" placeholder="2.0" min={1.5} max={4.0} step={0.1} tooltip={t.jetgrout.materialFsTip} />
                             <InputField label={t.jetgrout.bearingFS} name="FS" value={parameters.FS} onChange={handleInputChange} unit="-" placeholder="1.5" min={1.0} max={3.0} step={0.1} tooltip={t.jetgrout.bearingFSTip} />
                           </div>
+                          {/* #10 — EjgMultiplier ileri ayar */}
+                          <details className="param-advanced">
+                            <summary>{tr ? '⚙ İleri Ayarlar' : '⚙ Advanced Settings'}</summary>
+                            <div className="param-card-form" style={{ marginTop: 8 }}>
+                              <InputField
+                                label={tr ? 'Ejg Çarpanı (Ejg = k × σjet,tasarım)' : 'Ejg Multiplier (Ejg = k × σjet,design)'}
+                                name="EjgMultiplier"
+                                value={parameters.EjgMultiplier ?? 300}
+                                onChange={handleInputChange}
+                                unit="-"
+                                placeholder="300"
+                                min={100}
+                                max={1000}
+                                step={50}
+                                tooltip={tr ? 'Ejg = k × σjet,tasarım formülündeki katsayı (tipik 150–500). Ejg alanı dolu bırakılırsa bu değer kullanılmaz.' : 'Coefficient in Ejg = k × σjet,design (typical 150–500). Ignored if Ejg is entered directly.'}
+                              />
+                            </div>
+                          </details>
                         </div>
                         <div className="param-card">
                           <h3>{t.loading.title}</h3>
                           <div className="param-card-form">
                             <InputField label={t.loading.pressure} name="qtemel" value={parameters.qtemel} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qtemel} onUnitChange={handleUnitChange} placeholder="150" min={50} max={1000} step={10} tooltip={t.loading.pressureTip} />
-                            <InputField label={t.loading.netPressure} name="qnet" value={parameters.qnet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qnet} onUnitChange={handleUnitChange} placeholder="" min={0} max={500} step={5} tooltip={t.loading.netPressureTip} />
+                            {/* #3 — qnet notu */}
+                            <InputField label={t.loading.netPressure} name="qnet" value={parameters.qnet} onChange={handleInputChange} unitOptions={['kPa', 'MPa']} selectedUnit={units.qnet} onUnitChange={handleUnitChange} placeholder={tr ? 'Otomatik (qtemel − γ·H)' : 'Auto (qtemel − γ·H)'} min={0} max={500} step={5} tooltip={t.loading.netPressureTip} />
+                            {!parameters.qnet && (
+                              <div className="param-note">
+                                ℹ️ {tr
+                                  ? `qnet boş bırakılırsa otomatik hesaplanır: qtemel − γ·H = ${parseFloat(parameters.qtemel || 0).toFixed(0)} − 18×${parseFloat(parameters.H || 0).toFixed(0)} = ${Math.max(0, parseFloat(parameters.qtemel || 0) - 18 * parseFloat(parameters.H || 0)).toFixed(0)} kPa`
+                                  : `qnet auto = qtemel − γ·H = ${parseFloat(parameters.qtemel || 0).toFixed(0)} − 18×${parseFloat(parameters.H || 0).toFixed(0)} = ${Math.max(0, parseFloat(parameters.qtemel || 0) - 18 * parseFloat(parameters.H || 0)).toFixed(0)} kPa`}
+                              </div>
+                            )}
                           </div>
+                          {/* #9 — Max oturma sınırı */}
+                          <details className="param-advanced">
+                            <summary>{tr ? '📏 Oturma Sınırı' : '📏 Settlement Limit'}</summary>
+                            <div className="param-card-form" style={{ marginTop: 8 }}>
+                              <InputField
+                                label={tr ? 'İzin Verilen Maks. Oturma' : 'Allowable Settlement'}
+                                name="maxSettlementMm"
+                                value={parameters.maxSettlementMm ?? ''}
+                                onChange={handleInputChange}
+                                unit="mm"
+                                placeholder={tr ? 'örn. 25' : 'e.g. 25'}
+                                min={5}
+                                max={200}
+                                step={5}
+                                tooltip={tr ? 'Hesaplanan oturma bu değerle karşılaştırılır (TS 500: max 25–50mm)' : 'Calculated settlement is checked against this limit (TS 500: max 25–50mm)'}
+                              />
+                            </div>
+                          </details>
                         </div>
                       </div>
                       <button className="page-calculate-btn" onClick={handleCalculate} disabled={loading}>
@@ -823,11 +920,12 @@ function App() {
                     <div className="page-content">
                       {results ? (
                         <div className="results-grid">
-                          <ResultCard title={t.results.geometry} results={results.geometry} />
-                          <ResultCard title={t.results.material} results={results.material} />
-                          <ResultCard title={t.results.capacity} results={results.capacity} />
-                          <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} />
-                          <ResultCard title={t.results.settlement} results={results.settlement} />
+                          {/* #5 — lang prop her ResultCard'a iletiliyor */}
+                          <ResultCard title={t.results.geometry} results={results.geometry} lang={lang} />
+                          <ResultCard title={t.results.material} results={results.material} lang={lang} />
+                          <ResultCard title={t.results.capacity} results={results.capacity} lang={lang} />
+                          <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} lang={lang} />
+                          <ResultCard title={t.results.settlement} results={results.settlement} lang={lang} />
                         </div>
                       ) : (
                         <div className="no-results">

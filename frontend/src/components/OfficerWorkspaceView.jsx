@@ -393,6 +393,7 @@ export default function OfficerWorkspaceView({ applicationId, token, onBack }) {
                   key={cat}
                   title={RESULT_LABELS[cat] || cat}
                   results={items}
+                  lang="tr"
                 />
               ))}
             </div>

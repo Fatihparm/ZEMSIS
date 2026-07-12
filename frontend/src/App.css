@@ -559,6 +559,137 @@
   font-weight: 600;
 }
 
+/* #7 — Senkronizasyon detay satırı */
+.sync-info--detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sync-info-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.sync-info-sub {
+  display: block;
+  font-weight: 400;
+  color: #065f46;
+  font-size: 0.77rem;
+  margin-top: 2px;
+}
+
+/* #3 — qnet otomatik hesap notu */
+.param-note {
+  margin-top: 6px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* #10 — EjgMultiplier ve max oturma ileri ayar */
+.param-advanced {
+  margin-top: 12px;
+  border-top: 1px solid var(--color-gray-200);
+  padding-top: 10px;
+}
+
+.param-advanced summary {
+  cursor: pointer;
+  color: var(--color-gray-500);
+  font-size: 0.82rem;
+  font-weight: 600;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+
+.param-advanced summary:hover {
+  color: var(--color-primary);
+}
+
+.param-advanced summary::-webkit-details-marker { display: none; }
+
+.param-advanced[open] summary {
+  color: var(--color-primary);
+}
+
+/* #2 — Anlık önizleme bar */
+.param-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 16px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(17,62,104,0.06) 0%, rgba(80,177,200,0.08) 100%);
+  border: 1px solid rgba(17,62,104,0.12);
+  border-radius: 16px;
+  backdrop-filter: blur(4px);
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.param-preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 80px;
+  padding: 4px 8px;
+}
+
+.param-preview-sep {
+  width: 1px;
+  height: 36px;
+  background: rgba(17,62,104,0.12);
+  flex-shrink: 0;
+}
+
+.param-preview-label {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.param-preview-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.param-preview-warn {
+  color: #d97706;
+}
+
+.param-preview-hint {
+  font-size: 0.68rem;
+  color: #d97706;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .param-preview-bar {
+    padding: 10px 12px;
+  }
+  .param-preview-item {
+    min-width: 60px;
+  }
+}
+
+
 .page-calculate-btn {
   display: block;
   width: min(100%, 420px);

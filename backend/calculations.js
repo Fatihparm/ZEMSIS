@@ -318,6 +318,9 @@ function calculateAll(input, lang = 'en') {
     // Dil desteği
     const tr = lang === 'tr';
 
+    // #8 — Ejg otomatik mi hesaplandı?
+    const ejgIsAuto = !EjgInput;
+
     return {
         input: {
             D, s, cu, sigmaJet, Es, Ejg, H, qtemel, qnet: qnetValue,
@@ -328,12 +331,17 @@ function calculateAll(input, lang = 'en') {
         geometry: {
             Ajet: { value: Ajet, unit: 'm²', description: tr ? 'Kolon Alanı' : 'Column Area' },
             a: { value: a, unit: '-', description: tr ? 'Alan İyileştirme Oranı' : 'Area Replacement Ratio' },
-            aPercent: { value: a * 100, unit: '%', description: tr ? 'Alan İyileştirme Oranı' : 'Area Replacement Ratio' }
+            aPercent: { value: a * 100, unit: '%', description: tr ? 'Alan İyileştirme Oranı (%)' : 'Area Replacement Ratio (%)' }
         },
 
         material: {
             sigmaJetDesign: { value: sigmaJetDesign, unit: 'kPa', description: tr ? 'Tasarım Basınç Dayanımı' : 'Design Compressive Strength' },
-            Ejg: { value: Ejg, unit: 'kPa', description: tr ? 'Jet Grout Elastisite Modülü' : 'Jet Grout Elastic Modulus' },
+            // #8: isAuto bayrağı — Ejg manuel girilmediyse true
+            Ejg: {
+                value: Ejg, unit: 'kPa',
+                description: tr ? 'Jet Grout Elastisite Modülü' : 'Jet Grout Elastic Modulus',
+                isAuto: ejgIsAuto
+            },
             cjet: { value: cjet, unit: 'kPa', description: tr ? 'Jet Grout Kohezyonu' : 'Jet Grout Cohesion' }
         },
 
@@ -343,25 +351,50 @@ function calculateAll(input, lang = 'en') {
             Qu_raw: { value: Qu_raw, unit: 'kN', description: tr ? 'Uç Taşıma Kapasitesi (Qu)' : 'End Bearing Capacity (Qu)' },
             Qu_safe: { value: Qu_safe, unit: 'kN', description: tr ? 'Emniyetli Uç Taşıma (Qu/FS)' : 'Safe End Bearing (Qu/FS)' },
             Qcrush: { value: Qcrush, unit: 'kN', description: tr ? 'Yapısal Kapasite (Qcrush)' : 'Structural Capacity (Qcrush)' },
-            Qkolon: { value: Qkolon, unit: 'kN', description: tr ? 'Maks. Kolon Yükü' : 'Max Column Load' },
-            Qkolon_limit: { value: Qkolon_limit, unit: 'kN', description: tr ? 'Kolon Yük Limiti (Qsemn+Quemn)' : 'Column Load Limit (Qsemn+Quemn)' },
+            // #4: ratio = Qkolon/Qkolon_limit → progress bar için
+            Qkolon: {
+                value: Qkolon, unit: 'kN',
+                description: tr ? 'Maks. Kolon Yükü' : 'Max Column Load',
+                ratio: Qkolon_limit > 0 ? Qkolon / Qkolon_limit : null
+            },
+            Qkolon_limit: { value: Qkolon_limit, unit: 'kN', description: tr ? 'Kolon Yük Limiti (Qs+Qu emniyetli)' : 'Column Load Limit (Safe Qs+Qu)' },
             kolonSafe: { value: kolonSafe, unit: '-', description: tr ? 'Kolon Güvenli mi? (Qkolon < Limit)' : 'Column Safe? (Qkolon < Limit)' }
         },
 
         improvedSoil: {
             qzemin: { value: qzemin, unit: 'kPa', description: tr ? 'Zemin Gerilme Payı' : 'Soil Stress Share' },
             cuImproved: { value: cuImproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Kohezyon' : 'Improved Cohesion' },
-            qemnImproved: { value: qemnImproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Taşıma Kapasitesi' : 'Improved Bearing Capacity' },
+            // #4: ratio = qtemel/qemnImproved → yük doluluk oranı
+            qemnImproved: {
+                value: qemnImproved, unit: 'kPa',
+                description: tr ? 'İyileştirilmiş Taşıma Kapasitesi' : 'Improved Bearing Capacity',
+                ratio: qemnImproved > 0 ? qtemel / qemnImproved : null
+            },
             Eimproved: { value: Eimproved, unit: 'kPa', description: tr ? 'İyileştirilmiş Elastisite Modülü' : 'Improved Elastic Modulus' },
             improvedSafe: { value: improvedSafe, unit: '-', description: tr ? 'İyileştirilmiş Güvenli mi? (qemn > qtemel)' : 'Improved Safe? (qemn > qtemel)' }
         },
 
         settlement: {
-            qkazi: { value: qkazi, unit: 'kPa', description: tr ? 'Kazık Gerilmesi (γ·Hkazı)' : 'Pile Stress (γ·Hkazı)' },
-            qnet: { value: qnetValue, unit: 'kPa', description: tr ? 'Net Basınç' : 'Net Pressure' },
+            // #3: qnet açıklama etiketi otomatik mi manuel mi olduğunu gösteriyor
+            qnet: {
+                value: qnetValue, unit: 'kPa',
+                description: tr
+                    ? `Net Basınç${!qnetInput ? ' (oto: qtemel − γ·H)' : ' (manuel)'}`
+                    : `Net Pressure${!qnetInput ? ' (auto: qtemel − γ·H)' : ' (manual)'}`
+            },
+            qkazi: { value: qkazi, unit: 'kPa', description: tr ? 'Kaldırma Gerilmesi (γ·Hkazı)' : 'Overburden Stress (γ·Hkazı)' },
             Eimproved: { value: Eimproved, unit: 'kPa', description: tr ? 'İyileştirilmiş E Modülü' : 'Improved E Modulus' },
-            deltaCm: { value: settlementCm, unit: 'cm', description: tr ? 'Oturma (cm)' : 'Settlement (cm)' },
-            deltaMm: { value: settlementMm, unit: 'mm', description: tr ? 'Oturma (mm)' : 'Settlement (mm)' }
+            // #9: limit alanı — input'tan maxSettlementCm/Mm geldiyse karşılaştırma yapar
+            deltaCm: {
+                value: settlementCm, unit: 'cm',
+                description: tr ? 'Oturma (cm)' : 'Settlement (cm)',
+                limit: input.maxSettlementCm || null
+            },
+            deltaMm: {
+                value: settlementMm, unit: 'mm',
+                description: tr ? 'Oturma (mm)' : 'Settlement (mm)',
+                limit: input.maxSettlementMm || null
+            }
         }
     };
 }

@@ -2,7 +2,7 @@ import ResultCard from './ResultCard';
 import StressChart from './StressChart';
 import './LayerResultsPanel.css';
 
-function LayerResultsPanel({ results, translations, lang }) {
+function LayerResultsPanel({ results, translations, lang, waterTable = 0 }) {
     if (!results) return null;
 
     const t = translations;
@@ -67,14 +67,15 @@ function LayerResultsPanel({ results, translations, lang }) {
                 </div>
             </div>
 
-            {/* Gerilme-Derinlik Grafiği */}
-            <StressChart layers={results.layers} lang={lang} />
+            {/* Gerilme-Derinlik Grafiği — #6 waterTable iletiliyor */}
+            <StressChart layers={results.layers} lang={lang} waterTable={waterTable} />
 
             {/* Özet kartları */}
             <div className="layer-summary-section">
                 <h3>{t.summary}</h3>
                 <div className="summary-cards">
-                    <ResultCard title="" results={results.summary} />
+                    {/* #5 lang prop eklendi */}
+                    <ResultCard title="" results={results.summary} lang={lang} />
                 </div>
             </div>
         </div>
