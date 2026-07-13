@@ -719,10 +719,10 @@ function App() {
               <Dashboard
                 lang={lang}
                 user={user}
+                token={token}
                 onNewProject={handleNewProject}
                 onGoProjects={() => setActivePage('projects')}
-                onImportDxf={handleImportDxf}
-                onImportPdf={handleImportPdfClick}
+                onLoadProject={handleLoadProject}
               />
             )}
 
@@ -857,23 +857,20 @@ function App() {
                             )}
                           </div>
                           {/* #9 — Max oturma sınırı */}
-                          <details className="param-advanced">
-                            <summary>{tr ? '📏 Oturma Sınırı' : '📏 Settlement Limit'}</summary>
-                            <div className="param-card-form" style={{ marginTop: 8 }}>
-                              <InputField
-                                label={tr ? 'İzin Verilen Maks. Oturma' : 'Allowable Settlement'}
-                                name="maxSettlementMm"
-                                value={parameters.maxSettlementMm ?? ''}
-                                onChange={handleInputChange}
-                                unit="mm"
-                                placeholder={tr ? 'örn. 25' : 'e.g. 25'}
-                                min={5}
-                                max={200}
-                                step={5}
-                                tooltip={tr ? 'Hesaplanan oturma bu değerle karşılaştırılır (TS 500: max 25–50mm)' : 'Calculated settlement is checked against this limit (TS 500: max 25–50mm)'}
-                              />
-                            </div>
-                          </details>
+                          <div className="param-card-form">
+                            <InputField
+                              label={tr ? 'Oturma Sınırı' : 'Settlement Limit'}
+                              name="maxSettlementMm"
+                              value={parameters.maxSettlementMm ?? 25}
+                              onChange={handleInputChange}
+                              unit="mm"
+                              placeholder={tr ? 'örn. 25' : 'e.g. 25'}
+                              min={5}
+                              max={200}
+                              step={5}
+                              tooltip={tr ? 'Hesaplanan oturma bu değerle karşılaştırılır (TS 500: max 25–50mm)' : 'Calculated settlement is checked against this limit (TS 500: max 25–50mm)'}
+                            />
+                          </div>
                         </div>
                       </div>
                       <button className="page-calculate-btn" onClick={handleCalculate} disabled={loading}>
