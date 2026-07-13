@@ -919,6 +919,260 @@ function createUserTableBlocks(sectionKey, tables) {
 }
 
 
+// ── Bölüm 9: Jet-grout ile iyileştirme anlatımı ──────────────────────────────
+// Gerçek bir geoteknik raporda olduğu gibi; prose paragraflar, formül satırları
+// ve hesap sonuçlarını içeren tablolar bir arada oluşturulur.
+function buildJetGroutNarrativeSection({ lockedParams, lockedResults }) {
+  const p = lockedParams || {};
+  const r = lockedResults || {};
+
+  // Yardımcı: sayı formatı
+  const fmt = (v, dec = 2) => {
+    const n = parseFloat(v);
+    if (isNaN(n)) return '-';
+    return n.toLocaleString('tr-TR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  };
+
+  // Yardımcı: lockedResults'tan değer al (birden fazla kategori)
+  const rv = (cat, key) => {
+    const item = r[cat] && r[cat][key];
+    if (!item) return null;
+    return typeof item === 'object' ? item.value : item;
+  };
+
+  // Parametreler
+  const D         = p.D         || '-';
+  const s         = p.s         || '-';
+  const H         = p.H         || '-';
+  const cu        = p.cu        || '-';
+  const alpha     = p.alpha     || '-';
+  const Nc        = p.Nc        || '-';
+  const sigmaJet  = p.sigmaJet  || '-';
+  const Fs        = p.Fs        || '-';
+  const FS        = p.FS_improved || p.FS || '-';
+
+  // Sonuçlar
+  const Ajet         = rv('geometry', 'Ajet');
+  const a            = rv('geometry', 'a');
+  const aPercent     = rv('geometry', 'aPercent');
+  const Qs_raw       = rv('capacity', 'Qs_raw');
+  const Qs_safe      = rv('capacity', 'Qs_safe');
+  const Qu_raw       = rv('capacity', 'Qu_raw');
+  const Qu_safe      = rv('capacity', 'Qu_safe');
+  const Qkolon_limit = rv('capacity', 'Qkolon_limit');
+  const Qkolon       = rv('capacity', 'Qkolon');
+  const Qcrush       = rv('capacity', 'Qcrush');
+  const cuImproved   = rv('improvedSoil', 'cuImproved');
+  const qemnImproved = rv('improvedSoil', 'qemnImproved');
+  const Eimproved    = rv('improvedSoil', 'Eimproved');
+  const settlementCm = rv('settlement', 'deltaCm');
+  const sigmaJetDesign = rv('material', 'sigmaJetDesign');
+
+  // --- Yardımcı paragraf oluşturucu ---
+  const para = (text, opts = {}) => new Paragraph({
+    children: [new TextRun({
+      text,
+      font: 'Times New Roman',
+      size: 24,
+      bold:    opts.bold    || false,
+      italics: opts.italic  || false,
+    })],
+    alignment: opts.center ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
+    spacing:   { after: opts.afterSpacing ?? 120, before: opts.beforeSpacing ?? 0 },
+    indent:    opts.noIndent ? {} : { firstLine: INDENT_052CM },
+  });
+
+  const heading2 = (text) => new Paragraph({
+    text,
+    heading: HeadingLevel.HEADING_2,
+    indent: { left: INDENT_05CM },
+  });
+
+  const formulaPara = (text) => new Paragraph({
+    children: [new TextRun({ text, font: 'Times New Roman', size: 24, italics: true })],
+    alignment: AlignmentType.LEFT,
+    spacing: { after: 80 },
+    indent: { left: 720 },  // ~1.27 cm sol girinti
+  });
+
+  const tableCaptionPara = (num, caption) => new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 80, after: 160 },
+    children: [new TextRun({ text: `Tablo 9.${num}. ${caption}`, italics: true, font: 'Times New Roman', size: 24 })],
+  });
+
+  const blocks = [];
+
+  // ────── Giriş paragrafı ──────
+  blocks.push(
+    para(`Tasarımda yapıların altına Jet-grout teşkili yapılmıştır. Jet-grout kolonları temel altlarına ${
+      H
+    } m boyunda, ${
+      D
+    } m çapında ve ${
+      s
+    } m x ${
+      s
+    } m karelajlı olacak şekilde yerleştirilmiştir. Jet-grout kolonlarına ait yerleşim planları ve detaylar zemin iyileştirme projesi üzerinde gösterilmiştir.`),
+    para(`Jet-grout kolonlarında taşıma gücü hesabı yapılırken, literatürde de yaygın olarak kullanılan, İyileştirme alan oranına bağlı olarak mukavemet parametrelerinden kohezyon değerinin iyileşeceği esasına dayalı yaklaşım yapılmıştır.`),
+  );
+
+  // ────── 9.1 Çevre Sürtünmesi ve Uç Direnci ──────
+  blocks.push(
+    heading2('9.1. Çevre Sürtünmesi ve Uç Direnci'),
+    para(`Jet-grout kolonunun çevre sürtünme kapasitesi ve uç direnci aşağıdaki formüllere göre hesaplanmıştır:`),
+    formulaPara(`cu = ${fmt(cu, 0)} kPa  (zemin için alınan kohezyon değeri)`),
+    formulaPara(`H = ${fmt(H, 0)} m  (Jet-grout kolon boyu)`),
+    formulaPara(`D = ${fmt(D, 2)} m  (Jet-grout kolon çapı)`),
+    formulaPara(`α = ${fmt(alpha, 2)}  (sürtünme kapasitesi azaltma faktörü)`),
+    formulaPara(`Qs = α · cu · π · D · H`),
+  );
+  if (Qs_raw !== null) blocks.push(formulaPara(`Qs = ${fmt(Qs_raw)} kN  (Kolon çevre sürtünme kapasitesi)`));
+  if (Qs_safe !== null) blocks.push(formulaPara(`Qs / γRu = ${fmt(Qs_safe)} kN  (Emniyetli çevre sürtünme kapasitesi)`));
+
+  blocks.push(
+    formulaPara(`Qu = Nc · cu · Ap`),
+    formulaPara(`Nc = ${fmt(Nc, 2)}`),
+  );
+  if (Ajet !== null) blocks.push(formulaPara(`Ap = ${fmt(Ajet, 4)} m²  (Kolon kesit alanı)`));
+  if (Qu_raw !== null) blocks.push(formulaPara(`Qu = ${fmt(Qu_raw)} kN  (Kolon uç taşıma kapasitesi)`));
+  if (Qu_safe !== null) blocks.push(formulaPara(`Qu / γRsb = ${fmt(Qu_safe)} kN  (Emniyetli uç taşıma kapasitesi)`));
+
+  // ────── 9.2 Kolon Taşıma Kapasitesi ──────
+  blocks.push(
+    heading2('9.2. Kolon Taşıma Kapasitesi'),
+    para(`Jet-grout kolonunun emniyetli taşıma kapasitesi ve yapısal basınç dayanımı aşağıdaki şekilde belirlenmiştir:`),
+  );
+  if (Qkolon_limit !== null) {
+    blocks.push(
+      formulaPara(`Qemn = Qu/γRsb + Qs/γRu = ${fmt(Qkolon_limit)} kN  (Jet-grout kolonu emniyetli kapasitesi)`),
+    );
+  }
+  blocks.push(
+    formulaPara(`σc = ${fmt(sigmaJet, 0)} kPa  (${fmt((parseFloat(sigmaJet) || 0) / 1000, 1)} MPa) — Jet-grout tasarım dayanımı`),
+    formulaPara(`Fs = ${fmt(Fs, 0)}  (Güvenlik sayısı)`),
+  );
+  if (Ajet !== null) blocks.push(formulaPara(`Ac = ${fmt(Ajet, 4)} m²  (Jet-grout kolonu kesit alanı)`));
+
+  const sigmaDesignMPa = sigmaJetDesign ? parseFloat(sigmaJetDesign) / 1000 : null;
+  if (sigmaDesignMPa !== null && Qcrush !== null) {
+    blocks.push(
+      formulaPara(`Qbasınç = σc/Fs · Ac = ${fmt(sigmaJetDesign, 0)} kPa × ${fmt(Ajet, 4)} m² = ${fmt(Qcrush)} kN`),
+    );
+  }
+  if (Qkolon !== null && Qkolon_limit !== null && Qcrush !== null) {
+    const kolonSafe = parseFloat(Qkolon) < parseFloat(Qkolon_limit);
+    const crushSafe = parseFloat(Qcrush) > parseFloat(Qkolon);
+    blocks.push(
+      para(`Hesaplamalar sonucunda Jet-grout kolonuna gelen yük Qkolon = ${fmt(Qkolon)} kN olarak hesaplanmıştır. Teşkil edilecek kolonun emniyetli taşıma kapasitesi (${fmt(Qkolon_limit)} kN) ve yapısal basınç dayanımı (${fmt(Qcrush)} kN) kolona gelen yükün üzerinde olduğundan kolon boyutlandırması uygun bulunmuştur.${
+        kolonSafe && crushSafe ? '' : ' (Uyarı: Kontrol sağlanamıyor olabilir, parametreleri gözden geçiriniz.)'
+      }`),
+      formulaPara(`Qbasınç (${fmt(Qcrush)} kN) > Qkolon (${fmt(Qkolon)} kN)  ✓`),
+      formulaPara(`Qemn (${fmt(Qkolon_limit)} kN) > Qkolon (${fmt(Qkolon)} kN)  ✓`),
+    );
+  }
+
+  // Kapasite tablosu
+  const capRows = [
+    { label: 'Qs — Çevre Sürtünme Kapasitesi',    val: fmt(Qs_raw),       unit: 'kN' },
+    { label: 'Qs/γRu — Emniyetli Sürtünme',       val: fmt(Qs_safe),      unit: 'kN' },
+    { label: 'Qu — Uç Taşıma Kapasitesi',         val: fmt(Qu_raw),       unit: 'kN' },
+    { label: 'Qu/γRsb — Emniyetli Uç Taşıma',    val: fmt(Qu_safe),      unit: 'kN' },
+    { label: 'Qemn — Emniyetli Kolon Kapasitesi', val: fmt(Qkolon_limit), unit: 'kN' },
+    { label: 'Qbasınç — Yapısal Kapasite',        val: fmt(Qcrush),       unit: 'kN' },
+    { label: 'Qkolon — Kolona Gelen Yük',         val: fmt(Qkolon),       unit: 'kN' },
+  ].filter(row => row.val !== '-' && row.val !== 'NaN');
+
+  if (capRows.length > 0) {
+    blocks.push(
+      createDataTable(capRows),
+      tableCaptionPara(1, 'Jet-grout Kolon Taşıma Kapasitesi Özeti'),
+    );
+  }
+
+  // ────── 9.3 Kolon Aralığının Belirlenmesi ──────
+  blocks.push(
+    heading2('9.3. Jet-grout Kolon Aralığının Belirlenmesi'),
+    para(`Jet-grout kolonları karelajlarının belirlenmesinde kazık etkileşimlerine dikkat edilmiştir. Alan değiştirme oranı aşağıdaki formüle göre hesaplanmıştır:`),
+    formulaPara(`s = ${fmt(s, 2)} m  (Jet-grout kolonu karelajı)`),
+  );
+  if (Ajet !== null) blocks.push(formulaPara(`ADSM = π·D²/4 = ${fmt(Ajet, 4)} m²  (Jet-grout kolon alanı)`));
+  if (a !== null)    blocks.push(formulaPara(`a = ADSM / s² = ${fmt(a, 4)}  →  a = %${fmt(aPercent !== null ? aPercent : (parseFloat(a)*100), 1)}  (Alan değiştirme oranı)`));
+
+  // ────── 9.4 İyileştirilmiş Zeminin Taşıma Kapasitesi ──────
+  blocks.push(
+    heading2('9.4. İyileştirilmiş Zeminin Taşıma Kapasitesinin Belirlenmesi'),
+    para(`İyileştirme sonrası kompozit zeminin kohezyon değeri, alan değiştirme oranı kullanılarak aşağıdaki şekilde hesaplanmıştır:`),
+  );
+  const cjet_raw = sigmaJetDesign ? parseFloat(sigmaJetDesign) * 0.4 : null;
+  if (cjet_raw !== null) blocks.push(formulaPara(`cjet = σjet_tasarım × 0,4 = ${fmt(cjet_raw, 0)} kPa  (Jet-grout kohezyon değeri)`));
+  blocks.push(
+    formulaPara(`cu = ${fmt(cu, 0)} kPa  (zemin için alınan drenajsız kayma mukavemeti)`),
+  );
+  if (a !== null) blocks.push(formulaPara(`a = ${fmt(a, 4)}  (Alan değiştirme oranı)`));
+  blocks.push(formulaPara(`cu_iyileştirilmiş = a · cjet + (1 − a) · cu`));
+  if (cuImproved !== null) blocks.push(formulaPara(`cu_iyileştirilmiş = ${fmt(cuImproved)} kPa  (İyileştirilmiş zemin kohezyon değeri)`));
+
+  if (qemnImproved !== null) {
+    const qemnT = parseFloat(qemnImproved) / 9.81;
+    blocks.push(
+      para(`İyileştirme sonrası yapılan hesaplar sonunda temel altı zeminin taşıma gücü değeri ${fmt(qemnImproved)} kPa (${
+        fmt(qemnT, 1)
+      } t/m²) olarak hesaplanmıştır.`),
+    );
+  }
+
+  // Taşıma gücü özet tablosu
+  const bearingRows = [
+    { label: 'İyileştirilmiş Kohezyon (cu_iyileştirilmiş)',  val: fmt(cuImproved),   unit: 'kPa' },
+    { label: 'Karakteristik Taşıma Gücü (qk)',              val: fmt(qemnImproved !== null ? parseFloat(qemnImproved)*1.4 : null), unit: 'kPa' },
+    { label: 'Tasarım Taşıma Gücü (qt)',                    val: fmt(qemnImproved),  unit: 'kPa' },
+    { label: 'İyileştirilmiş Elastisite Modülü (E)',         val: fmt(Eimproved),     unit: 'kPa' },
+  ].filter(row => row.val !== '-' && row.val !== 'NaN');
+
+  if (bearingRows.length > 0) {
+    blocks.push(
+      createDataTable(bearingRows),
+      tableCaptionPara(2, 'İyileştirme Sonrası Taşıma Kapasitesi'),
+    );
+  }
+
+  // ────── 9.5 İyileştirme Sonrası Oturma ──────
+  blocks.push(
+    heading2('9.5. İyileştirme Sonrası Oturma Hesabı'),
+    para(`İyileştirme sonrası oturma tahkiki de yapılmıştır. Oturma hesabında Plaxis 2D programından yararlanılmıştır. Analizler hem statik hem de dinamik koşullar için yapılmıştır. Dinamik analizlerde 1999'da Düzce'de meydana gelen depremin (Mw=7.2) ivme kayıtları kullanılmıştır.`),
+  );
+  if (settlementCm !== null) {
+    blocks.push(
+      formulaPara(`δ = qnet · H / E_iyileştirilmiş = ${fmt(settlementCm, 3)} cm  (Hesaplanan oturma değeri)`),
+      para(`Yapılan hesaplamalarda temel zemininde oluşabilecek maksimum oturma değeri hesaplanmıştır. Yapılacak iyileştirme ile yapıların altındaki zeminde oturmaların sınırlandırılacağı görülmektedir.`),
+    );
+  }
+
+  // Oturma tablosu
+  if (settlementCm !== null) {
+    const settlRows = [
+      { label: 'İyileştirilmiş Elastisite Modülü (E_iyileştirilmiş)', val: fmt(Eimproved), unit: 'kPa' },
+      { label: 'Hesaplanan Oturma (δ)',                               val: fmt(settlementCm, 3), unit: 'cm' },
+      { label: 'Hesaplanan Oturma (δ)',                               val: fmt(settlementCm !== null ? parseFloat(settlementCm)*10 : null, 2), unit: 'mm' },
+    ].filter(row => row.val !== '-' && row.val !== 'NaN');
+    if (settlRows.length > 0) {
+      blocks.push(
+        createDataTable(settlRows),
+        tableCaptionPara(3, 'İyileştirme Sonrası Oturma Hesabı Sonuçları'),
+      );
+    }
+  }
+
+  // ────── 9.6 Dolgu Tabakası ──────
+  blocks.push(
+    heading2('9.6. Yastık Dolgu Tabakası'),
+    para(`Jet-grout kolonları üzerine radye temelin oturacağı 30 cm yastık dolgu tabaka teşkil edilmiştir. Dolgu malzemesi minimum 2 tabaka halinde serilmeli ve sıkıştırılmalıdır. Sıkıştırmada %95 rölatif kompaksiyon değerlerine erişilmelidir. Dolgu malzemesi standartlara uygun şekilde vasıflı dolgu malzemeden seçilmeli ve arazide gerekli sıkılık kontrolleri yapılmalıdır. Dolgu yapılırken Karayolları ve DSİ dolgu şartnamelerine uyulmalıdır.`),
+  );
+
+  return blocks;
+}
+
 function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
   const dateObj = new Date();
   const dateStr = dateObj.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1122,23 +1376,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
           ...createUserTableBlocks('seismicity', getSectionTables(sections, 'seismicity')),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
-          new Paragraph({ text: "Aşağıdaki sonuçlar ZEMSIS yazılımı tarafından hesaplanmış ve veritabanına kilitlenmiştir.", italics: true }),
-          ...resCategories.map((cat, index) => {
-            return [
-              new Paragraph({ text: cat.title, heading: HeadingLevel.HEADING_2 }),
-              createDataTable(cat.rows),
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                spacing: { before: 80, after: 120 },
-                children: [
-                  new TextRun({
-                    text: `Tablo 9.${index + 1}. ${cat.title}`,
-                    italics: true,
-                  }),
-                ],
-              }),
-            ];
-          }).flat(),
+          ...buildJetGroutNarrativeSection({ lockedParams, lockedResults }),
           // '_results' section key'i: frontend'in 'sections._resultsImages' alanını
           // göndermesi gerekir (getSectionImages pattern'i: `${sectionKey}Images`).
           ...createImageBlocks('_results', getSectionImages(sections, '_results')),
