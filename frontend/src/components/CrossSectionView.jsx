@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import MobileWarning from './MobileWarning';
 import './CrossSectionView.css';
 
 // Zemin tipi renkleri
@@ -420,9 +421,25 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange, ext
 
     }, [parameters, soilLayers, lang, waterTable, groundSurface, localFoundation, localFill]);
 
+    // ── ResizeObserver: redraw on container/orientation change ──
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ro = new ResizeObserver(() => {
+            setGroundSurface(v => v); // trigger redraw
+        });
+        ro.observe(canvas.parentElement || canvas);
+        return () => ro.disconnect();
+    }, []);
+
     const tr = lang === 'tr';
 
     return (
+        <MobileWarning
+            lang={lang}
+            type="crossSection"
+            summaryData={{ D: parameters.D, s: parameters.s, H: parameters.H }}
+        >
         <div className="cross-section-wrapper">
             <h3>{tr ? 'Jet Grout Kesit Görünümü' : 'Jet Grout Cross-Section View'}</h3>
 
@@ -557,6 +574,7 @@ function CrossSectionView({ parameters, soilLayers, lang, onParameterChange, ext
                 <canvas ref={canvasRef} className="cross-section-canvas" />
             </div>
         </div>
+        </MobileWarning>
     );
 }
 

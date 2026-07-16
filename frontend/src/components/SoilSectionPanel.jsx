@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import MobileWarning from './MobileWarning';
 import './SoilSectionPanel.css';
 
 // ── Soil constants ──────────────────────────────────────────────────────────────
@@ -125,6 +126,17 @@ function SoilSectionPanel({
         onChange(copy);
     };
     const onDragOver = (e) => e.preventDefault();
+
+    // Touch-friendly layer reorder (▲▼ buttons)
+    const moveLayer = (index, direction) => {
+        if (readOnly) return;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= layers.length) return;
+        const copy = [...layers];
+        const [moved] = copy.splice(index, 1);
+        copy.splice(newIndex, 0, moved);
+        onChange(copy);
+    };
 
     // ── Depth range ──
     const getDepthRange = (index) => {
@@ -423,10 +435,23 @@ function SoilSectionPanel({
 
     }, [parameters, layers, lang, waterTable, groundSurface, localFoundation, localFill]);
 
+    // ── ResizeObserver: redraw canvas when container resizes ──
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ro = new ResizeObserver(() => {
+            // Force canvas redraw by triggering a state update
+            setGroundSurface(v => v);
+        });
+        ro.observe(canvas.parentElement || canvas);
+        return () => ro.disconnect();
+    }, []);
+
     // ═══════════════════════════════════════════════════════════════════════════
     //  Render
     // ═══════════════════════════════════════════════════════════════════════════
-    return ( 
+    return (
+        <MobileWarning lang={lang} type="soilSection" summaryData={{ layers }}>
         <div className="ssp-wrapper">
             {/* ── Left panel: Soil layers ── */}
             <div className="ssp-left">
@@ -634,6 +659,20 @@ function SoilSectionPanel({
                                 </div>
                                 {!readOnly && (
                                     <div className="ssp-layer-row-actions">
+                                        <div className="ssp-layer-reorder-btns">
+                                            <button
+                                                className="ssp-reorder-btn"
+                                                title={tr ? 'Yukarı taşı' : 'Move up'}
+                                                disabled={index === 0}
+                                                onClick={e => { e.stopPropagation(); moveLayer(index, -1); }}
+                                            >▲</button>
+                                            <button
+                                                className="ssp-reorder-btn"
+                                                title={tr ? 'Aşağı taşı' : 'Move down'}
+                                                disabled={index === layers.length - 1}
+                                                onClick={e => { e.stopPropagation(); moveLayer(index, 1); }}
+                                            >▼</button>
+                                        </div>
                                         <input
                                             type="number"
                                             className="ssp-layer-thickness-input"
@@ -669,6 +708,7 @@ function SoilSectionPanel({
                 <canvas ref={canvasRef} className="ssp-canvas" />
             </div>
         </div>
+        </MobileWarning>
     );
 }
 

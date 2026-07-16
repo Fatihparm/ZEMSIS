@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import SectionCutView from './SectionCutView';
 import DxfImportModal from './DxfImportModal';
+import MobileWarning from './MobileWarning';
 import './PlanView.css';
 
 // ── Section line colors ──
@@ -164,6 +165,9 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     const [zoom, setZoom] = useState(1);
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+    // Touch state refs (no re-render needed)
+    const touchStateRef = useRef({ isPanning: false, startX: 0, startY: 0, panX: 0, panY: 0, isPinching: false, startDist: 0, startZoom: 1 });
 
     // Grid snap
     const [gridSnap, setGridSnap] = useState(true);
@@ -1111,6 +1115,80 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         setIsDraggingColumn(false);
     }, []);
 
+    // ── Touch event handlers (pan + pinch-zoom) ──
+    const getTouchDist = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const getTouchMid  = (t1, t2) => ({ x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 });
+
+    const handleTouchStart = useCallback((e) => {
+        e.preventDefault();
+        const ts = touchStateRef.current;
+        if (e.touches.length === 1) {
+            ts.isPanning  = true;
+            ts.isPinching = false;
+            ts.startX = e.touches[0].clientX;
+            ts.startY = e.touches[0].clientY;
+            ts.panX   = pan.x;
+            ts.panY   = pan.y;
+        } else if (e.touches.length === 2) {
+            ts.isPanning  = false;
+            ts.isPinching = true;
+            ts.startDist  = getTouchDist(e.touches[0], e.touches[1]);
+            ts.startZoom  = zoom;
+            const mid = getTouchMid(e.touches[0], e.touches[1]);
+            ts.startX = mid.x;
+            ts.startY = mid.y;
+            ts.panX   = pan.x;
+            ts.panY   = pan.y;
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pan, zoom]);
+
+    const handleTouchMove = useCallback((e) => {
+        e.preventDefault();
+        const ts = touchStateRef.current;
+        if (ts.isPanning && e.touches.length === 1) {
+            const dx = e.touches[0].clientX - ts.startX;
+            const dy = e.touches[0].clientY - ts.startY;
+            setPan({ x: ts.panX + dx, y: ts.panY + dy });
+        } else if (ts.isPinching && e.touches.length === 2) {
+            const dist = getTouchDist(e.touches[0], e.touches[1]);
+            const scale = Math.max(0.1, Math.min(50, ts.startZoom * (dist / ts.startDist)));
+            setZoom(scale);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleTouchEnd = useCallback((e) => {
+        const ts = touchStateRef.current;
+        if (e.touches.length === 0) {
+            ts.isPanning  = false;
+            ts.isPinching = false;
+        } else if (e.touches.length === 1) {
+            // One finger lifted from pinch — transition to pan
+            ts.isPinching = false;
+            ts.isPanning  = true;
+            ts.startX = e.touches[0].clientX;
+            ts.startY = e.touches[0].clientY;
+            ts.panX   = pan.x;
+            ts.panY   = pan.y;
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pan]);
+
+    // Register touch listeners with { passive: false } so we can preventDefault
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove',  handleTouchMove,  { passive: false });
+        canvas.addEventListener('touchend',   handleTouchEnd,   { passive: false });
+        return () => {
+            canvas.removeEventListener('touchstart', handleTouchStart);
+            canvas.removeEventListener('touchmove',  handleTouchMove);
+            canvas.removeEventListener('touchend',   handleTouchEnd);
+        };
+    }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
     // Wheel zoom — must be non-passive to preventDefault
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -1139,13 +1217,13 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         const wrapper = containerRef.current?.closest('.plan-view-fullscreen-wrapper');
         if (!wrapper) return;
 
+        const getClientY = (e) => e.touches ? e.touches[0].clientY : e.clientY;
+
         const handleMove = (e) => {
-            const rect = wrapper.getBoundingClientRect();
-            // wrapper contains header + content area. We need the content area.
             const contentArea = wrapper.querySelector('.plan-split-container');
             if (!contentArea) return;
             const contentRect = contentArea.getBoundingClientRect();
-            const y = e.clientY - contentRect.top;
+            const y = getClientY(e) - contentRect.top;
             const ratio = Math.max(0.25, Math.min(0.85, y / contentRect.height));
             setSplitRatio(ratio);
         };
@@ -1155,10 +1233,14 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
         };
 
         window.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleUp);
+        window.addEventListener('mouseup',   handleUp);
+        window.addEventListener('touchmove', handleMove, { passive: true });
+        window.addEventListener('touchend',  handleUp);
         return () => {
             window.removeEventListener('mousemove', handleMove);
-            window.removeEventListener('mouseup', handleUp);
+            window.removeEventListener('mouseup',   handleUp);
+            window.removeEventListener('touchmove', handleMove);
+            window.removeEventListener('touchend',  handleUp);
         };
     }, [isResizingSplit]);
 
@@ -1391,6 +1473,12 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
     const showSectionPanel = activeSection !== null;
 
     return (
+        <MobileWarning
+            lang={lang}
+            type="planView"
+            summaryData={{ totalColumns, area, perimeter, ar: Ar }}
+            breakpoint={600}
+        >
         <div className="plan-view-fullscreen-wrapper">
             <div className="plan-view-header">
                 <h3>{tr ? 'Jet Grout Yerleşim Planı (İnteraktif Çizim)' : 'Jet Grout Layout Plan (Interactive Drawing)'}</h3>
@@ -1667,7 +1755,11 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
 
                 {/* Resize handle */}
                 {showSectionPanel && (
-                    <div className="plan-split-handle" onMouseDown={handleSplitMouseDown}>
+                    <div
+                        className="plan-split-handle"
+                        onMouseDown={handleSplitMouseDown}
+                        onTouchStart={(e) => { e.preventDefault(); setIsResizingSplit(true); }}
+                    >
                         <div className="plan-split-handle-bar" />
                     </div>
                 )}
@@ -1698,6 +1790,7 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                 />
             )}
         </div>
+        </MobileWarning>
     );
 }
 

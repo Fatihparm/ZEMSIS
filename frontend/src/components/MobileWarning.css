@@ -1,0 +1,140 @@
+/* ¦¦ MobileWarning ¦¦ */
+.mobile-warning {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    min-height: 220px;
+    background: linear-gradient(135deg, rgba(30,30,50,0.95) 0%, rgba(20,20,40,0.98) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 16px;
+    text-align: center;
+    gap: 1rem;
+    margin: 1rem;
+    backdrop-filter: blur(12px);
+}
+
+.mobile-warning__icon {
+    font-size: 3rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px rgba(99,102,241,0.5));
+}
+
+.mobile-warning__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin: 0;
+}
+
+.mobile-warning__desc {
+    font-size: 0.82rem;
+    color: rgba(148, 163, 184, 0.85);
+    margin: 0;
+    line-height: 1.5;
+    max-width: 280px;
+}
+
+.mobile-warning__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.35);
+    border-radius: 20px;
+    font-size: 0.72rem;
+    color: #a5b4fc;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+/* Summary section below the warning */
+.mobile-warning__summary {
+    width: 100%;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mobile-warning__summary-title {
+    font-size: 0.78rem;
+    color: rgba(148,163,184,0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.mobile-summary-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.mobile-summary-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.mobile-summary-card__label {
+    font-size: 0.7rem;
+    color: rgba(148,163,184,0.65);
+    font-weight: 500;
+}
+
+.mobile-summary-card__value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.mobile-summary-card__unit {
+    font-size: 0.68rem;
+    color: rgba(148,163,184,0.5);
+}
+
+/* Layer list for SoilSection */
+.mobile-layer-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.mobile-layer-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+}
+
+.mobile-layer-item__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mobile-layer-item__name {
+    font-size: 0.82rem;
+    color: #e2e8f0;
+    font-weight: 600;
+    flex: 1;
+}
+
+.mobile-layer-item__depth {
+    font-size: 0.75rem;
+    color: rgba(148,163,184,0.65);
+}

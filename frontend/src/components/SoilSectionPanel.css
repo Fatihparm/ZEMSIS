@@ -542,3 +542,65 @@
   background: #e0f6ff;
   border-color: var(--color-primary, #0ea5e9);
 }
+
+/* ── Touch-friendly layer reorder buttons ── */
+.ssp-layer-reorder-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.ssp-reorder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 5px;
+  background: #f5f5f5;
+  color: #555;
+  font-size: 0.6rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ssp-reorder-btn:hover:not(:disabled) {
+  background: #e0f0ff;
+  color: #0ea5e9;
+  border-color: #0ea5e9;
+}
+
+.ssp-reorder-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* Larger touch targets on touch devices */
+@media (pointer: coarse) {
+  .ssp-reorder-btn {
+    width: 32px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .ssp-layer-row {
+    min-height: 52px;
+    padding: 10px 8px;
+  }
+
+  .ssp-layer-remove-btn {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 1.1rem;
+  }
+
+  .ssp-layer-thickness-input {
+    min-height: 32px;
+    font-size: 0.9rem;
+  }
+}

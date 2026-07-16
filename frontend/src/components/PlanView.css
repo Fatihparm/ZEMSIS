@@ -429,3 +429,28 @@
     display: none;
   }
 }
+
+/* ── Touch devices: 44×44px minimum targets (WCAG 2.5.5) ── */
+@media (pointer: coarse) {
+  .toolbar-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 12px;
+  }
+
+  .plan-split-handle {
+    height: 20px; /* taller touch hit area */
+    padding: 6px 0;
+  }
+
+  .plan-split-handle-bar {
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  /* Section delete buttons bigger */
+  .toolbar-section-delete {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
