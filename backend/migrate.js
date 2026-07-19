@@ -25,7 +25,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 1. users tablosu (ilk kez oluşturma + kolon eklemeleri)
     // ────────────────────────────────────────────────────────────
-    console.log('\n[1/5] users tablosu...');
+    console.log('\n[1/6] users tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,7 +51,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 2. projects tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[2/5] projects tablosu...');
+    console.log('\n[2/6] projects tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,7 +80,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 3. report_drafts tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[3/5] report_drafts tablosu...');
+    console.log('\n[3/6] report_drafts tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS report_drafts (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -100,7 +100,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 4. project_applications tablosu (YENİ)
     // ────────────────────────────────────────────────────────────
-    console.log('\n[4/5] project_applications tablosu...');
+    console.log('\n[4/6] project_applications tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS project_applications (
         id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -127,9 +127,33 @@ async function runMigration() {
     console.log('   ✓ project_applications tablosu hazır');
 
     // ────────────────────────────────────────────────────────────
-    // 5. Mevcut schema doğrulama (bilgi amaçlı)
+    // 5. report_verifications tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[5/5] Schema doğrulama...');
+    console.log('\n[5/6] report_verifications tablosu...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS report_verifications (
+        id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code         VARCHAR(50) UNIQUE NOT NULL,
+        project_id   UUID REFERENCES projects(id) ON DELETE SET NULL,
+        user_id      UUID REFERENCES users(id) ON DELETE SET NULL,
+        project_name TEXT DEFAULT NULL,
+        created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_report_verifications_code
+        ON report_verifications(code);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_report_verifications_project
+        ON report_verifications(project_id);
+    `);
+    console.log('   ✓ report_verifications tablosu hazır');
+
+    // ────────────────────────────────────────────────────────────
+    // 6. Mevcut schema doğrulama (bilgi amaçlı)
+    // ────────────────────────────────────────────────────────────
+    console.log('\n[6/6] Schema doğrulama...');
     const tables = await client.query(`
       SELECT table_name
       FROM information_schema.tables
