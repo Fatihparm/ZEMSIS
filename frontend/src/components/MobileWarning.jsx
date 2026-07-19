@@ -10,72 +10,58 @@ const SOIL_COLOR_MAP = {
 };
 
 const SOIL_NAMES = {
-    en: { kum: "Sand", kil: "Clay", silt: "Silt", kaya: "Rock", cakil: "Gravel" },
-    tr: { kum: "Kum",  kil: "Kil",  silt: "Silt", kaya: "Kaya", cakil: "Cakil"  },
+    en: { kum: "Sand", kil: "Clay", silt: "Silt", kaya: "Rock",  cakil: "Gravel" },
+    tr: { kum: "Kum",  kil: "Kil",  silt: "Silt", kaya: "Kaya",  cakil: "Ã‡akÄ±l"  },
 };
 
-/**
- * MobileWarning
- *
- * Wraps a complex canvas component. On screens <= 768px, renders a warning
- * with an optional summary view instead of the full component.
- *
- * Props:
- *   - lang: "tr" | "en"
- *   - type: "planView" | "soilSection" | "crossSection" | "generic"
- *   - summaryData: object with summary-specific fields
- *   - children: the real component (rendered on desktop/tablet)
- *   - breakpoint: override mobile breakpoint (default 768)
- */
 function MobileWarning({ lang, type = "generic", summaryData = {}, children, breakpoint = 768 }) {
     const isMobile = useIsMobile(breakpoint);
     const tr = lang === "tr";
 
     if (!isMobile) return <>{children}</>;
 
-    const title = tr ? "Masaüstü / Tablet Gerekli" : "Desktop / Tablet Required";
+    const title = tr ? "MasaÃ¼stÃ¼ / Tablet Gerekli" : "Desktop / Tablet Required";
     const desc  = tr
-        ? "Bu bileşen dokunmatik ekranda tam olarak çalışmaz. Lütfen tablet (yatay) veya masaüstü kullanın."
+        ? "Bu bileÅŸen dokunmatik ekranda tam olarak Ã§alÄ±ÅŸmaz. LÃ¼tfen tablet (yatay) veya masaÃ¼stÃ¼ kullanÄ±n."
         : "This component requires a larger screen for full functionality. Please use a tablet (landscape) or desktop.";
 
     return (
         <div className="mobile-warning">
-            <div className="mobile-warning__icon">???</div>
+            <div className="mobile-warning__icon">ğŸ–¥ï¸</div>
             <p className="mobile-warning__title">{title}</p>
             <p className="mobile-warning__desc">{desc}</p>
             <span className="mobile-warning__badge">
-                ?? {tr ? "Tablet veya masaüstü önerilir" : "Tablet or desktop recommended"}
+                ğŸ“ {tr ? "Tablet veya masaÃ¼stÃ¼ Ã¶nerilir" : "Tablet or desktop recommended"}
             </span>
 
-            {/* PlanView summary */}
             {type === "planView" && (
                 <div className="mobile-warning__summary">
                     <div className="mobile-warning__summary-title">
-                        {tr ? "Plan Özeti" : "Plan Summary"}
+                        {tr ? "Plan Ã–zeti" : "Plan Summary"}
                     </div>
                     <div className="mobile-summary-cards">
                         <div className="mobile-summary-card">
-                            <span className="mobile-summary-card__label">?? {tr ? "Kolon" : "Columns"}</span>
-                            <span className="mobile-summary-card__value">{summaryData.totalColumns ?? "—"}</span>
+                            <span className="mobile-summary-card__label">ğŸ”´ {tr ? "Kolon" : "Columns"}</span>
+                            <span className="mobile-summary-card__value">{summaryData.totalColumns ?? "â€”"}</span>
                         </div>
                         <div className="mobile-summary-card">
-                            <span className="mobile-summary-card__label">?? {tr ? "Alan" : "Area"}</span>
+                            <span className="mobile-summary-card__label">ğŸ“ {tr ? "Alan" : "Area"}</span>
                             <span className="mobile-summary-card__value">
-                                {summaryData.area != null ? summaryData.area.toFixed(1) : "—"}
+                                {summaryData.area != null ? summaryData.area.toFixed(1) : "â€”"}
                             </span>
-                            <span className="mobile-summary-card__unit">m²</span>
+                            <span className="mobile-summary-card__unit">mÂ²</span>
                         </div>
                         <div className="mobile-summary-card">
-                            <span className="mobile-summary-card__label">?? {tr ? "Çevre" : "Perimeter"}</span>
+                            <span className="mobile-summary-card__label">ğŸ“ {tr ? "Ã‡evre" : "Perimeter"}</span>
                             <span className="mobile-summary-card__value">
-                                {summaryData.perimeter != null ? summaryData.perimeter.toFixed(1) : "—"}
+                                {summaryData.perimeter != null ? summaryData.perimeter.toFixed(1) : "â€”"}
                             </span>
                             <span className="mobile-summary-card__unit">m</span>
                         </div>
                         <div className="mobile-summary-card">
-                            <span className="mobile-summary-card__label">?? Ar</span>
+                            <span className="mobile-summary-card__label">ğŸ“Š Ar</span>
                             <span className="mobile-summary-card__value">
-                                {summaryData.ar != null ? summaryData.ar.toFixed(1) : "—"}
+                                {summaryData.ar != null ? summaryData.ar.toFixed(1) : "â€”"}
                             </span>
                             <span className="mobile-summary-card__unit">%</span>
                         </div>
@@ -83,7 +69,6 @@ function MobileWarning({ lang, type = "generic", summaryData = {}, children, bre
                 </div>
             )}
 
-            {/* SoilSection summary — layer list */}
             {type === "soilSection" && Array.isArray(summaryData.layers) && summaryData.layers.length > 0 && (
                 <div className="mobile-warning__summary">
                     <div className="mobile-warning__summary-title">
@@ -91,7 +76,9 @@ function MobileWarning({ lang, type = "generic", summaryData = {}, children, bre
                     </div>
                     <div className="mobile-layer-list">
                         {summaryData.layers.map((layer, i) => {
-                            const start = summaryData.layers.slice(0, i).reduce((s, l) => s + (parseFloat(l.thickness) || 0), 0);
+                            const start = summaryData.layers
+                                .slice(0, i)
+                                .reduce((s, l) => s + (parseFloat(l.thickness) || 0), 0);
                             const end   = start + (parseFloat(layer.thickness) || 0);
                             const name  = SOIL_NAMES[lang]?.[layer.soilType] || layer.soilType;
                             const color = SOIL_COLOR_MAP[layer.soilType] || "#888";
@@ -100,7 +87,7 @@ function MobileWarning({ lang, type = "generic", summaryData = {}, children, bre
                                     <div className="mobile-layer-item__dot" style={{ background: color }} />
                                     <span className="mobile-layer-item__name">{name}</span>
                                     <span className="mobile-layer-item__depth">
-                                        {start.toFixed(1)}–{end.toFixed(1)} m
+                                        {start.toFixed(1)}-{end.toFixed(1)} m
                                     </span>
                                 </div>
                             );
@@ -109,7 +96,6 @@ function MobileWarning({ lang, type = "generic", summaryData = {}, children, bre
                 </div>
             )}
 
-            {/* CrossSection summary */}
             {type === "crossSection" && (
                 <div className="mobile-warning__summary">
                     <div className="mobile-warning__summary-title">
@@ -117,18 +103,18 @@ function MobileWarning({ lang, type = "generic", summaryData = {}, children, bre
                     </div>
                     <div className="mobile-summary-cards">
                         <div className="mobile-summary-card">
-                            <span className="mobile-summary-card__label">D {tr ? "Çap" : "Diam."}</span>
-                            <span className="mobile-summary-card__value">{summaryData.D ?? "—"}</span>
+                            <span className="mobile-summary-card__label">D {tr ? "Ã‡ap" : "Diam."}</span>
+                            <span className="mobile-summary-card__value">{summaryData.D ?? "â€”"}</span>
                             <span className="mobile-summary-card__unit">m</span>
                         </div>
                         <div className="mobile-summary-card">
-                            <span className="mobile-summary-card__label">s {tr ? "Aralık" : "Spacing"}</span>
-                            <span className="mobile-summary-card__value">{summaryData.s ?? "—"}</span>
+                            <span className="mobile-summary-card__label">s {tr ? "AralÄ±k" : "Spacing"}</span>
+                            <span className="mobile-summary-card__value">{summaryData.s ?? "â€”"}</span>
                             <span className="mobile-summary-card__unit">m</span>
                         </div>
                         <div className="mobile-summary-card">
                             <span className="mobile-summary-card__label">H {tr ? "Uzunluk" : "Length"}</span>
-                            <span className="mobile-summary-card__value">{summaryData.H ?? "—"}</span>
+                            <span className="mobile-summary-card__value">{summaryData.H ?? "â€”"}</span>
                             <span className="mobile-summary-card__unit">m</span>
                         </div>
                     </div>

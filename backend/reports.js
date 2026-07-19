@@ -26,6 +26,16 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+// ── Doğrulama kodu üretici ────────────────────────────────────────────────────
+function generateVerifyCode(projectId) {
+  const year = new Date().getFullYear();
+  const projectSlug = String(projectId || '').replace(/-/g, '').slice(0, 4).toUpperCase().padEnd(4, 'X');
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 0/O, 1/I karışıklığı yok
+  let rand = '';
+  for (let i = 0; i < 4; i++) rand += chars[Math.floor(Math.random() * chars.length)];
+  return `ZMS-${year}-${projectSlug}-${rand}`;
+}
+
 router.get('/draft/:projectId', async (req, res) => {
   try {
     const result = await pool.query(
@@ -102,7 +112,20 @@ router.post('/generate/:projectId', async (req, res) => {
     );
     const sections = draftResult.rows.length > 0 ? draftResult.rows[0].sections : {};
 
-    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections });
+    // Doğrulama kodu üret ve DB'ye kaydet
+    const verifyCode = generateVerifyCode(project.id);
+    try {
+      await pool.query(
+        `INSERT INTO report_verifications (code, project_id, user_id, project_name)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (code) DO NOTHING`,
+        [verifyCode, project.id, req.userId, project.name || null]
+      );
+    } catch (verifyErr) {
+      console.warn('Verify code kayıt hatası (rapor yine de oluşturulacak):', verifyErr.message);
+    }
+
+    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode });
 
     const docxBuffer = await Packer.toBuffer(doc);
 
@@ -194,7 +217,20 @@ router.post('/generate-for-application/:applicationId', async (req, res) => {
     );
     const sections = draftResult.rows.length > 0 ? draftResult.rows[0].sections : {};
 
-    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections });
+    // Doğrulama kodu üret ve DB'ye kaydet
+    const verifyCode = generateVerifyCode(project.id);
+    try {
+      await pool.query(
+        `INSERT INTO report_verifications (code, project_id, user_id, project_name)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (code) DO NOTHING`,
+        [verifyCode, project.id, row.user_id, project.name || null]
+      );
+    } catch (verifyErr) {
+      console.warn('Verify code kayıt hatası (rapor yine de oluşturulacak):', verifyErr.message);
+    }
+
+    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode });
     const docxBuffer = await Packer.toBuffer(doc);
 
     const safeName = (project.name || 'rapor')
@@ -378,7 +414,7 @@ function createCoverLogoParagraph(logoAsset) {
   });
 }
 
-function createFooterTable(logoAsset, dateStr) {
+function createFooterTable(logoAsset, dateStr, verifyCode) {
   const logoRun = createLogoRun(logoAsset, 28);
   const logoParagraph = logoRun
     ? new Paragraph({
@@ -387,6 +423,10 @@ function createFooterTable(logoAsset, dateStr) {
         children: [logoRun],
       })
     : new Paragraph({ text: '', spacing: { before: 0, after: 0 } });
+
+  const footerText = verifyCode
+    ? `ZEMSIS © ${new Date().getFullYear()} - Tarih: ${dateStr}  |  Doğrulama Kodu: ${verifyCode}`
+    : `ZEMSIS © ${new Date().getFullYear()} - Tarih: ${dateStr}`;
 
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -425,7 +465,7 @@ function createFooterTable(logoAsset, dateStr) {
                 alignment: AlignmentType.LEFT,
                 spacing: { before: 0, after: 0 },
                 children: [
-                  new TextRun({ text: `ZEMSIS © ${new Date().getFullYear()} - Tarih: ${dateStr}`, size: 16, color: '555555' }),
+                  new TextRun({ text: footerText, size: 16, color: '555555' }),
                 ],
               }),
             ],
@@ -1173,7 +1213,7 @@ function buildJetGroutNarrativeSection({ lockedParams, lockedResults }) {
   return blocks;
 }
 
-function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
+function buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode }) {
   const dateObj = new Date();
   const dateStr = dateObj.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
   const coverDate = dateObj.toLocaleDateString('tr-TR', { month: 'long' }).toUpperCase() + ", " + dateObj.getFullYear();
@@ -1296,6 +1336,22 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
 
           new Paragraph({ children: [new TextRun({ text: coverDate, font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 900 } }),
           new Paragraph({ children: [new TextRun({ text: reportNumber ? "Rapor No: " + reportNumber : "Rapor No: " + project.id, font: "Times New Roman", size: 28, bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 300 } }),
+          ...(verifyCode ? [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 200, after: 60 },
+              children: [
+                new TextRun({ text: `Doğrulama Kodu: ${verifyCode}`, font: "Times New Roman", size: 20, color: '444444' }),
+              ],
+            }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: 0 },
+              children: [
+                new TextRun({ text: `zemsis.com/verify/${verifyCode}`, font: "Times New Roman", size: 20, color: '1155CC', underline: { type: 'single' } }),
+              ],
+            }),
+          ] : []),
         ]
       },
       // İçindekiler, Tablolar ve Şekiller Listesi
@@ -1335,7 +1391,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections }) {
         },
         footers: {
           default: new Footer({
-            children: [createFooterTable(logoAsset, dateStr)]
+            children: [createFooterTable(logoAsset, dateStr, verifyCode)]
           })
         },
         children: [

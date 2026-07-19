@@ -84,6 +84,18 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_applications_user    ON project_applications(user_id);
       CREATE INDEX IF NOT EXISTS idx_applications_muni    ON project_applications(municipality);
       CREATE INDEX IF NOT EXISTS idx_applications_status  ON project_applications(status);
+
+      -- ── Rapor doğrulama kodları ──────────────────────────────
+      CREATE TABLE IF NOT EXISTS report_verifications (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code        TEXT UNIQUE NOT NULL,
+        project_id  UUID REFERENCES projects(id) ON DELETE SET NULL,
+        user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+        project_name TEXT DEFAULT NULL,
+        created_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_report_verifications_code ON report_verifications(code);
     `);
     console.log('✅ Database tables ready');
   } catch (err) {

@@ -63,6 +63,51 @@ app.use('/api/applications', applicationsRouter);
 app.use('/api/calculate', calcLimiter);
 app.use('/api/calculate-layers', calcLimiter);
 
+// ── Rapor Doğrulama (public — auth gerektirmez) ──────────────
+app.get('/api/verify/:code', async (req, res) => {
+  try {
+    const { pool } = require('./db');
+    const code = (req.params.code || '').toUpperCase().trim();
+
+    if (!code || !/^ZMS-\d{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
+      return res.status(400).json({ success: false, error: 'Geçersiz doğrulama kodu formatı.' });
+    }
+
+    const result = await pool.query(
+      `SELECT rv.code, rv.project_name, rv.created_at,
+              p.name AS project_name_db, p.id AS project_id,
+              u.full_name AS owner_name
+       FROM report_verifications rv
+       LEFT JOIN projects p ON p.id = rv.project_id
+       LEFT JOIN users u ON u.id = rv.user_id
+       WHERE rv.code = $1`,
+      [code]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        valid: false,
+        error: 'Bu doğrulama koduna ait rapor bulunamadı. Belge değiştirilmiş veya geçersiz olabilir.',
+      });
+    }
+
+    const row = result.rows[0];
+    res.json({
+      success: true,
+      valid: true,
+      code: row.code,
+      projectName: row.project_name_db || row.project_name || 'Bilinmiyor',
+      ownerName: row.owner_name || 'Bilinmiyor',
+      createdAt: row.created_at,
+      message: 'Bu rapor ZEMSIS platformunda kayıtlı ve doğrulanmıştır.',
+    });
+  } catch (err) {
+    console.error('Verify endpoint error:', err);
+    res.status(500).json({ success: false, error: 'Doğrulama sırasında bir hata oluştu.' });
+  }
+});
+
 // ── Health check ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
