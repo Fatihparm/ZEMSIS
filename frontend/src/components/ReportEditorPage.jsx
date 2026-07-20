@@ -229,10 +229,15 @@ function splitPreviewParagraphs(text) {
 
 function getPreviewImages(sections, sectionKey) {
   const value = sections?.[getSectionImageKey(sectionKey)];
-  return Array.isArray(value) ? value.filter(img => img?.dataUrl) : [];
+  // Yeni format: UUID string array → previewUrl içeren objeler sections'ta saklı
+  // Eski format: dataUrl içeren objeler (geriye dönük uyumluluk)
+  return Array.isArray(value)
+    ? value.filter(img => img?.previewUrl || img?.dataUrl)
+    : [];
 }
 
 function getPreviewLogoSrc(sections) {
+  if (sections?.coverLogoPreviewUrl) return sections.coverLogoPreviewUrl;
   return sections?.coverLogo?.dataUrl || '/zemsis-logo.png';
 }
 
@@ -292,7 +297,10 @@ function buildPreviewTableRows({ sections, sectionDefaults, parameters, results 
 }
 
 function sectionDefaultsHasContent(sections, sectionDefaults, key) {
-  return Boolean((sections?.[key] ?? sectionDefaults?.[key] ?? '').toString().trim());
+  const blocks = sections?.[getSectionBlocksKey(key)];
+  if (Array.isArray(blocks)) return blocks.some(b => b?.text?.trim());
+  // sectionDefaults string fallback (varsayılan metin her zaman mevcutsa true döner)
+  return Boolean((sectionDefaults?.[key] ?? '').toString().trim());
 }
 
 function buildPreviewFigureRows({ sections, sectionDefaults }) {
@@ -503,8 +511,14 @@ function getImageCaptionNumber(sectionKey, index) {
   return sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
 }
 
-function loadImageFromFile(file) {
-  return new Promise((resolve, reject) => {
+/**
+ * Görsel dosyasını canvas üzerinde resize/compress eder,
+ * ardından backend'e yükler ve { id, previewUrl, caption, name, width, height } döner.
+ * dataUrl artık lokal state'te saklanmıyor — JSONB'de büyük blob kalmaz.
+ */
+async function uploadImageFile(file, projectId, token, sectionKey = 'unknown') {
+  // 1. Canvas ile resize
+  const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Görsel okunamadı.'));
     reader.onload = () => {
@@ -523,30 +537,56 @@ function loadImageFromFile(file) {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Görsel işlenemedi.'));
-          return;
-        }
+        if (!ctx) { reject(new Error('Görsel işlenemedi.')); return; }
         ctx.drawImage(img, 0, 0, width, height);
 
         const outputMime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
         const quality = outputMime === 'image/jpeg' ? 0.9 : undefined;
-        const dataUrl = canvas.toDataURL(outputMime, quality);
-        resolve({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-          name: file.name,
-          caption: '',
-          dataUrl,
-          width,
-          height,
-          mimeType: outputMime,
-        });
+        resolve({ dataUrl: canvas.toDataURL(outputMime, quality), width, height, mimeType: outputMime });
       };
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+
+  // 2. Backend'e yükle
+  const res = await fetch(`${API_URL}/reports/images/${projectId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      dataUrl: dataUrl.dataUrl,
+      width: dataUrl.width,
+      height: dataUrl.height,
+      mimeType: dataUrl.mimeType,
+      name: file.name,
+      caption: '',
+      sectionKey,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Görsel yüklenemedi.');
+  }
+
+  const json = await res.json();
+  if (!json.success || !json.imageId) {
+    throw new Error('Görsel ID alınamadı.');
+  }
+
+  return {
+    id: json.imageId,
+    previewUrl: `${API_URL}/reports/images/${json.imageId}?token=${encodeURIComponent(token)}`,
+    caption: '',
+    name: file.name,
+    width: dataUrl.width,
+    height: dataUrl.height,
+  };
 }
+
 
 // ── Blok sistemi yardımcı fonksiyonları ──────────────────────
 function getSectionBlocksKey(sectionKey) {
@@ -561,16 +601,10 @@ function createBlock(type = 'paragraph', text = '') {
   };
 }
 
-function getBlocksForSection(sections, sectionKey, sectionDefaults) {
+function getBlocksForSection(sections, sectionKey) {
   const blocksKey = getSectionBlocksKey(sectionKey);
   const blocks = sections?.[blocksKey];
-  if (Array.isArray(blocks)) return blocks;
-  // Eski string'den migrate et
-  const legacyText = sections?.[sectionKey] ?? sectionDefaults?.[sectionKey] ?? '';
-  if (String(legacyText).trim()) {
-    return [createBlock('paragraph', String(legacyText))];
-  }
-  return [];
+  return Array.isArray(blocks) ? blocks : [];
 }
 
 // ── Renk Paleti ──────────────────────────────────────────────
@@ -1347,6 +1381,11 @@ function ReportEditorPage({
     const section = SECTIONS.find(s => s.key === sectionKey);
     if (!section?.allowImages) return;
 
+    if (!projectId) {
+      alert('Görsel eklemek için önce projeyi kaydedin.');
+      return;
+    }
+
     const existingImages = Array.isArray(sections[getSectionImageKey(sectionKey)])
       ? sections[getSectionImageKey(sectionKey)]
       : [];
@@ -1359,7 +1398,9 @@ function ReportEditorPage({
     }
 
     try {
-      const images = await Promise.all(selectedFiles.map(loadImageFromFile));
+      const images = await Promise.all(
+        selectedFiles.map(file => uploadImageFile(file, projectId, token, sectionKey))
+      );
       updateSectionImages(sectionKey, prev => [...prev, ...images]);
     } catch (err) {
       alert(err.message || 'Görsel yüklenemedi.');
@@ -1372,8 +1413,19 @@ function ReportEditorPage({
     );
   };
 
-  const handleRemoveImage = (sectionKey, imageId) => {
+  const handleRemoveImage = async (sectionKey, imageId) => {
+    // Önce UI'dan kaldır (hızlı feedback)
     updateSectionImages(sectionKey, prev => prev.filter(img => img.id !== imageId));
+    // Arkaplanda DB'den sil
+    try {
+      await fetch(`${API_URL}/reports/images/${imageId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Silme hatası kritik değil; UI'dan zaten kaldırıldı
+      console.warn('Image delete failed for', imageId);
+    }
   };
 
   // ── Taslağı yükle ────────────────────────────────────────────
@@ -1385,11 +1437,56 @@ function ReportEditorPage({
       .then(r => r.json())
       .then(data => {
         if (data.success && data.sections) {
-          setSections(data.sections);
+          const raw = data.sections;
+
+          // sections'taki image array'lerini normalize et:
+          // Eski format: [{id, dataUrl, ...}] → olduğu gibi bırak
+          // Yeni format: [uuid_string, ...] → {id, previewUrl, caption} objesine çevir
+          // veya [{id:uuid, previewUrl:...}] → previewUrl'i token ile yenile
+          const SECTION_IMAGE_KEYS = [
+            'introImages', 'areaInfoImages', 'structureInfoImages',
+            'existingResearchImages', 'additionalResearchImages',
+            'soilProfileImages', 'seismicityImages', '_resultsImages',
+            'foundationSystemImages', 'conclusionsImages', 'referencesImages',
+          ];
+
+          const normalized = { ...raw };
+
+          for (const key of SECTION_IMAGE_KEYS) {
+            const arr = raw[key];
+            if (!Array.isArray(arr)) continue;
+            normalized[key] = arr.map(item => {
+              if (typeof item === 'string') {
+                // Yeni format: sadece UUID saklanmış
+                return {
+                  id: item,
+                  previewUrl: `${API_URL}/reports/images/${item}?token=${encodeURIComponent(token)}`,
+                  caption: '',
+                  name: '',
+                };
+              }
+              if (item && typeof item === 'object' && item.id && !item.dataUrl) {
+                // {id, previewUrl, caption, name} formatı — previewUrl'i token ile yenile
+                return {
+                  ...item,
+                  previewUrl: `${API_URL}/reports/images/${item.id}?token=${encodeURIComponent(token)}`,
+                };
+              }
+              // Eski {id, dataUrl, ...} formatı — olduğu gibi bırak
+              return item;
+            });
+          }
+
+          // coverLogoId varsa previewUrl yenile
+          if (normalized.coverLogoId) {
+            normalized.coverLogoPreviewUrl = `${API_URL}/reports/images/${normalized.coverLogoId}?token=${encodeURIComponent(token)}`;
+          }
+
+          setSections(normalized);
         }
       })
       .catch(() => {});
-  }, [projectId, token]);
+  }, [projectId, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Bir alan güncelle ─────────────────────────────────────────
   const updateSection = useCallback((key, value) => {
@@ -1411,13 +1508,42 @@ function ReportEditorPage({
     if (!projectId) return;
     setSaveStatus('saving');
     try {
+      // JSONB'ye göndermeden önce sections'ı temizle:
+      // - image objeleri: sadece {id, caption, name} sakla (previewUrl/dataUrl gönderme)
+      // - coverLogoPreviewUrl: geçici URL, saklanmamalı
+      const SECTION_IMAGE_KEYS = [
+        'introImages', 'areaInfoImages', 'structureInfoImages',
+        'existingResearchImages', 'additionalResearchImages',
+        'soilProfileImages', 'seismicityImages', '_resultsImages',
+        'foundationSystemImages', 'conclusionsImages', 'referencesImages',
+      ];
+
+      const cleaned = { ...data };
+      // coverLogoPreviewUrl geçici — JSONB'de saklanmaz
+      delete cleaned.coverLogoPreviewUrl;
+
+      for (const key of SECTION_IMAGE_KEYS) {
+        const arr = data[key];
+        if (!Array.isArray(arr)) continue;
+        cleaned[key] = arr.map(img => {
+          if (!img || typeof img !== 'object') return img;
+          if (img.dataUrl) {
+            // Eski format: dataUrl'u koru (geriye dönük uyumluluk)
+            // Yeni yüklemeler artık bu yolu kullanmıyor
+            return img;
+          }
+          // Yeni format: sadece id + caption + name sakla
+          return { id: img.id, caption: img.caption || '', name: img.name || '' };
+        });
+      }
+
       const res = await fetch(`${API_URL}/reports/draft/${projectId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ sections: data }),
+        body: JSON.stringify({ sections: cleaned }),
       });
       const json = await res.json();
       setSaveStatus(json.success ? 'saved' : 'error');
@@ -1574,7 +1700,7 @@ function ReportEditorPage({
         {images.map((img, idx) => (
           <figure className="preview-image-card" key={img.id}>
             <div className="preview-image-card__frame">
-              <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+              <img src={img.previewUrl || img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
             </div>
             <figcaption>
               <strong>Şekil {getImageCaptionNumber(sec.key, idx)}</strong>
@@ -1655,7 +1781,8 @@ function ReportEditorPage({
     if (!sec) return null;
 
     if (sec.type === 'cover') {
-      const coverLogo = sections.coverLogo || null;
+      const coverLogoSrc = sections.coverLogoPreviewUrl || sections.coverLogo?.dataUrl || null;
+      const coverLogoId  = sections.coverLogoId || null;
       return (
         <div className="cover-form">
           <p className="section-desc">
@@ -1686,9 +1813,9 @@ function ReportEditorPage({
               </p>
             </div>
             <div className="cover-logo-actions">
-              {coverLogo?.dataUrl ? (
+              {coverLogoSrc ? (
                 <div className="cover-logo-preview">
-                  <img src={coverLogo.dataUrl} alt={coverLogo.name || 'Logo'} />
+                  <img src={coverLogoSrc} alt="Logo" />
                 </div>
               ) : (
                 <div className="cover-logo-placeholder">Logo yüklenmedi</div>
@@ -1702,9 +1829,22 @@ function ReportEditorPage({
                     onChange={async e => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      if (!projectId) {
+                        alert('Logo yüklemek için önce projeyi kaydedin.');
+                        e.target.value = '';
+                        return;
+                      }
                       try {
-                        const image = await loadImageFromFile(file);
-                        updateSection('coverLogo', image);
+                        const uploaded = await uploadImageFile(file, projectId, token, 'coverLogo');
+                        // Hem ID'yi hem preview URL'yi sections'ta sakla
+                        setSections(prev => ({
+                          ...prev,
+                          coverLogoId: uploaded.id,
+                          coverLogoPreviewUrl: uploaded.previewUrl,
+                          // Eski format temizle
+                          coverLogo: null,
+                        }));
+                        setSaveStatus('idle');
                       } catch (err) {
                         alert(err.message || 'Logo yüklenemedi.');
                       }
@@ -1712,11 +1852,28 @@ function ReportEditorPage({
                     }}
                   />
                 </label>
-                {coverLogo?.dataUrl && (
+                {coverLogoSrc && (
                   <button
                     type="button"
                     className="image-remove-btn"
-                    onClick={() => updateSection('coverLogo', null)}
+                    onClick={async () => {
+                      // Eski format veya yeni format
+                      if (coverLogoId) {
+                        try {
+                          await fetch(`${API_URL}/reports/images/${coverLogoId}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                        } catch { /* kritik değil */ }
+                      }
+                      setSections(prev => ({
+                        ...prev,
+                        coverLogo: null,
+                        coverLogoId: null,
+                        coverLogoPreviewUrl: null,
+                      }));
+                      setSaveStatus('idle');
+                    }}
                   >
                     Logoyu Kaldır
                   </button>
@@ -1735,7 +1892,7 @@ function ReportEditorPage({
       const tables = Array.isArray(sections[getSectionTableKey(sec.key)])
         ? sections[getSectionTableKey(sec.key)]
         : [];
-      const blocks = getBlocksForSection(sections, sec.key, sectionDefaults);
+      const blocks = getBlocksForSection(sections, sec.key);
       const isSectionCollapsed = collapsedSections.has(sec.key);
 
       return (
@@ -1802,7 +1959,7 @@ function ReportEditorPage({
                   {images.map((img, idx) => (
                     <div className="image-card" key={img.id}>
                       <div className="image-card__preview">
-                        <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+                        <img src={img.previewUrl || img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
                       </div>
                       <div className="image-card__body">
                         <div className="image-card__meta">
@@ -1905,7 +2062,7 @@ function ReportEditorPage({
                   {images.map((img, idx) => (
                     <div className="image-card" key={img.id}>
                       <div className="image-card__preview">
-                        <img src={img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
+                        <img src={img.previewUrl || img.dataUrl} alt={img.caption || img.name || `Görsel ${idx + 1}`} />
                       </div>
                       <div className="image-card__body">
                         <div className="image-card__meta">

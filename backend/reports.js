@@ -19,7 +19,8 @@ const {
   PageBreak,
   VerticalAlign,
   Header,
-  Footer
+  Footer,
+  TableOfContents,
 } = require('docx');
 
 const router = express.Router();
@@ -83,6 +84,113 @@ router.put('/draft/:projectId', async (req, res) => {
   }
 });
 
+// ── POST /api/reports/images/:projectId ─────────────────────────────────────
+// Görsel yükle; base64 dataUrl kabul et, BYTEA olarak sakla, UUID döndür.
+// Frontend canvas → dataUrl → buraya gönderir; JSONB'de büyük base64 blob kalmaz.
+router.post('/images/:projectId', async (req, res) => {
+  try {
+    const { dataUrl, width, height, mimeType, name, caption, sectionKey } = req.body;
+
+    if (!dataUrl || typeof dataUrl !== 'string') {
+      return res.status(400).json({ success: false, error: 'dataUrl gereklidir' });
+    }
+
+    // Projenin bu kullanıcıya ait olduğunu doğrula
+    const check = await pool.query(
+      'SELECT id FROM projects WHERE id = $1 AND user_id = $2',
+      [req.params.projectId, req.userId]
+    );
+    if (check.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Proje bulunamadı' });
+    }
+
+    // base64 → binary buffer
+    const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl);
+    if (!match) {
+      return res.status(400).json({ success: false, error: 'Geçersiz dataUrl formatı' });
+    }
+    const detectedMime = match[1];
+    const buffer = Buffer.from(match[2], 'base64');
+
+    const result = await pool.query(
+      `INSERT INTO report_images
+         (project_id, user_id, section_key, data, mime_type, width, height, file_size, original_name, caption)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id`,
+      [
+        req.params.projectId,
+        req.userId,
+        sectionKey || 'unknown',
+        buffer,
+        mimeType || detectedMime,
+        Number(width) || 0,
+        Number(height) || 0,
+        buffer.length,
+        name || null,
+        caption || '',
+      ]
+    );
+
+    const imageId = result.rows[0].id;
+    res.json({ success: true, imageId });
+  } catch (err) {
+    console.error('Image upload error:', err);
+    res.status(500).json({ success: false, error: 'Görsel kaydedilemedi' });
+  }
+});
+
+// ── GET /api/reports/images/:imageId ────────────────────────────────────────
+// Görsel binary'sini serve eder.
+// ?token=... query param ile auth — tarayıcı native <img src> için.
+router.get('/images/:imageId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT data, mime_type, user_id FROM report_images WHERE id = $1`,
+      [req.params.imageId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Görsel bulunamadı' });
+    }
+
+    const img = result.rows[0];
+
+    // Kullanıcı kendi görseline erişiyor mu kontrol et
+    if (img.user_id !== req.userId) {
+      return res.status(403).json({ success: false, error: 'Bu görsele erişim izniniz yok' });
+    }
+
+    res.setHeader('Content-Type', img.mime_type || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.send(img.data);
+  } catch (err) {
+    console.error('Image serve error:', err);
+    res.status(500).json({ success: false, error: 'Görsel getirilemedi' });
+  }
+});
+
+// ── DELETE /api/reports/images/:imageId ─────────────────────────────────────
+// Görseli sil — sadece sahibi silebilir.
+router.delete('/images/:imageId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `DELETE FROM report_images WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [req.params.imageId, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Görsel bulunamadı veya erişim izniniz yok' });
+    }
+
+    res.json({ success: true, message: 'Görsel silindi' });
+  } catch (err) {
+    console.error('Image delete error:', err);
+    res.status(500).json({ success: false, error: 'Görsel silinemedi' });
+  }
+});
+
+
+
 router.post('/generate/:projectId', async (req, res) => {
   try {
     const projectResult = await pool.query(
@@ -125,7 +233,11 @@ router.post('/generate/:projectId', async (req, res) => {
       console.warn('Verify code kayıt hatası (rapor yine de oluşturulacak):', verifyErr.message);
     }
 
-    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode });
+    // report_images tablosundan bu projeye ait tüm görselleri önceden çek
+    // (UUID → { buffer, mimeType, width, height, caption } harita)
+    const dbImages = await fetchProjectImages(req.params.projectId);
+
+    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode, dbImages });
 
     const docxBuffer = await Packer.toBuffer(doc);
 
@@ -230,7 +342,10 @@ router.post('/generate-for-application/:applicationId', async (req, res) => {
       console.warn('Verify code kayıt hatası (rapor yine de oluşturulacak):', verifyErr.message);
     }
 
-    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode });
+    // report_images tablosundan bu projeye ait tüm görselleri önceden çek
+    const dbImages = await fetchProjectImages(row.project_id);
+
+    const doc = buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode, dbImages });
     const docxBuffer = await Packer.toBuffer(doc);
 
     const safeName = (project.name || 'rapor')
@@ -253,9 +368,36 @@ router.post('/generate-for-application/:applicationId', async (req, res) => {
   }
 });
 
-function getSec(sections, key, fallback) {
-  const v = sections && sections[key];
-  return typeof v === 'string' && v.trim() ? v : fallback;
+// getSec() — STRING FALLBACK SİSTEMİ KALDIRILDI.
+// Blok sistemine tam geçişle birlikte bu fonksiyon artık kullanılmıyor.
+// Eski DB kayıtlarını otomatik dönüştürme mantığı getSectionBlocks() içine taşındı.
+
+/**
+ * Bir projeye ait tüm görsel kayıtlarını DB'den çeker.
+ * Dönen değer: { [imageId]: { buffer, mimeType, width, height, caption } }
+ * buildReportDOCX bu haritayı getSectionImages'a geçirir.
+ */
+async function fetchProjectImages(projectId) {
+  try {
+    const result = await pool.query(
+      `SELECT id, data, mime_type, width, height, caption FROM report_images WHERE project_id = $1`,
+      [projectId]
+    );
+    const map = {};
+    for (const row of result.rows) {
+      map[row.id] = {
+        buffer: row.data,
+        mimeType: row.mime_type,
+        width: row.width,
+        height: row.height,
+        caption: row.caption || '',
+      };
+    }
+    return map;
+  } catch (err) {
+    console.error('fetchProjectImages error:', err.message);
+    return {};
+  }
 }
 
 function buildReportSectionDefaults({ parcelName, parcelOwner, dateStr }) {
@@ -377,10 +519,24 @@ function parseImageInput(image) {
   };
 }
 
-function getLogoAsset(sections) {
+/**
+ * Logo asset'i döner:
+ *  - dbImages map'inde coverLogoId varsa oradan al (yeni format)
+ *  - sections.coverLogo.dataUrl varsa eski format
+ *  - Fallback: disk'ten varsayılan logo
+ */
+function getLogoAsset(sections, dbImages = {}) {
+  // Yeni format: coverLogoId UUID
+  const logoId = sections && sections.coverLogoId;
+  if (logoId && dbImages[logoId]) {
+    return dbImages[logoId];
+  }
+
+  // Eski format: coverLogo.dataUrl (geriye dönük uyumluluk)
   const uploaded = parseImageInput(sections && sections.coverLogo);
   if (uploaded) return uploaded;
 
+  // Fallback: varsayılan logo
   const fallback = loadDefaultLogoBuffer();
   if (!fallback) return null;
   return {
@@ -544,7 +700,7 @@ function buildTableRowsDynamic({ sections, pRows, resCategories }) {
   return rows;
 }
 
-function buildFigureRowsDynamic({ sections }) {
+function buildFigureRowsDynamic({ sections, dbImages = {} }) {
   const rows = [];
 
   if (hasSectionContent(sections, 'areaInfo')) {
@@ -576,7 +732,7 @@ function buildFigureRowsDynamic({ sections }) {
 
   const sectionOrder = ['intro', 'areaInfo', 'structureInfo', 'existingResearch', 'additionalResearch', 'soilProfile', 'seismicity', 'foundationSystem', 'conclusions'];
   for (const sectionKey of sectionOrder) {
-    const images = getSectionImages(sections, sectionKey);
+    const images = getSectionImages(sections, sectionKey, dbImages);
     if (!images.length) continue;
     const sectionNumber = getSectionNumber(sectionKey);
     const fallbackPage = sectionKey === 'intro' ? '5' :
@@ -605,8 +761,8 @@ function buildTableRows({ sections, pRows, resCategories }) {
   return buildTableRowsDynamic({ sections, pRows, resCategories });
 }
 
-function buildFigureRows({ sections }) {
-  return buildFigureRowsDynamic({ sections });
+function buildFigureRows({ sections, dbImages = {} }) {
+  return buildFigureRowsDynamic({ sections, dbImages });
 }
 
 // İçindekiler listesini dinamik olarak oluşturur.
@@ -632,8 +788,9 @@ function buildTocRows({ sections, pRows, resCategories, reportDefaults }) {
   return tocDefs
     .filter(item => {
       if (item.always) return true;
-      // Kullanıcı içeriği yoksa varsayılan içerikle kontrol et
-      return !!getSec(sections, item.key, (reportDefaults && reportDefaults[item.key]) || '');
+      // Bölümde en az bir blok içeriği varsa TOC'a ekle (blok sistemi)
+      const blocks = getSectionBlocks(sections, item.key, (reportDefaults && reportDefaults[item.key]) || '');
+      return blocks.length > 0 && blocks.some(b => b?.text?.trim());
     })
     .map(item => ({ label: item.label, page: item.page }));
 }
@@ -657,9 +814,32 @@ function getSectionNumber(sectionKey) {
   return REPORT_SECTION_NUMBERS[sectionKey] || '';
 }
 
-function getSectionImages(sections, sectionKey) {
-  const images = sections && sections[`${sectionKey}Images`];
-  return Array.isArray(images) ? images.filter(img => img && typeof img === 'object') : [];
+/**
+ * Bir bölümün görsel listesini döner.
+ * İki format desteklenir:
+ *  - Yeni: sections.{key}Images = ["uuid1", "uuid2"]  (string array)
+ *  - Eski: sections.{key}Images = [{id, dataUrl, ...}] (obje array)
+ * dbImages: { [imageId]: { buffer, mimeType, width, height, caption } }
+ */
+function getSectionImages(sections, sectionKey, dbImages = {}) {
+  const raw = sections && sections[`${sectionKey}Images`];
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map(item => {
+      if (typeof item === 'string') {
+        // Yeni format: UUID string
+        const dbImg = dbImages[item];
+        if (!dbImg) return null;
+        return dbImg;
+      }
+      if (item && typeof item === 'object') {
+        // Eski format: obje (dataUrl içeriyor)
+        return item;
+      }
+      return null;
+    })
+    .filter(Boolean);
 }
 
 function getSectionTables(sections, sectionKey) {
@@ -667,9 +847,28 @@ function getSectionTables(sections, sectionKey) {
   return Array.isArray(tables) ? tables.filter(t => t && typeof t === 'object') : [];
 }
 
-function getSectionBlocks(sections, sectionKey) {
+/**
+ * Bir bölümün blok içeriğini 3 katmanlı öncelikle döner:
+ *  1. sections[sectionKey + 'Blocks'] mevcutsa → doğrudan kullan (yeni blok sistemi)
+ *  2. sections[sectionKey] eski string mevcutsa → tek paragraph bloğuna çevir (eski DB uyumluluğu)
+ *  3. Her ikisi de yoksa → defaultText'ten tek paragraph bloğu üret (varsayılan içerik)
+ */
+function getSectionBlocks(sections, sectionKey, defaultText = '') {
+  // 1. Yeni blok sistemi
   const blocks = sections && sections[`${sectionKey}Blocks`];
-  return Array.isArray(blocks) ? blocks : null;
+  if (Array.isArray(blocks) && blocks.length > 0) return blocks;
+
+  // 2. Eski string sistemi (DB'de eski format varsa geriye dönük uyumluluk)
+  const legacyStr = sections && sections[sectionKey];
+  if (typeof legacyStr === 'string' && legacyStr.trim()) {
+    return [{ type: 'paragraph', text: legacyStr.trim() }];
+  }
+
+  // 3. Varsayılan metin
+  const def = typeof defaultText === 'string' ? defaultText.trim() : '';
+  if (def) return [{ type: 'paragraph', text: def }];
+
+  return [];
 }
 
 function parseDataUrl(dataUrl) {
@@ -690,6 +889,9 @@ function scaleToFit(width, height, maxWidth, maxHeight) {
   };
 }
 
+/**
+ * createImageBlocks: her bir image için hem yeni (buffer) hem eski (dataUrl) formatı destekler.
+ */
 function createImageBlocks(sectionKey, images) {
   if (!images || !images.length) return [];
   const sectionNumber = getSectionNumber(sectionKey);
@@ -697,14 +899,28 @@ function createImageBlocks(sectionKey, images) {
   const maxHeight = 380;
 
   return images.flatMap((img, index) => {
-    const parsed = parseDataUrl(img.dataUrl);
-    if (!parsed) return [];
+    let buffer, mimeType;
+
+    if (Buffer.isBuffer(img.buffer)) {
+      // Yeni format: DB'den çekilmiş BYTEA
+      buffer = img.buffer;
+      mimeType = img.mimeType || img.mime_type || 'image/jpeg';
+    } else if (typeof img.dataUrl === 'string') {
+      // Eski format: base64 dataUrl
+      const parsed = parseDataUrl(img.dataUrl);
+      if (!parsed) return [];
+      buffer = parsed.buffer;
+      mimeType = parsed.mimeType;
+    } else {
+      return [];
+    }
 
     const width = Number(img.width) || maxWidth;
     const height = Number(img.height) || maxHeight;
     const scaled = scaleToFit(width, height, maxWidth, maxHeight);
     const figureNumber = sectionNumber ? `${sectionNumber}.${index + 1}` : `${index + 1}`;
     const caption = typeof img.caption === 'string' && img.caption.trim() ? img.caption.trim() : 'Görsel';
+    void mimeType; // docx kütüphanesi mime türünü auto-detect ediyor
 
     return [
       new Paragraph({
@@ -712,7 +928,7 @@ function createImageBlocks(sectionKey, images) {
         spacing: { before: 160, after: 80 },
         children: [
           new ImageRun({
-            data: parsed.buffer,
+            data: buffer,
             transformation: {
               width: scaled.width,
               height: scaled.height,
@@ -783,10 +999,10 @@ function createBlocksContent(blocks) {
   });
 }
 
-function createSectionBlocks(sectionKey, title, text, images = [], blocks = null) {
-  const contentParagraphs = (blocks && blocks.length > 0)
+function createSectionBlocks(sectionKey, title, images = [], blocks = []) {
+  const contentParagraphs = (Array.isArray(blocks) && blocks.length > 0)
     ? createBlocksContent(blocks)
-    : createParagraphs(text);
+    : [];
   return [
     new Paragraph({
       text: title,
@@ -1213,11 +1429,11 @@ function buildJetGroutNarrativeSection({ lockedParams, lockedResults }) {
   return blocks;
 }
 
-function buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode }) {
+function buildReportDOCX({ project, lockedParams, lockedResults, sections, verifyCode, dbImages = {} }) {
   const dateObj = new Date();
   const dateStr = dateObj.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
   const coverDate = dateObj.toLocaleDateString('tr-TR', { month: 'long' }).toUpperCase() + ", " + dateObj.getFullYear();
-  const logoAsset = getLogoAsset(sections);
+  const logoAsset = getLogoAsset(sections, dbImages);
   const coverLogoParagraph = createCoverLogoParagraph(logoAsset);
 
   const projectName = (sections && sections.projectName) || (project && project.name) || 'Zemin İyileştirme Projesi';
@@ -1275,8 +1491,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
   }
 
   const tableRows = buildTableRows({ sections, pRows, resCategories });
-  const figureRows = buildFigureRows({ sections });
-  const tocRows = buildTocRows({ sections, pRows, resCategories, reportDefaults });
+  const figureRows = buildFigureRows({ sections, dbImages });
 
   const doc = new Document({
     styles: {
@@ -1360,14 +1575,28 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
           page: { margin: PAGE_MARGINS }
         },
         children: [
+          // ── Dinamik İçindekiler (Word TOC field) ─────────────────
+          // Word belgesi açılınca sayfa numaraları otomatik hesaplanır.
+          // Kullanıcı "Alanları güncelle" onayını verdiğinde veya
+          // Ctrl+A → F9 ile manuel güncelleyebilir.
           new Paragraph({
             children: [new TextRun({ text: "İÇİNDEKİLER", bold: true, size: 28, font: "Times New Roman" })],
             alignment: AlignmentType.CENTER,
-            spacing: { before: 0, after: 320 },
+            spacing: { before: 0, after: 200 },
           }),
-          ...createListParagraphs(tocRows),
+          new TableOfContents("İÇİNDEKİLER", {
+            // Sadece Heading 1 (bölüm başlıkları) göster
+            headingStyleRange: "1-1",
+            // Sayfa numarasını sağa yasla ve noktalı satır çiz
+            tabLeader: "dot",
+            // Tıklanabilir köprüler oluştur
+            hyperlink: true,
+            // TOC başlığını içindeki paragraf olarak değil ayrı yönetiyoruz
+            // (yukarıdaki Paragraph zaten başlığı koydu)
+          }),
           new Paragraph({ children: [new PageBreak()] }),
 
+          // ── Tablolar Listesi (statik — Word'de otomatik field yok) ──
           new Paragraph({
             children: [new TextRun({ text: "TABLOLAR LİSTESİ", bold: true, size: 28, font: "Times New Roman" })],
             alignment: AlignmentType.CENTER,
@@ -1376,6 +1605,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
           ...createListParagraphs(tableRows),
           new Paragraph({ children: [new PageBreak()] }),
 
+          // ── Şekiller Listesi (statik — Word'de otomatik field yok) ──
           new Paragraph({
             children: [new TextRun({ text: "ŞEKİLLER LİSTESİ", bold: true, size: 28, font: "Times New Roman" })],
             alignment: AlignmentType.CENTER,
@@ -1395,22 +1625,22 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
           })
         },
         children: [
-          ...createSectionBlocks('intro', "1. GİRİŞ", getSec(sections, 'intro', reportDefaults.intro), getSectionImages(sections, 'intro'), getSectionBlocks(sections, 'intro')),
+          ...createSectionBlocks('intro', "1. GİRİŞ", getSectionImages(sections, 'intro', dbImages), getSectionBlocks(sections, 'intro', reportDefaults.intro)),
           ...createUserTableBlocks('intro', getSectionTables(sections, 'intro')),
           
-          ...createSectionBlocks('areaInfo', "2. İNCELEME ALANI HAKKINDA BİLGİLER", getSec(sections, 'areaInfo', reportDefaults.areaInfo), getSectionImages(sections, 'areaInfo'), getSectionBlocks(sections, 'areaInfo')),
+          ...createSectionBlocks('areaInfo', "2. İNCELEME ALANI HAKKINDA BİLGİLER", getSectionImages(sections, 'areaInfo', dbImages), getSectionBlocks(sections, 'areaInfo', reportDefaults.areaInfo)),
           ...createUserTableBlocks('areaInfo', getSectionTables(sections, 'areaInfo')),
           
-          ...createSectionBlocks('structureInfo', "3. YAPI HAKKINDA BİLGİLER", getSec(sections, 'structureInfo', reportDefaults.structureInfo), getSectionImages(sections, 'structureInfo'), getSectionBlocks(sections, 'structureInfo')),
+          ...createSectionBlocks('structureInfo', "3. YAPI HAKKINDA BİLGİLER", getSectionImages(sections, 'structureInfo', dbImages), getSectionBlocks(sections, 'structureInfo', reportDefaults.structureInfo)),
           ...createUserTableBlocks('structureInfo', getSectionTables(sections, 'structureInfo')),
           
-          ...createSectionBlocks('existingResearch', "4. MEVCUT ZEMİN ARAŞTIRMALARI", getSec(sections, 'existingResearch', reportDefaults.existingResearch), getSectionImages(sections, 'existingResearch'), getSectionBlocks(sections, 'existingResearch')),
+          ...createSectionBlocks('existingResearch', "4. MEVCUT ZEMİN ARAŞTIRMALARI", getSectionImages(sections, 'existingResearch', dbImages), getSectionBlocks(sections, 'existingResearch', reportDefaults.existingResearch)),
           ...createUserTableBlocks('existingResearch', getSectionTables(sections, 'existingResearch')),
           
-          ...createSectionBlocks('additionalResearch', "5. İLAVE ZEMİN ARAŞTIRMALARI", getSec(sections, 'additionalResearch', reportDefaults.additionalResearch), getSectionImages(sections, 'additionalResearch'), getSectionBlocks(sections, 'additionalResearch')),
+          ...createSectionBlocks('additionalResearch', "5. İLAVE ZEMİN ARAŞTIRMALARI", getSectionImages(sections, 'additionalResearch', dbImages), getSectionBlocks(sections, 'additionalResearch', reportDefaults.additionalResearch)),
           ...createUserTableBlocks('additionalResearch', getSectionTables(sections, 'additionalResearch')),
           
-          ...createSectionBlocks('soilProfile', "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", getSec(sections, 'soilProfile', reportDefaults.soilProfile), getSectionImages(sections, 'soilProfile'), getSectionBlocks(sections, 'soilProfile')),
+          ...createSectionBlocks('soilProfile', "6. İDEALİZE ZEMİN PROFİLİ VE YER ALTI SUYU DURUMU", getSectionImages(sections, 'soilProfile', dbImages), getSectionBlocks(sections, 'soilProfile', reportDefaults.soilProfile)),
           ...createUserTableBlocks('soilProfile', getSectionTables(sections, 'soilProfile')),
           
           new Paragraph({ text: "7. GEOTEKNİK TASARIM PARAMETRELERİNİN TESPİTİ", heading: HeadingLevel.HEADING_1 }),
@@ -1428,23 +1658,23 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
           }),
           ...createUserTableBlocks('_params', getSectionTables(sections, '_params')),
           
-          ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSec(sections, 'seismicity', reportDefaults.seismicity), getSectionImages(sections, 'seismicity'), getSectionBlocks(sections, 'seismicity')),
+          ...createSectionBlocks('seismicity', "8. DEPREMSELLİK", getSectionImages(sections, 'seismicity', dbImages), getSectionBlocks(sections, 'seismicity', reportDefaults.seismicity)),
           ...createUserTableBlocks('seismicity', getSectionTables(sections, 'seismicity')),
           
           new Paragraph({ text: "9. ZEMİN İYİLEŞTİRME ALTERNATİFLERİ", heading: HeadingLevel.HEADING_1 }),
           ...buildJetGroutNarrativeSection({ lockedParams, lockedResults }),
           // '_results' section key'i: frontend'in 'sections._resultsImages' alanını
           // göndermesi gerekir (getSectionImages pattern'i: `${sectionKey}Images`).
-          ...createImageBlocks('_results', getSectionImages(sections, '_results')),
+          ...createImageBlocks('_results', getSectionImages(sections, '_results', dbImages)),
           ...createUserTableBlocks('_results', getSectionTables(sections, '_results')),
           
-          ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSec(sections, 'foundationSystem', reportDefaults.foundationSystem), getSectionImages(sections, 'foundationSystem'), getSectionBlocks(sections, 'foundationSystem')),
+          ...createSectionBlocks('foundationSystem', "10. ÖNERİLEN TEMEL SİSTEMİ", getSectionImages(sections, 'foundationSystem', dbImages), getSectionBlocks(sections, 'foundationSystem', reportDefaults.foundationSystem)),
           ...createUserTableBlocks('foundationSystem', getSectionTables(sections, 'foundationSystem')),
           
-          ...createSectionBlocks('conclusions', "11. SONUÇ VE ÖNERİLER", getSec(sections, 'conclusions', reportDefaults.conclusions), getSectionImages(sections, 'conclusions'), getSectionBlocks(sections, 'conclusions')),
+          ...createSectionBlocks('conclusions', "11. SONUÇ VE ÖNERİLER", getSectionImages(sections, 'conclusions', dbImages), getSectionBlocks(sections, 'conclusions', reportDefaults.conclusions)),
           ...createUserTableBlocks('conclusions', getSectionTables(sections, 'conclusions')),
           
-          ...createSectionBlocks('references', "12. YARARLANILAN KAYNAKLAR", getSec(sections, 'references', reportDefaults.references), getSectionImages(sections, 'references'), getSectionBlocks(sections, 'references')),
+          ...createSectionBlocks('references', "12. YARARLANILAN KAYNAKLAR", getSectionImages(sections, 'references', dbImages), getSectionBlocks(sections, 'references', reportDefaults.references)),
         ]
       }
     ]

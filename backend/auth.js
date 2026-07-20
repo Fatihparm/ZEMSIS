@@ -13,12 +13,22 @@ const userCache = new Map();
 
 // ── JWT middleware ──────────────────────────────────────────
 function authMiddleware(req, res, next) {
+  // Header'dan veya query param'dan token al
+  // Not: query param sadece görsel serve (?token=...) gibi browser-native
+  //      istekler için kullanılır; diğer tüm istekler header kullanır.
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  let token = null;
+
+  if (header && header.startsWith('Bearer ')) {
+    token = header.split(' ')[1];
+  } else if (req.query.token && typeof req.query.token === 'string') {
+    token = req.query.token;
+  }
+
+  if (!token) {
     return res.status(401).json({ success: false, error: 'Token required' });
   }
 
-  const token = header.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId           = decoded.userId;

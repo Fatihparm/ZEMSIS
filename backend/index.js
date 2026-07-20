@@ -34,7 +34,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '50mb' }));
+// Görseller artık ayrı /api/reports/images endpoint'ine binary olarak gönderiliyor.
+// sections JSON'u artık sadece metin ve UUID listesi içerdiğinden limit düşürüldü.
+app.use(express.json({ limit: '5mb' }));
 
 // ── Rate Limiting ────────────────────────────────────────────
 // Auth endpoint'leri için sıkı limit
