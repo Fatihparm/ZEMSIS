@@ -89,7 +89,7 @@ router.put('/draft/:projectId', async (req, res) => {
 // Frontend canvas → dataUrl → buraya gönderir; JSONB'de büyük base64 blob kalmaz.
 router.post('/images/:projectId', async (req, res) => {
   try {
-    const { dataUrl, width, height, mimeType, name, caption, sectionKey } = req.body;
+    const { dataUrl, width, height, mimeType, name, caption, sectionKey } = req.body || {};
 
     if (!dataUrl || typeof dataUrl !== 'string') {
       return res.status(400).json({ success: false, error: 'dataUrl gereklidir' });
@@ -134,8 +134,16 @@ router.post('/images/:projectId', async (req, res) => {
     const imageId = result.rows[0].id;
     res.json({ success: true, imageId });
   } catch (err) {
-    console.error('Image upload error:', err);
-    res.status(500).json({ success: false, error: 'Görsel kaydedilemedi' });
+    // Tablo yoksa anlaşılır hata ver
+    const isTableMissing = err.message && err.message.includes('relation "report_images" does not exist');
+    console.error('Image upload error:', err.message);
+    if (isTableMissing) {
+      return res.status(500).json({
+        success: false,
+        error: 'Veritabanı migrasyonu henüz çalıştırılmadı. Lütfen "docker compose exec backend node migrate.js" komutunu çalıştırın.',
+      });
+    }
+    res.status(500).json({ success: false, error: 'Görsel kaydedilemedi: ' + err.message });
   }
 });
 
@@ -816,9 +824,10 @@ function getSectionNumber(sectionKey) {
 
 /**
  * Bir bölümün görsel listesini döner.
- * İki format desteklenir:
- *  - Yeni: sections.{key}Images = ["uuid1", "uuid2"]  (string array)
- *  - Eski: sections.{key}Images = [{id, dataUrl, ...}] (obje array)
+ * 3 format desteklenir:
+ *  1. "uuid-string"              → dbImages[uuid] ile çözümle
+ *  2. {id, caption, name}        → dbImages[id] + caption override (yeni DB formatı)
+ *  3. {id, dataUrl, ...}         → olduğu gibi kullan (eski geriye dönük format)
  * dbImages: { [imageId]: { buffer, mimeType, width, height, caption } }
  */
 function getSectionImages(sections, sectionKey, dbImages = {}) {
@@ -828,19 +837,32 @@ function getSectionImages(sections, sectionKey, dbImages = {}) {
   return raw
     .map(item => {
       if (typeof item === 'string') {
-        // Yeni format: UUID string
+        // Format 1: sadece UUID string
         const dbImg = dbImages[item];
         if (!dbImg) return null;
         return dbImg;
       }
       if (item && typeof item === 'object') {
-        // Eski format: obje (dataUrl içeriyor)
-        return item;
+        if (item.dataUrl) {
+          // Format 3: eski {dataUrl, ...} — olduğu gibi kullan
+          return item;
+        }
+        if (item.id) {
+          // Format 2: yeni {id, caption, name} — DB'den buffer + sections'tan caption
+          const dbImg = dbImages[item.id];
+          if (!dbImg) return null;
+          return {
+            ...dbImg,
+            // Kullanıcının sections'ta yazdığı caption öncelikli
+            caption: item.caption || dbImg.caption || '',
+          };
+        }
       }
       return null;
     })
     .filter(Boolean);
 }
+
 
 function getSectionTables(sections, sectionKey) {
   const tables = sections && sections[`${sectionKey}Tables`];
