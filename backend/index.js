@@ -34,9 +34,13 @@ app.use(cors({
   credentials: true
 }));
 
-// Görseller artık ayrı /api/reports/images endpoint'ine binary olarak gönderiliyor.
-// sections JSON'u artık sadece metin ve UUID listesi içerdiğinden limit düşürüldü.
+// ── Body parser ─────────────────────────────────────────────
+// Görsel upload endpoint'i base64 dataUrl alır → yüksek limit
+// (tek bir 2000px JPEG ~1-3 MB base64 olabilir)
+app.use('/api/reports/images', express.json({ limit: '20mb' }));
+// Diğer tüm endpointler (draft kaydetme vb.) — artık büyük blob gitmiyor
 app.use(express.json({ limit: '5mb' }));
+
 
 // ── Rate Limiting ────────────────────────────────────────────
 // Auth endpoint'leri için sıkı limit
