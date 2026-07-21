@@ -601,10 +601,24 @@ function createBlock(type = 'paragraph', text = '') {
   };
 }
 
-function getBlocksForSection(sections, sectionKey) {
+function getBlocksForSection(sections, sectionKey, defaultText = '') {
   const blocksKey = getSectionBlocksKey(sectionKey);
   const blocks = sections?.[blocksKey];
-  return Array.isArray(blocks) ? blocks : [];
+  if (Array.isArray(blocks)) return blocks;
+
+  const legacyStr = sections?.[sectionKey];
+  const textToUse = (typeof legacyStr === 'string' && legacyStr.trim())
+    ? legacyStr
+    : (typeof defaultText === 'string' ? defaultText : '');
+
+  if (!textToUse.trim()) return [];
+
+  const paragraphs = textToUse
+    .split(/\r?\n+/)
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  return paragraphs.map(p => createBlock('paragraph', p));
 }
 
 // ── Renk Paleti ──────────────────────────────────────────────
@@ -1272,11 +1286,7 @@ function ReportEditorPage({
   const updateSectionBlocks = useCallback((sectionKey, updater) => {
     setSections(prev => {
       const blockKey = getSectionBlocksKey(sectionKey);
-      const current = Array.isArray(prev[blockKey])
-        ? prev[blockKey]
-        : (String(prev[sectionKey] ?? '').trim()
-          ? [createBlock('paragraph', String(prev[sectionKey]))]
-          : []);
+      const current = getBlocksForSection(prev, sectionKey, sectionDefaults[sectionKey]);
       const next = typeof updater === 'function' ? updater(current) : updater;
       return { ...prev, [blockKey]: next };
     });
@@ -1288,7 +1298,7 @@ function ReportEditorPage({
         return current;
       });
     }, 2000);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sectionDefaults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddTable = (sectionKey, rows, cols) => {
     updateSectionTables(sectionKey, prev => {
@@ -1892,7 +1902,7 @@ function ReportEditorPage({
       const tables = Array.isArray(sections[getSectionTableKey(sec.key)])
         ? sections[getSectionTableKey(sec.key)]
         : [];
-      const blocks = getBlocksForSection(sections, sec.key);
+      const blocks = getBlocksForSection(sections, sec.key, sectionDefaults[sec.key]);
       const isSectionCollapsed = collapsedSections.has(sec.key);
 
       return (
@@ -2327,7 +2337,8 @@ function ReportEditorPage({
                       (SECTIONS.filter(s => s.type === 'wysiwyg' || s.type === 'cover')
                       .filter(s => {
                         if (s.type === 'cover') return COVER_FIELDS.some(f => (sections[f.key] ?? sectionDefaults[f.key] ?? '').toString().length > 0);
-                        return (sections[s.key] ?? sectionDefaults[s.key] ?? '').length > 10;
+                        const secBlocks = getBlocksForSection(sections, s.key, sectionDefaults[s.key]);
+                        return secBlocks.some(b => b?.text?.trim()?.length > 0);
                       }).length /
                     SECTIONS.filter(s => s.type !== 'locked').length) * 100
                   )}%`,
@@ -2337,7 +2348,8 @@ function ReportEditorPage({
             <p className="completion-pct">
               {SECTIONS.filter(s => s.type === 'wysiwyg' || s.type === 'cover').filter(s => {
                 if (s.type === 'cover') return COVER_FIELDS.some(f => (sections[f.key] ?? sectionDefaults[f.key] ?? '').toString().length > 0);
-                return (sections[s.key] ?? sectionDefaults[s.key] ?? '').length > 10;
+                const secBlocks = getBlocksForSection(sections, s.key, sectionDefaults[s.key]);
+                return secBlocks.some(b => b?.text?.trim()?.length > 0);
               }).length}
               {' / '}
               {SECTIONS.filter(s => s.type !== 'locked').length} alan dolduruldu
