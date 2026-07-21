@@ -8,6 +8,7 @@ services:
       args:
         # Docker build sırasında /api geçilir → Nginx üzerinden backend'e yönlenir
         VITE_API_URL: /api
+        VITE_GOOGLE_CLIENT_ID: "177597941513-u7madsiab1pu64q9hgnn0im79ge0qf8o.apps.googleusercontent.com"
     ports:
       - "3000:80"
     depends_on:
@@ -24,6 +25,7 @@ services:
       DATABASE_URL: "postgresql://postgres:root@db:5432/jet-grout-calc"
       JWT_SECRET: "jg-calc-secret-key-2026-change-in-production"
       ALLOWED_ORIGINS: "http://localhost:3000,https://zemin.depremzeminsorgulama.com,http://zemin.depremzeminsorgulama.com"
+      GOOGLE_CLIENT_ID: "177597941513-u7madsiab1pu64q9hgnn0im79ge0qf8o.apps.googleusercontent.com"
     depends_on:
       db:
         condition: service_healthy
