@@ -268,3 +268,273 @@
     padding: 12px 16px;
   }
 }
+
+/* ── Google Butonu ─────────────────────────────────────────── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  color: var(--color-gray-400);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-gray-200);
+}
+
+.auth-google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: 14px;
+  background: var(--color-white);
+  color: var(--color-gray-700);
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.auth-google-btn:hover:not(:disabled) {
+  border-color: #4285F4;
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.18);
+  transform: translateY(-1px);
+}
+
+.auth-google-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.12);
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Google Rol Seçim Modalı ───────────────────────────────── */
+.google-role-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 20, 40, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: overlay-in 0.2s ease;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.google-role-modal {
+  width: min(480px, 100%);
+  background: var(--color-white);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 32px 80px rgba(10, 20, 40, 0.3);
+  animation: modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.grm-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.grm-google-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #f8f9fa;
+  border: 1px solid #e8eaed;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5f6368;
+  margin-bottom: 16px;
+}
+
+.grm-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-gray-800);
+  margin: 0 0 8px;
+}
+
+.grm-subtitle {
+  font-size: 0.88rem;
+  color: var(--color-gray-500);
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+
+.grm-email {
+  font-size: 0.84rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin: 0;
+}
+
+.grm-role-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.grm-role-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 2px solid var(--color-gray-200);
+  border-radius: 16px;
+  background: var(--color-white);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.grm-role-card:hover {
+  border-color: var(--color-primary);
+  background: rgba(17, 62, 104, 0.03);
+}
+
+.grm-role-card.active {
+  border-color: var(--color-primary);
+  background: rgba(17, 62, 104, 0.06);
+  box-shadow: 0 4px 16px rgba(17, 62, 104, 0.12);
+}
+
+.grm-role-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.grm-role-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grm-role-info strong {
+  font-size: 0.92rem;
+  color: var(--color-gray-800);
+  font-weight: 700;
+}
+
+.grm-role-info span {
+  font-size: 0.78rem;
+  color: var(--color-gray-500);
+}
+
+.grm-role-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--color-gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  color: white;
+}
+
+.grm-role-check.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.grm-municipality {
+  margin-bottom: 16px;
+}
+
+.grm-municipality label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--color-gray-600);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.grm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.grm-cancel {
+  flex: 1;
+  padding: 13px 0;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-gray-600);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.grm-cancel:hover:not(:disabled) {
+  border-color: var(--color-gray-400);
+  background: var(--color-gray-50);
+}
+
+.grm-confirm {
+  flex: 2;
+  padding: 13px 0;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: white;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(17, 62, 104, 0.25);
+  transition: all 0.2s ease;
+  letter-spacing: 0.03em;
+}
+
+.grm-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(17, 62, 104, 0.3);
+}
+
+.grm-confirm:disabled,
+.grm-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

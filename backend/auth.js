@@ -1,7 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const { pool } = require('./db');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -178,6 +181,111 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ success: false, error: 'Login failed' });
+  }
+});
+
+// ── POST /api/auth/google ───────────────────────────────────
+// Frontend'den Google ID Token alır, doğrular ve JWT döndürür.
+// Yeni kullanıcılar için rol seçimi gerekirse pending_role_selection: true döner.
+router.post('/google', async (req, res) => {
+  try {
+    const { credential, role, municipality } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ success: false, error: 'Google credential required' });
+    }
+
+    // ── Google ID Token'ı doğrula ────────────────────────────
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+    } catch (verifyErr) {
+      console.error('Google token verify error:', verifyErr.message);
+      return res.status(401).json({ success: false, error: 'Invalid Google token' });
+    }
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name: fullName, email_verified } = payload;
+
+    if (!email_verified) {
+      return res.status(400).json({ success: false, error: 'Google email not verified' });
+    }
+
+    // ── Mevcut kullanıcıyı google_id veya email ile bul ──────
+    const existingResult = await pool.query(
+      'SELECT id, email, full_name, role, municipality, google_id, created_at FROM users WHERE google_id = $1 OR email = $2 LIMIT 1',
+      [googleId, email.toLowerCase()]
+    );
+
+    let user;
+
+    if (existingResult.rows.length > 0) {
+      // ── Mevcut kullanıcı — google_id yoksa güncelle ──────────
+      user = existingResult.rows[0];
+      if (!user.google_id) {
+        await pool.query('UPDATE users SET google_id = $1 WHERE id = $2', [googleId, user.id]);
+        user.google_id = googleId;
+      }
+
+      // Rol seçimi talep edildiyse güncelle (municipal_officer ise municipality de gerekli)
+      if (role && role !== user.role) {
+        if (role === 'municipal_officer' && !municipality) {
+          return res.status(400).json({ success: false, error: 'Municipality is required for municipal officers' });
+        }
+        await pool.query(
+          'UPDATE users SET role = $1, municipality = $2 WHERE id = $3',
+          [role, role === 'municipal_officer' ? municipality : null, user.id]
+        );
+        user.role = role;
+        user.municipality = role === 'municipal_officer' ? municipality : null;
+      }
+    } else {
+      // ── Yeni kullanıcı — rol seçimi bekleniyorsa önce sor ────
+      // Eğer rol gönderilmemişse, frontend'e rol seçimi yapmasını söyle
+      if (!role) {
+        return res.json({
+          success: true,
+          pending_role_selection: true,
+          googleData: { credential, email, fullName }
+        });
+      }
+
+      if (role === 'municipal_officer' && !municipality) {
+        return res.status(400).json({ success: false, error: 'Municipality is required for municipal officers' });
+      }
+
+      // Yeni kullanıcı oluştur (şifresiz)
+      const insertResult = await pool.query(
+        'INSERT INTO users (email, password_hash, full_name, role, municipality, google_id) VALUES ($1, NULL, $2, $3, $4, $5) RETURNING id, email, full_name, role, municipality, created_at',
+        [email.toLowerCase(), fullName, role || 'user', role === 'municipal_officer' ? municipality : null, googleId]
+      );
+      user = insertResult.rows[0];
+    }
+
+    // ── JWT oluştur ve cache'e ekle ──────────────────────────
+    const userPayload = {
+      id:           user.id,
+      email:        user.email,
+      fullName:     user.full_name,
+      role:         user.role || 'user',
+      municipality: user.municipality || null,
+      createdAt:    user.created_at
+    };
+    userCache.set(user.id, userPayload);
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, fullName: user.full_name, role: user.role || 'user', municipality: user.municipality || null },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ success: true, token, user: userPayload });
+  } catch (err) {
+    console.error('Google auth error:', err);
+    res.status(500).json({ success: false, error: 'Google authentication failed' });
   }
 });
 
