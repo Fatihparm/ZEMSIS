@@ -287,8 +287,50 @@
   background: var(--color-gray-200);
 }
 
-.auth-google-btn {
+/* ── Google Buton: Overlay Tekniği (Mobil Uyumlu) ──────────────
+   Google'ın renderButton() iframe'i cross-origin; programatik .click() çalışmaz.
+   Çözüm: native Google butonunu tam genişlikte göster, üzerine görsel örtü bindiriyoruz.
+   touch/click Google iframe'ine düşer → mobilde de çalışır.
+   ──────────────────────────────────────────────────────────────── */
+
+/* Kapsayıcı: relative + tam genişlik */
+.auth-google-wrapper {
+  position: relative;
   width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.auth-google-wrapper:hover {
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.18);
+  transform: translateY(-1px);
+}
+
+.auth-google-wrapper:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.12);
+}
+
+/* Google native butonu — altta, gerçek tıklama hedefi */
+.auth-google-native {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* Google'ın render ettiği iframe'i tam genişliğe yay */
+.auth-google-native > div,
+.auth-google-native iframe {
+  width: 100% !important;
+  border-radius: 14px !important;
+}
+
+/* Görsel örtü — üste yapışık, pointer-events:none → tıklamalar geçer */
+.auth-google-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -301,25 +343,13 @@
   font-family: var(--font-heading);
   font-size: 0.9rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  pointer-events: none; /* ← touch/click Google iframe'ine geçer */
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.auth-google-btn:hover:not(:disabled) {
+.auth-google-wrapper:hover .auth-google-overlay {
   border-color: #4285F4;
-  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.18);
-  transform: translateY(-1px);
-}
-
-.auth-google-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.12);
-}
-
-.auth-google-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  background: #f8faff;
 }
 
 .google-icon {
