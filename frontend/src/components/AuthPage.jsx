@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { API_URL } from '../config';
 import { MUNICIPALITIES } from '../constants';
 import './AuthPage.css';
@@ -63,22 +63,54 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
   }, [API, tr, onLogin]);
 
   // ── Google GSI başlat ──────────────────────────────────────
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !window.google) return;
+  const googleInitialized = useRef(false);
 
+  const initializeGoogle = useCallback(() => {
+    if (!GOOGLE_CLIENT_ID || !window.google || googleInitialized.current) return;
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: handleGoogleCredential,
       auto_select: false,
       cancel_on_tap_outside: true,
     });
+    googleInitialized.current = true;
   }, [handleGoogleCredential]);
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    // Eğer script zaten yüklendiyse hemen initialize et
+    if (window.google) {
+      initializeGoogle();
+      return;
+    }
+
+    // Script henüz yüklenmediyse onload callback bekle
+    const scriptEl = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+    if (scriptEl) {
+      const onLoad = () => initializeGoogle();
+      scriptEl.addEventListener('load', onLoad);
+      return () => scriptEl.removeEventListener('load', onLoad);
+    }
+  }, [initializeGoogle]);
+
+  // handleGoogleCredential değiştiğinde (render'da) google'ı yeniden initialize et
+  useEffect(() => {
+    if (googleInitialized.current) {
+      googleInitialized.current = false;
+      initializeGoogle();
+    }
+  }, [handleGoogleCredential, initializeGoogle]);
 
   // Google butonunu manuel tetikle (popup flow)
   const handleGoogleButtonClick = () => {
     if (!window.google) {
       setError(tr ? 'Google servisi yüklenemedi' : 'Google service failed to load');
       return;
+    }
+    // Henüz initialize edilmediyse şimdi yap
+    if (!googleInitialized.current) {
+      initializeGoogle();
     }
     window.google.accounts.id.prompt();
   };
