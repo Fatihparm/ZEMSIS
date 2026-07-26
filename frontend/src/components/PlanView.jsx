@@ -1027,7 +1027,10 @@ function PlanView({ parameters, lang, onParameterChange, soilLayers, initialDraw
                         const cx = mouseWorld2.x - sectionStart.x;
                         const cy = mouseWorld2.y - sectionStart.y;
                         const perpMouse = cx * lNx + cy * lNy;
-                        viewSide = perpMouse >= 0 ? 1 : -1;
+                        // Canvas Y ekseni ters (ekranda aşağı = pozitif) olduğundan
+                        // dünya koordinatlarında hesaplanan perpMouse'un işareti
+                        // ekrandaki görsel sol/sağ yönünün tersidir. Tersleyerek düzeltiyoruz.
+                        viewSide = perpMouse >= 0 ? -1 : 1;
                     }
                     pushUndo();
                     const newSection = {

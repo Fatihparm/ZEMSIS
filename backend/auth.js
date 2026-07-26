@@ -3,8 +3,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { pool } = require('./db');
+const { validateBody, registerSchema, loginSchema } = require('./schemas');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -54,9 +56,10 @@ function officerMiddleware(req, res, next) {
 }
 
 // ── POST /api/auth/register ─────────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', validateBody(registerSchema), async (req, res, next) => {
   try {
     const { email, password, fullName, role, municipality } = req.body;
+
 
     // Validation
     if (!email || !password || !fullName) {
@@ -124,9 +127,10 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/auth/login ────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', validateBody(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
+
 
     if (!email || !password) {
       return res.status(400).json({

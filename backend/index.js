@@ -10,6 +10,8 @@ const { router: authRouter } = require('./auth');
 const projectsRouter = require('./projects');
 const reportsRouter = require('./reports');
 const applicationsRouter = require('./applications');
+const errorHandler = require('./errorHandler');
+const { validateBody, calculateSchema, calculateLayersSchema } = require('./schemas');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,14 +38,10 @@ app.use(cors({
 
 // ── Body parser ─────────────────────────────────────────────
 // Görsel upload endpoint'i base64 dataUrl alır → yüksek limit
-// (tek bir 2000px JPEG ~1-3 MB base64 olabilir)
 app.use('/api/reports/images', express.json({ limit: '20mb' }));
-// Diğer tüm endpointler (draft kaydetme vb.) — artık büyük blob gitmiyor
 app.use(express.json({ limit: '5mb' }));
 
-
 // ── Rate Limiting ────────────────────────────────────────────
-// Auth endpoint'leri için sıkı limit
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 dakika
   max: 20,                   // 15 dakikada en fazla 20 istek
@@ -52,7 +50,6 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, please try again later.' }
 });
 
-// Hesaplama endpoint'leri için genel limit
 const calcLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 dakika
   max: 60,
@@ -66,11 +63,9 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/applications', applicationsRouter);
-app.use('/api/calculate', calcLimiter);
-app.use('/api/calculate-layers', calcLimiter);
 
 // ── Rapor Doğrulama (public — auth gerektirmez) ──────────────
-app.get('/api/verify/:code', async (req, res) => {
+app.get('/api/verify/:code', async (req, res, next) => {
   try {
     const { pool } = require('./db');
     const code = (req.params.code || '').toUpperCase().trim();
@@ -109,8 +104,7 @@ app.get('/api/verify/:code', async (req, res) => {
       message: 'Bu rapor ZEMSIS platformunda kayıtlı ve doğrulanmıştır.',
     });
   } catch (err) {
-    console.error('Verify endpoint error:', err);
-    res.status(500).json({ success: false, error: 'Doğrulama sırasında bir hata oluştu.' });
+    next(err);
   }
 });
 
@@ -123,76 +117,26 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ── Main calculation endpoint ───────────────────────────────
-app.post('/api/calculate', (req, res) => {
+// ── Main calculation endpoint (Zod Validation) ──────────────
+app.post('/api/calculate', calcLimiter, validateBody(calculateSchema), (req, res, next) => {
   try {
-    const { parameters } = req.body;
-
-    const required = ['D', 's', 'cu', 'sigmaJet', 'Es', 'Ejg', 'H', 'qtemel', 'FS'];
-    const missing = required.filter(param =>
-      parameters[param] === undefined || parameters[param] === null || parameters[param] === ''
-    );
-
-    if (missing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Missing required parameters: ${missing.join(', ')}`
-      });
-    }
-
-    const numericParams = {};
-    for (const key in parameters) {
-      numericParams[key] = parseFloat(parameters[key]);
-      if (isNaN(numericParams[key])) {
-        return res.status(400).json({
-          success: false,
-          error: `Invalid numeric value for parameter: ${key}`
-        });
-      }
-    }
-
-    const results = calculations.calculateAll(numericParams, req.body.lang || 'en');
+    const { parameters, lang } = req.body;
+    const results = calculations.calculateAll(parameters, lang || 'tr');
 
     res.json({
       success: true,
       message: 'Calculation completed successfully',
       results
     });
-
   } catch (error) {
-    console.error('Calculation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Calculation failed: ' + error.message
-    });
+    next(error);
   }
 });
 
-// ── Soil layer profile calculation endpoint ─────────────────
-app.post('/api/calculate-layers', (req, res) => {
+// ── Soil layer profile calculation endpoint (Zod Validation) ─
+app.post('/api/calculate-layers', calcLimiter, validateBody(calculateLayersSchema), (req, res, next) => {
   try {
     const { layers } = req.body;
-
-    if (!layers || !Array.isArray(layers) || layers.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'At least one soil layer is required'
-      });
-    }
-
-    const requiredFields = ['thickness', 'gamma', 'phi', 'cohesion', 'elasticity', 'poisson'];
-    for (let i = 0; i < layers.length; i++) {
-      const missing = requiredFields.filter(f =>
-        layers[i][f] === undefined || layers[i][f] === null || layers[i][f] === ''
-      );
-      if (missing.length > 0) {
-        return res.status(400).json({
-          success: false,
-          error: `Layer ${i + 1}: Missing fields: ${missing.join(', ')}`
-        });
-      }
-    }
-
     const results = calculations.calculateSoilProfile(layers);
 
     res.json({
@@ -200,13 +144,8 @@ app.post('/api/calculate-layers', (req, res) => {
       message: 'Soil profile calculation completed',
       results
     });
-
   } catch (error) {
-    console.error('Layer calculation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Layer calculation failed: ' + error.message
-    });
+    next(error);
   }
 });
 
@@ -265,6 +204,9 @@ app.get('/api/parameters', (req, res) => {
     ]
   });
 });
+
+// ── Global Error Handling Middleware ────────────────────────
+app.use(errorHandler);
 
 // ── Start server ────────────────────────────────────────────
 async function start() {

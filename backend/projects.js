@@ -1,11 +1,13 @@
 const express = require('express');
 const { pool } = require('./db');
 const { authMiddleware } = require('./auth');
+const { validateBody, projectSchema } = require('./schemas');
 
 const router = express.Router();
 
 // All project routes require authentication
 router.use(authMiddleware);
+
 
 // ── GET /api/projects — List user's projects ────────────────
 router.get('/', async (req, res) => {
@@ -73,9 +75,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /api/projects — Create new project ─────────────────
-router.post('/', async (req, res) => {
+router.post('/', validateBody(projectSchema), async (req, res, next) => {
   try {
     const { name, description, parameters, soilLayers, results, drawingData, extraParams, units } = req.body;
+
 
     if (!name || !parameters) {
       return res.status(400).json({

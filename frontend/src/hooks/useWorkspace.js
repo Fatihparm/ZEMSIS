@@ -1,121 +1,43 @@
 /**
- * useWorkspace — Çalışma alanı state hook'u
+ * useWorkspace — Çalışma alanı state hook'u (Zustand Store Wrapper)
  *
- * parameters, soilLayers, units, extraParams, results, layerResults,
- * drawingDataRef ve proje işlemleri (yükle / sıfırla / kaydetme tamamlandı)
- * burada yönetilir. Daha önce App.jsx içindeydi.
+ * Zustand store (useWorkspaceStore) üzerinden tüm çalışma alanı durumunu
+ * ve aksiyonlarını yönetir.
  */
-import { useState, useRef } from 'react';
-import {
-  defaultParameters,
-  defaultUnits,
-  defaultSoilLayers,
-  defaultExtraParams,
-} from '../constants/defaults';
-import { loadAutosave, clearAutosave } from './useAutoSave';
+import { useWorkspaceStore } from '../store/useWorkspaceStore';
 
 export function useWorkspace() {
-  const [parameters, setParameters] = useState(() => {
-    const saved = loadAutosave();
-    return saved?.parameters || { ...defaultParameters };
-  });
-  const [soilLayers, setSoilLayers] = useState(() => {
-    const saved = loadAutosave();
-    return saved?.soilLayers || [...defaultSoilLayers];
-  });
-  const [units, setUnits] = useState(() => {
-    const saved = loadAutosave();
-    return saved?.units || { ...defaultUnits };
-  });
-  const [extraParams, setExtraParams] = useState(() => {
-    const saved = loadAutosave();
-    return saved?.extraParams || { ...defaultExtraParams };
-  });
-
-  const [results,      setResults]      = useState(null);
-  const [layerResults, setLayerResults] = useState(null);
-
-  const [currentProjectId,   setCurrentProjectId]   = useState(null);
-  const [currentProjectName, setCurrentProjectName] = useState('');
-  const [showSaveModal,      setShowSaveModal]       = useState(false);
-
-  const drawingDataRef = useRef(null);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setParameters(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleUnitChange = (fieldName, newUnit) => {
-    setUnits(prev => ({ ...prev, [fieldName]: newUnit }));
-  };
-
-  const handleDrawingDataChange = (data) => {
-    drawingDataRef.current = data;
-  };
-
-  const resetWorkspace = () => {
-    setCurrentProjectId(null);
-    setCurrentProjectName('');
-    setParameters({ ...defaultParameters });
-    setSoilLayers([...defaultSoilLayers]);
-    setUnits({ ...defaultUnits });
-    setResults(null);
-    setLayerResults(null);
-    setExtraParams({ ...defaultExtraParams });
-    drawingDataRef.current = null;
-    clearAutosave();
-  };
-
-  const handleLoadProject = (project) => {
-    setCurrentProjectId(project.id);
-    setCurrentProjectName(project.name);
-    if (project.parameters) setParameters(project.parameters);
-    if (project.soilLayers?.length > 0) setSoilLayers(project.soilLayers);
-    if (project.units)      setUnits(project.units);
-    if (project.results)    setResults(project.results);
-    setExtraParams(project.extraParams || { ...defaultExtraParams });
-    drawingDataRef.current = project.drawingData || null;
-  };
-
-  const handleSaveComplete = (savedProject) => {
-    setCurrentProjectId(savedProject.id);
-    setCurrentProjectName(savedProject.name);
-    setShowSaveModal(false);
-  };
-
-  const getProjectData = () => ({
-    name: currentProjectName,
-    description: '',
-    parameters,
-    soilLayers,
-    results,
-    drawingData: drawingDataRef.current,
-    units,
-    extraParams,
-  });
+  const store = useWorkspaceStore();
 
   return {
-    // state
-    parameters, setParameters,
-    soilLayers, setSoilLayers,
-    units, setUnits,
-    extraParams, setExtraParams,
-    results, setResults,
-    layerResults, setLayerResults,
-    currentProjectId,
-    currentProjectName,
-    showSaveModal, setShowSaveModal,
-    drawingDataRef,
-    // handlers
-    handleInputChange,
-    handleUnitChange,
-    handleDrawingDataChange,
-    resetWorkspace,
-    handleLoadProject,
-    handleSaveComplete,
-    getProjectData,
+    // State
+    parameters: store.parameters,
+    setParameters: store.setParameters,
+    soilLayers: store.soilLayers,
+    setSoilLayers: store.setSoilLayers,
+    units: store.units,
+    setUnits: store.setUnits,
+    extraParams: store.extraParams,
+    setExtraParams: store.setExtraParams,
+    results: store.results,
+    setResults: store.setResults,
+    layerResults: store.layerResults,
+    setLayerResults: store.setLayerResults,
+    currentProjectId: store.currentProjectId,
+    currentProjectName: store.currentProjectName,
+    showSaveModal: store.showSaveModal,
+    setShowSaveModal: store.setShowSaveModal,
+
+    // Drawing data ref adapter for backward compatibility
+    drawingDataRef: { current: store.drawingData },
+
+    // Handlers
+    handleInputChange: store.handleInputChange,
+    handleUnitChange: store.handleUnitChange,
+    handleDrawingDataChange: store.handleDrawingDataChange,
+    resetWorkspace: store.resetWorkspace,
+    handleLoadProject: store.handleLoadProject,
+    handleSaveComplete: store.handleSaveComplete,
+    getProjectData: store.getProjectData,
   };
 }

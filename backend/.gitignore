@@ -1,4 +1,7 @@
 node_modules
 .env
+.env.*
+*.zip
 /deprem-zemin-main
+
 
