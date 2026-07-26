@@ -68,8 +68,8 @@ export function useCalculation(workspace, langCtx) {
         console.error('Non-JSON API response:', text);
         throw new Error(
           tr
-            ? `API Sunucu Hatası (${response.status}): Yanıt JSON formatında değil.`
-            : `API Server Error (${response.status}): Response is not valid JSON.`
+            ? `API Sunucusuna Bağlanılamadı (${response.status}). Lütfen backend sunucusunun (port 3001) çalıştığından emin olun.`
+            : `API Server Connection Failed (${response.status}). Please check backend server on port 3001.`
         );
       }
 
@@ -77,7 +77,7 @@ export function useCalculation(workspace, langCtx) {
         setResults(data.results);
         setActiveTab('results');
       } else {
-        setError(data.message || data.error || t.calcFailed);
+        setError(data.error || data.message || t.calcFailed);
       }
     } catch (err) {
       if (err instanceof TypeError) {

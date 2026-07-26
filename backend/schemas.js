@@ -77,14 +77,27 @@ const projectSchema = z.object({
     units: z.record(z.any()).optional().default({})
 });
 
-// ── Validation Middleware Factory ───────────────────────────
+// ── Kurşun Geçirmez Validation Middleware (Direct HTTP 400 Response) ──
 function validateBody(schema) {
     return (req, res, next) => {
         try {
             req.body = schema.parse(req.body);
             next();
         } catch (err) {
-            next(err);
+            const errors = err.issues || err.errors || [];
+            const fieldErrors = errors.map(e => ({
+                field: Array.isArray(e.path) ? e.path.join('.') : String(e.path || ''),
+                message: e.message
+            }));
+
+            const combinedMessage = fieldErrors.map(f => f.message).join('; ');
+
+            return res.status(400).json({
+                success: false,
+                error: combinedMessage || 'Doğrulama Hatası',
+                message: combinedMessage,
+                details: fieldErrors
+            });
         }
     };
 }

@@ -6,9 +6,10 @@ const { ZodError } = require('zod');
  */
 function errorHandler(err, req, res, next) {
     // 1. Zod Doğrulama Hataları (Validation Errors)
-    if (err instanceof ZodError) {
-        const fieldErrors = err.errors.map(e => ({
-            field: e.path.join('.'),
+    if (err instanceof ZodError || err.name === 'ZodError' || Array.isArray(err.issues) || Array.isArray(err.errors)) {
+        const errors = err.issues || err.errors || [];
+        const fieldErrors = errors.map(e => ({
+            field: Array.isArray(e.path) ? e.path.join('.') : e.path,
             message: e.message
         }));
 
