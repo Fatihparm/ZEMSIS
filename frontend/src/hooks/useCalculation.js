@@ -3,7 +3,6 @@
  *
  * Jet grout hesaplamasını API'ye gönderir, loading ve error state'lerini yönetir.
  * safeConvert ile birim dönüşüm güvenliği sağlanır.
- * Daha önce App.jsx içindeydi.
  */
 import { useState } from 'react';
 import { API_URL } from '../config';
@@ -58,15 +57,29 @@ export function useCalculation(workspace, langCtx) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parameters: convertedParams, lang: tr ? 'tr' : 'en' })
       });
-      const data = await response.json();
-      if (data.success) {
+
+      const contentType = response.headers.get('content-type') || '';
+      let data = {};
+
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON API response:', text);
+        throw new Error(
+          tr
+            ? `API Sunucu Hatası (${response.status}): Yanıt JSON formatında değil.`
+            : `API Server Error (${response.status}): Response is not valid JSON.`
+        );
+      }
+
+      if (response.ok && data.success) {
         setResults(data.results);
         setActiveTab('results');
       } else {
-        setError(data.error || t.calcFailed);
+        setError(data.message || data.error || t.calcFailed);
       }
     } catch (err) {
-      // Network hataları TypeError, birim hataları Error olarak gelir
       if (err instanceof TypeError) {
         setError(t.apiError);
       } else {

@@ -1,16 +1,16 @@
 const { z } = require('zod');
 
-// ── 1. Calculation schemas ──────────────────────────────────
+// ── 1. Hesaplama Şemaları ────────────────────────────────────
 const calculateSchema = z.object({
     parameters: z.object({
-        D: z.coerce.number({ invalid_type_error: 'D must be a number' }).positive('Column diameter (D) must be positive'),
-        s: z.coerce.number({ invalid_type_error: 's must be a number' }).positive('Column spacing (s) must be positive'),
-        cu: z.coerce.number({ invalid_type_error: 'cu must be a number' }).nonnegative('Cohesion (cu) must be non-negative'),
-        sigmaJet: z.coerce.number({ invalid_type_error: 'sigmaJet must be a number' }).positive('Jet grout strength (sigmaJet) must be positive'),
-        Es: z.coerce.number({ invalid_type_error: 'Es must be a number' }).positive('Soil elastic modulus (Es) must be positive'),
-        Ejg: z.coerce.number({ invalid_type_error: 'Ejg must be a number' }).positive('Jet grout elastic modulus (Ejg) must be positive').optional().nullable(),
-        H: z.coerce.number({ invalid_type_error: 'H must be a number' }).positive('Column height (H) must be positive'),
-        qtemel: z.coerce.number({ invalid_type_error: 'qtemel must be a number' }).nonnegative('Foundation pressure (qtemel) must be non-negative'),
+        D: z.coerce.number({ invalid_type_error: 'Kolon çapı (D) sayısal bir değer olmalıdır' }).positive('Kolon çapı (D) pozitif bir sayı olmalıdır'),
+        s: z.coerce.number({ invalid_type_error: 'Kolon aralığı (s) sayısal bir değer olmalıdır' }).positive('Kolon aralığı (s) pozitif bir sayı olmalıdır'),
+        cu: z.coerce.number({ invalid_type_error: 'Kohezyon (cu) sayısal bir değer olmalıdır' }).nonnegative('Kohezyon (cu) değeri negatif olamaz'),
+        sigmaJet: z.coerce.number({ invalid_type_error: 'Jet Grout mukavemeti (sigmaJet) sayısal bir değer olmalıdır' }).positive('Jet Grout mukavemeti (sigmaJet) pozitif olmalıdır'),
+        Es: z.coerce.number({ invalid_type_error: 'Zemin elastisite modülü (Es) sayısal bir değer olmalıdır' }).positive('Zemin elastisite modülü (Es) pozitif olmalıdır'),
+        Ejg: z.coerce.number({ invalid_type_error: 'Jet Grout elastisite modülü (Ejg) sayısal bir değer olmalıdır' }).positive('Jet Grout elastisite modülü (Ejg) pozitif olmalıdır').optional().nullable(),
+        H: z.coerce.number({ invalid_type_error: 'Kolon derinliği (H) sayısal bir değer olmalıdır' }).positive('Kolon derinliği (H) pozitif bir sayı olmalıdır'),
+        qtemel: z.coerce.number({ invalid_type_error: 'Temel taban gerilmesi (qtemel) sayısal bir değer olmalıdır' }).nonnegative('Temel taban gerilmesi (qtemel) negatif olamaz'),
         Fs: z.coerce.number().positive().optional().default(2.0),
         FS: z.coerce.number().positive().optional(),
         FS_shaft: z.coerce.number().positive().optional(),
@@ -25,29 +25,29 @@ const calculateSchema = z.object({
         qtemelStatik: z.coerce.number().optional(),
         maxSettlementMm: z.coerce.number().optional(),
         maxSettlementCm: z.coerce.number().optional(),
-    }, { required_error: 'parameters object is required' }),
+    }, { required_error: 'Parametreler objesi zorunludur' }),
     lang: z.enum(['tr', 'en']).optional().default('tr')
 });
 
 const layerSchema = z.object({
     soilType: z.string().optional(),
-    thickness: z.coerce.number().positive('Layer thickness must be positive'),
-    gamma: z.coerce.number().positive('Unit weight (gamma) must be positive'),
-    phi: z.coerce.number().nonnegative('Friction angle (phi) must be non-negative'),
-    cohesion: z.coerce.number().nonnegative('Cohesion must be non-negative'),
-    elasticity: z.coerce.number().positive('Elasticity modulus must be positive'),
-    poisson: z.coerce.number().min(0, 'Poisson ratio cannot be negative').max(0.5, 'Poisson ratio cannot exceed 0.5'),
+    thickness: z.coerce.number().positive('Zemin tabaka kalınlığı pozitif olmalıdır'),
+    gamma: z.coerce.number().positive('Birim hacim ağırlık (γ) pozitif olmalıdır'),
+    phi: z.coerce.number().nonnegative('İçsel sürtünme açısı (φ) negatif olamaz'),
+    cohesion: z.coerce.number().nonnegative('Kohezyon (c) değeri negatif olamaz'),
+    elasticity: z.coerce.number().positive('Elastisite modülü (E) pozitif olmalıdır'),
+    poisson: z.coerce.number().min(0, 'Poisson oranı (ν) negatif olamaz').max(0.5, 'Poisson oranı (ν) 0.5 değerini geçemez'),
 });
 
 const calculateLayersSchema = z.object({
-    layers: z.array(layerSchema).min(1, 'At least one soil layer is required')
+    layers: z.array(layerSchema).min(1, 'En az 1 adet zemin tabakası girilmelidir')
 });
 
-// ── 2. Auth schemas ─────────────────────────────────────────
+// ── 2. Kullanıcı & Auth Şemaları ────────────────────────────
 const registerSchema = z.object({
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-    fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+    email: z.string().email('Geçerli bir e-posta adresi giriniz'),
+    password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
+    fullName: z.string().min(2, 'Ad soyad en az 2 karakter olmalıdır'),
     role: z.enum(['user', 'municipal_officer']).optional().default('user'),
     municipality: z.string().nullable().optional()
 }).refine(data => {
@@ -56,18 +56,18 @@ const registerSchema = z.object({
     }
     return true;
 }, {
-    message: 'Municipality is required for municipal officers',
+    message: 'Belediye personelleri için belediye adı zorunludur',
     path: ['municipality']
 });
 
 const loginSchema = z.object({
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(1, 'Password is required')
+    email: z.string().email('Geçerli bir e-posta adresi giriniz'),
+    password: z.string().min(1, 'Şifre alanı zorunludur')
 });
 
-// ── 3. Project schemas ──────────────────────────────────────
+// ── 3. Proje Şemaları ────────────────────────────────────────
 const projectSchema = z.object({
-    name: z.string().min(1, 'Project name is required'),
+    name: z.string().min(1, 'Proje adı zorunludur'),
     description: z.string().optional().default(''),
     parameters: z.record(z.any()),
     soilLayers: z.array(z.any()).optional().default([]),

@@ -1,56 +1,58 @@
 const { ZodError } = require('zod');
 
 /**
- * Express Global Error Handling Middleware
- * Standardizes API error responses and prevents sensitive stack leaks in production.
+ * Express Global Hata Yönetimi Middleware'i (Global Error Handler)
+ * Tüm API hatalarını Türkçe mesajlarla standartlaştırır.
  */
 function errorHandler(err, req, res, next) {
-    // 1. Zod Validation Errors
+    // 1. Zod Doğrulama Hataları (Validation Errors)
     if (err instanceof ZodError) {
         const fieldErrors = err.errors.map(e => ({
             field: e.path.join('.'),
             message: e.message
         }));
 
+        const combinedMessage = fieldErrors.map(f => f.message).join('; ');
+
         return res.status(400).json({
             success: false,
-            error: 'Validation Error',
-            message: fieldErrors.map(f => f.message).join('; '),
+            error: combinedMessage || 'Doğrulama Hatası',
+            message: combinedMessage,
             details: fieldErrors
         });
     }
 
-    // 2. Custom Application Operational Errors (with statusCode)
+    // 2. Özel Uygulama İçi Hatalar (statusCode tanımlı)
     if (err.statusCode) {
         return res.status(err.statusCode).json({
             success: false,
-            error: err.message || 'Error occurred'
+            error: err.message || 'İşlem gerçekleştirilemedi'
         });
     }
 
-    // 3. Syntax / JSON Parse Error from Body Parser
+    // 3. Geçersiz JSON Body Hataları
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         return res.status(400).json({
             success: false,
-            error: 'Invalid JSON payload'
+            error: 'Geçersiz JSON verisi gönderildi'
         });
     }
 
-    // 4. CORS Error
+    // 4. CORS Politikası İhlali
     if (err.message === 'CORS policy violation') {
         return res.status(403).json({
             success: false,
-            error: 'CORS policy violation: Origin not allowed'
+            error: 'CORS Güvenlik İhlali: Bu alan adından istek atılamaz'
         });
     }
 
-    // 5. Unexpected / System 500 Errors
+    // 5. Beklenmeyen Sunucu (500) Hataları
     console.error('🔥 [Unhandled Error]:', err);
 
     const isProduction = process.env.NODE_ENV === 'production';
     res.status(500).json({
         success: false,
-        error: isProduction ? 'Internal Server Error' : err.message
+        error: isProduction ? 'Sunucuda beklenmeyen bir hata oluştu' : err.message
     });
 }
 
