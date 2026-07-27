@@ -63,17 +63,23 @@ const translations = {
       netPressureTip: 'Net pressure for settlement (leave empty to auto-calculate)'
     },
     results: {
-      title: 'Calculation Results',
+      title: 'Analysis Results',
       geometry: 'Geometry',
       material: 'Material Parameters',
       capacity: 'Bearing Capacity',
       improvedSoil: 'Improved Soil',
       settlement: 'Settlement',
-      noResults: 'No results yet.',
-      enterParams: 'Enter parameters and click "Calculate".'
+      soilProfile: 'Soil Profile',
+      noResults: 'No analysis yet.',
+      enterParams: 'Go to the "Parameters" tab, fill in the values, then click "Run Analysis" here.',
+      soilProfileUsed: 'Soil profile applied (cu, Es, γ from layers)',
+      paramsSummary: 'Parameters Used in Analysis',
+      soilProfileSection: 'Soil Profile Analysis'
     },
     calculate: 'Calculate',
     calculating: 'Calculating...',
+    analyze: 'Run Analysis',
+    analyzing: 'Analyzing...',
     apiError: 'Cannot connect to API. Is the backend running?',
     calcFailed: 'Calculation failed',
     footer: 'ZEMSIS v1.0 © 2026'
@@ -138,17 +144,23 @@ const translations = {
       netPressureTip: 'Oturma hesabi icin net basinc (bos birakilirsa otomatik hesaplanir)'
     },
     results: {
-      title: 'Hesap Sonuclari',
+      title: 'Analiz Sonuclari',
       geometry: 'Geometri',
       material: 'Malzeme Parametreleri',
       capacity: 'Tasima Kapasitesi',
       improvedSoil: 'Iyilestirilmis Zemin',
       settlement: 'Oturma',
-      noResults: 'Henuz sonuc yok.',
-      enterParams: 'Parametreleri girin ve "Hesapla" butonuna tiklayin.'
+      soilProfile: 'Zemin Profili',
+      noResults: 'Henuz analiz yapilmadi.',
+      enterParams: '"Parametreler" tabindan degerleri girin, sonra buradan "Analiz Et" butonuna tiklayin.',
+      soilProfileUsed: 'Zemin profili kullanildi (cu, Es, γ katmanlardan alindi)',
+      paramsSummary: 'Analizde Kullanilan Parametreler',
+      soilProfileSection: 'Zemin Profili Analizi'
     },
     calculate: 'Hesapla',
     calculating: 'Hesaplaniyor...',
+    analyze: 'Analiz Et',
+    analyzing: 'Analiz Ediliyor...',
     apiError: "API'ye baglanilamiyor. Backend calisiyor mu?",
     calcFailed: 'Hesaplama basarisiz',
     footer: 'ZEMSIS v1.0 © 2026'

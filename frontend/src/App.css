@@ -718,6 +718,7 @@
   cursor: not-allowed;
 }
 
+
 .no-results {
   display: grid;
   place-items: center;
@@ -735,6 +736,192 @@
   font-size: 1.4rem;
   color: var(--color-primary);
 }
+
+/* ── Sonuçlar Tabı — Analiz Merkezi ── */
+
+/* Başlık satırı: sol h2 + sağ buton */
+.results-header {
+  justify-content: space-between !important;
+  align-items: center;
+}
+
+/* Ana Analiz Butonu */
+.results-analyze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f3f6e 0%, #1a6ea8 60%, #50b1c8 100%);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(15, 63, 110, 0.30),
+              0 0 0 0 rgba(80, 177, 200, 0);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.results-analyze-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff;
+  flex-shrink: 0;
+}
+
+.results-analyze-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(15, 63, 110, 0.38),
+              0 0 0 4px rgba(80, 177, 200, 0.18);
+}
+
+.results-analyze-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Ortalanmış analiz butonu (boş durum için) */
+.results-analyze-btn--centered {
+  margin-top: 20px;
+  font-size: 1.05rem;
+  padding: 14px 36px;
+  box-shadow: 0 12px 32px rgba(15, 63, 110, 0.28);
+}
+
+/* Spinner (loading) */
+.results-analyze-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: results-spin 0.7s linear infinite;
+}
+
+@keyframes results-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Zemin profili uygulama badge'i */
+.results-soil-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border: 1px solid #6ee7b7;
+  border-radius: 999px;
+  color: #065f46;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.results-soil-badge-icon {
+  font-size: 1rem;
+}
+
+/* Kullanılan parametreler özeti */
+.results-params-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(17,62,104,0.04) 0%, rgba(80,177,200,0.06) 100%);
+  border: 1px solid rgba(17,62,104,0.1);
+  border-radius: 14px;
+}
+
+.results-params-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+
+.results-params-chip {
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  font-family: 'Consolas', 'Courier New', monospace;
+  white-space: nowrap;
+}
+
+/* Zemin profili analiz bölümü */
+.results-soil-section {
+  margin-top: 28px;
+}
+
+.results-soil-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+  padding-left: 14px;
+  position: relative;
+}
+
+.results-soil-section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #10b981, #059669);
+}
+
+/* Boş durum */
+.results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  padding: 40px 32px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px dashed var(--color-gray-300);
+  border-radius: 20px;
+  text-align: center;
+}
+
+.results-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+  filter: grayscale(0.2);
+}
+
+.results-empty-title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+}
+
+.results-empty-desc {
+  font-size: 0.9rem;
+  color: var(--color-gray-500);
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+
 
 /* ═══════════════════════════════════════════════════
    RESPONSIVE BREAKPOINTS

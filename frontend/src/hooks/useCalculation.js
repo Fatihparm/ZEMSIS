@@ -1,8 +1,9 @@
 /**
  * useCalculation — Hesaplama hook'u
  *
- * Jet grout hesaplamasını API'ye gönderir, loading ve error state'lerini yönetir.
- * safeConvert ile birim dönüşüm güvenliği sağlanır.
+ * Jet grout hesaplamasını ve zemin profili analizini paralel API çağrısıyla
+ * yapar. soilLayers varsa ağırlıklı ortalamalar (cu, Es, gamma) otomatik
+ * kullanılır. safeConvert ile birim dönüşüm güvenliği sağlanır.
  */
 import { useState } from 'react';
 import { API_URL } from '../config';
@@ -10,7 +11,7 @@ import { API_URL } from '../config';
 const toKPa = (value, unit) => unit === 'MPa' ? value * 1000 : value;
 
 /**
- * @param {{ parameters, units, setResults, setActiveTab }} workspace
+ * @param {{ parameters, soilLayers, units, setResults, setLayerResults, setActiveTab }} workspace
  * @param {{ tr: boolean, t: object }} langCtx
  */
 export function useCalculation(workspace, langCtx) {
@@ -18,7 +19,7 @@ export function useCalculation(workspace, langCtx) {
   const [error,   setError]   = useState(null);
 
   const handleCalculate = async () => {
-    const { parameters, units, setResults, setActiveTab } = workspace;
+    const { parameters, soilLayers = [], units, setResults, setLayerResults, setActiveTab } = workspace;
     const { tr, t } = langCtx;
 
     setLoading(true);
@@ -40,6 +41,26 @@ export function useCalculation(workspace, langCtx) {
         return toKPa(raw, unit);
       };
 
+      // ── Zemin profili varsa ağırlıklı ortalamaları hesapla ──
+      let layerResultsData = null;
+      const hasLayers = soilLayers && soilLayers.length > 0 &&
+        soilLayers.some(l => parseFloat(l.thickness) > 0);
+
+      if (hasLayers) {
+        const layersResponse = await fetch(`${API_URL}/calculate-layers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ layers: soilLayers })
+        });
+        if (layersResponse.ok) {
+          const layersData = await layersResponse.json();
+          if (layersData.success) {
+            layerResultsData = layersData.results;
+          }
+        }
+      }
+
+      // ── Parametre dönüşümleri ──
       const convertedParams = {
         ...parameters,
         sigmaJet: safeConvert('sigmaJet', 'sigmaJet'),
@@ -52,6 +73,15 @@ export function useCalculation(workspace, langCtx) {
         maxSettlementCm: maxMm ? maxMm / 10 : null,
       };
 
+      // ── Zemin profili varsa cu, Es, gamma'yı oradan al ──
+      if (layerResultsData?.summary) {
+        const s = layerResultsData.summary;
+        if (s.cohesionAvg?.value)   convertedParams.cu    = s.cohesionAvg.value;
+        if (s.elasticityAvg?.value) convertedParams.Es    = s.elasticityAvg.value;
+        if (s.gammaAvg?.value)      convertedParams.gamma = s.gammaAvg.value;
+      }
+
+      // ── Ana jet grout hesabı ──
       const response = await fetch(`${API_URL}/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,7 +105,12 @@ export function useCalculation(workspace, langCtx) {
 
       if (response.ok && data.success) {
         setResults(data.results);
-        setActiveTab('results');
+        if (layerResultsData && setLayerResults) {
+          setLayerResults(layerResultsData);
+        }
+        // Sonuçlar tabındaysa setActiveTab çağırma (zaten oradayız)
+        // Ama farklı tabdan tetiklenirse sonuçlara git
+        if (setActiveTab) setActiveTab('results');
       } else {
         setError(data.error || data.message || t.calcFailed);
       }

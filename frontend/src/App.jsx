@@ -55,7 +55,14 @@ export default function App() {
 
   // ── Hesaplama ────────────────────────────────────────────────────────────
   const calc = useCalculation(
-    { parameters: ws.parameters, units: ws.units, setResults: ws.setResults, setActiveTab },
+    {
+      parameters:      ws.parameters,
+      soilLayers:      ws.soilLayers,
+      units:           ws.units,
+      setResults:      ws.setResults,
+      setLayerResults: ws.setLayerResults,
+      setActiveTab,
+    },
     { tr, t }
   );
 
@@ -246,11 +253,8 @@ export default function App() {
                     parameters={ws.parameters}
                     units={ws.units}
                     layerResults={ws.layerResults}
-                    error={calc.error}
-                    loading={calc.loading}
                     onInputChange={ws.handleInputChange}
                     onUnitChange={ws.handleUnitChange}
-                    onCalculate={calc.handleCalculate}
                   />
                 )}
 
@@ -283,30 +287,21 @@ export default function App() {
                   />
                 )}
 
-                {/* Sonuçlar */}
+                {/* Sonuçlar — Analiz Merkezi */}
                 {activeTab === 'results' && (
-                  <div className="page-container">
-                    <div className="page-header">
-                      <h2>{tr ? 'Hesap Sonuclari' : 'Calculation Results'}</h2>
-                    </div>
-                    <div className="page-content">
-                      {ws.results ? (
-                        <div className="results-grid">
-                          <ResultCard title={t.results.geometry}     results={ws.results.geometry}     lang={lang} />
-                          <ResultCard title={t.results.material}     results={ws.results.material}     lang={lang} />
-                          <ResultCard title={t.results.capacity}     results={ws.results.capacity}     lang={lang} />
-                          <ResultCard title={t.results.improvedSoil} results={ws.results.improvedSoil} lang={lang} />
-                          <ResultCard title={t.results.settlement}   results={ws.results.settlement}   lang={lang} />
-                        </div>
-                      ) : (
-                        <div className="no-results">
-                          <p>{t.results.title}</p>
-                          <p>{t.results.noResults}</p>
-                          <p style={{ fontSize: '0.8rem', marginTop: 6 }}>{t.results.enterParams}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <ResultsTab
+                    t={t}
+                    tr={tr}
+                    lang={lang}
+                    results={ws.results}
+                    layerResults={ws.layerResults}
+                    soilLayers={ws.soilLayers}
+                    parameters={ws.parameters}
+                    units={ws.units}
+                    loading={calc.loading}
+                    error={calc.error}
+                    onAnalyze={calc.handleCalculate}
+                  />
                 )}
 
                 {/* Başvuru */}
@@ -374,8 +369,8 @@ export default function App() {
 // ParametersTab — Parametre giriş ekranı (yalnızca App içinde kullanılır)
 // ─────────────────────────────────────────────────────────────────────────
 function ParametersTab({
-  t, tr, parameters, units, layerResults, error, loading,
-  onInputChange, onUnitChange, onCalculate,
+  t, tr, parameters, units, layerResults,
+  onInputChange, onUnitChange,
 }) {
   const D    = parseFloat(parameters.D) || 0;
   const s    = parseFloat(parameters.s) || 1;
@@ -390,7 +385,6 @@ function ParametersTab({
         <h2>{tr ? 'Parametreler' : 'Parameters'}</h2>
       </div>
       <div className="page-content">
-        {error && <div className="page-error">Warning: {error}</div>}
 
         {/* Anlık önizleme */}
         <div className="param-preview-bar">
@@ -522,10 +516,125 @@ function ParametersTab({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <button className="page-calculate-btn" onClick={onCalculate} disabled={loading}>
-          {loading ? t.calculating : t.calculate}
+// ─────────────────────────────────────────────────────────────────────────
+// ResultsTab — Analiz Merkezi (buton + tüm sonuçlar)
+// ─────────────────────────────────────────────────────────────────────────
+function ResultsTab({
+  t, tr, lang, results, layerResults, soilLayers, parameters, units,
+  loading, error, onAnalyze,
+}) {
+  const hasLayers = soilLayers && soilLayers.some(l => parseFloat(l.thickness) > 0);
+
+  // Analizde kullanılan parametreler özeti
+  const usedCu    = layerResults?.summary?.cohesionAvg?.value    ?? parseFloat(parameters.cu);
+  const usedEs    = layerResults?.summary?.elasticityAvg?.value  ?? parseFloat(parameters.Es);
+  const usedGamma = layerResults?.summary?.gammaAvg?.value       ?? parseFloat(parameters.gamma || 18);
+
+  return (
+    <div className="page-container">
+      {/* ── Başlık + Analiz Butonu ── */}
+      <div className="page-header results-header">
+        <h2>{t.results.title}</h2>
+        <button
+          id="btn-analyze"
+          className="results-analyze-btn"
+          onClick={onAnalyze}
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span className="results-analyze-spinner" />
+              {t.analyzing}
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              {t.analyze}
+            </>
+          )}
         </button>
+      </div>
+
+      <div className="page-content">
+        {/* ── Hata mesajı ── */}
+        {error && <div className="page-error" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+
+        {results ? (
+          <>
+            {/* ── Zemin profili badge'i ── */}
+            {hasLayers && layerResults && (
+              <div className="results-soil-badge">
+                <span className="results-soil-badge-icon">🌍</span>
+                <span>{t.results.soilProfileUsed}</span>
+              </div>
+            )}
+
+            {/* ── Kullanılan parametreler özeti ── */}
+            <div className="results-params-summary">
+              <span className="results-params-label">{t.results.paramsSummary}:</span>
+              <span className="results-params-chip">D = {parseFloat(parameters.D).toFixed(2)} m</span>
+              <span className="results-params-chip">s = {parseFloat(parameters.s).toFixed(2)} m</span>
+              <span className="results-params-chip">H = {parseFloat(parameters.H).toFixed(1)} m</span>
+              <span className="results-params-chip">cu = {usedCu?.toFixed ? usedCu.toFixed(1) : usedCu} kPa</span>
+              <span className="results-params-chip">Es = {usedEs?.toFixed ? usedEs.toFixed(0) : usedEs} kPa</span>
+              <span className="results-params-chip">γ = {usedGamma?.toFixed ? usedGamma.toFixed(1) : usedGamma} kN/m³</span>
+              <span className="results-params-chip">σjet = {parseFloat(parameters.sigmaJet).toFixed(0)} {units.sigmaJet || 'kPa'}</span>
+              <span className="results-params-chip">qtemel = {parseFloat(parameters.qtemel).toFixed(0)} {units.qtemel || 'kPa'}</span>
+            </div>
+
+            {/* ── Jet Grout Sonuç Kartları ── */}
+            <div className="results-grid" style={{ marginTop: 16 }}>
+              <ResultCard title={t.results.geometry}     results={results.geometry}     lang={lang} />
+              <ResultCard title={t.results.material}     results={results.material}     lang={lang} />
+              <ResultCard title={t.results.capacity}     results={results.capacity}     lang={lang} />
+              <ResultCard title={t.results.improvedSoil} results={results.improvedSoil} lang={lang} />
+              <ResultCard title={t.results.settlement}   results={results.settlement}   lang={lang} />
+            </div>
+
+            {/* ── Zemin Profili Analiz Sonuçları ── */}
+            {layerResults && (
+              <div className="results-soil-section">
+                <h3 className="results-soil-section-title">{t.results.soilProfileSection}</h3>
+                <ResultCard
+                  title={tr ? 'Katman Özeti' : 'Layer Summary'}
+                  results={layerResults.summary}
+                  lang={lang}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          /* ── Boş durum ── */
+          <div className="results-empty">
+            <div className="results-empty-icon">📊</div>
+            <h3 className="results-empty-title">{t.results.noResults}</h3>
+            <p className="results-empty-desc">{t.results.enterParams}</p>
+            <button
+              id="btn-analyze-empty"
+              className="results-analyze-btn results-analyze-btn--centered"
+              onClick={onAnalyze}
+              disabled={loading}
+            >
+              {loading ? (
+                <><span className="results-analyze-spinner" />{t.analyzing}</>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                  {t.analyze}
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
