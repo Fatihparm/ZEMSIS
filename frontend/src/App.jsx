@@ -8,10 +8,12 @@ import { useAutoSave }    from './hooks/useAutoSave';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 import translations from './constants/translations';
+import { getMethodByKey } from './constants/improvementMethods';
 
 // ── Layout bileşenleri ────────────────────────────────────────────────────
-import Sidebar from './components/layout/Sidebar';
-import TopBar  from './components/layout/TopBar';
+import Sidebar           from './components/layout/Sidebar';
+import TopBar            from './components/layout/TopBar';
+import MethodSelectModal from './components/layout/MethodSelectModal';
 
 // ── Sayfa / Alan bileşenleri ──────────────────────────────────────────────
 import InputField        from './components/InputField';
@@ -35,6 +37,7 @@ export default function App() {
   const [activePage, setActivePage] = useState('home');
   const [activeTab,  setActiveTab]  = useState('parameters');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showMethodModal, setShowMethodModal] = useState(false);
 
   const t  = translations[lang];
   const tr = lang === 'tr';
@@ -103,7 +106,12 @@ export default function App() {
 
   // ── Proje akış handler'ları ───────────────────────────────────────────────
   const handleNewProject = () => {
-    ws.resetWorkspace();
+    setShowMethodModal(true);
+  };
+
+  const handleMethodSelected = (method) => {
+    ws.resetWorkspace(method);
+    setShowMethodModal(false);
     setActivePage('workspace');
     setActiveTab('parameters');
   };
@@ -204,6 +212,10 @@ export default function App() {
           todayLabel={todayLabel}
           isCompact={isLockedWorkspaceView}
           onMenuOpen={() => setSidebarOpen(true)}
+          methodBadge={activePage === 'workspace' ? (() => {
+            const m = getMethodByKey(ws.improvementMethod);
+            return { label: tr ? m.labelTR : m.labelEN, icon: m.icon, color: m.color, bgColor: m.bgColor, borderColor: m.borderColor };
+          })() : null}
         />
 
         {/* Gizli PDF import input */}
@@ -359,6 +371,14 @@ export default function App() {
           onClose={() => ws.setShowSaveModal(false)}
           projectData={ws.getProjectData()}
           onLogout={auth.handleLogout}
+        />
+      )}
+
+      {showMethodModal && (
+        <MethodSelectModal
+          lang={lang}
+          onSelect={handleMethodSelected}
+          onClose={() => setShowMethodModal(false)}
         />
       )}
     </div>

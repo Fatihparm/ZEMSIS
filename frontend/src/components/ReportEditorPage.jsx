@@ -579,12 +579,35 @@ async function uploadImageFile(file, projectId, token, sectionKey = 'unknown') {
 
   return {
     id: json.imageId,
-    previewUrl: `${API_URL}/reports/images/${json.imageId}?token=${encodeURIComponent(token)}`,
+    // previewUrl token içermez — görsel fetch için fetchSecureImageUrl kullanılır
+    previewUrl: `${API_URL}/reports/images/${json.imageId}`,
     caption: '',
     name: file.name,
     width: dataUrl.width,
     height: dataUrl.height,
   };
+}
+
+/**
+ * Bir görsel URL'sini Authorization: Bearer header ile fetch eder
+ * ve bellekte Blob URL (örn: blob:http://...) olarak döndürür.
+ * Token asla URL'de görünmez.
+ *
+ * @param {string} imageUrl  - Görselin API endpoint URL'i
+ * @param {string} token     - JWT access token
+ * @returns {Promise<string|null>} Blob URL veya hata durumunda null
+ */
+async function fetchSecureImageUrl(imageUrl, token) {
+  try {
+    const res = await fetch(imageUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
 }
 
 
@@ -1411,7 +1434,12 @@ function ReportEditorPage({
       const images = await Promise.all(
         selectedFiles.map(file => uploadImageFile(file, projectId, token, sectionKey))
       );
-      updateSectionImages(sectionKey, prev => [...prev, ...images]);
+      // Görselleri güncelle (API'dan gelen {id})
+      const finalImages = await Promise.all(images.map(async img => ({
+        ...img,
+        previewUrl: await fetchSecureImageUrl(`${API_URL}/reports/images/${img.id}`, token)
+      })));
+      updateSectionImages(sectionKey, prev => [...prev, ...finalImages]);
     } catch (err) {
       alert(err.message || 'Görsel yüklenemedi.');
     }
@@ -1445,14 +1473,15 @@ function ReportEditorPage({
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
-      .then(data => {
+      .then(async data => {
         if (data.success && data.sections) {
           const raw = data.sections;
 
           // sections'taki image array'lerini normalize et:
           // Eski format: [{id, dataUrl, ...}] → olduğu gibi bırak
           // Yeni format: [uuid_string, ...] → {id, previewUrl, caption} objesine çevir
-          // veya [{id:uuid, previewUrl:...}] → previewUrl'i token ile yenile
+          // veya [{id:uuid, ...}] → fetchSecureImageUrl ile Blob URL al
+          // Güvenlik: previewUrl ASLA token içermez — fetch Authorization header kullanır
           const SECTION_IMAGE_KEYS = [
             'introImages', 'areaInfoImages', 'structureInfoImages',
             'existingResearchImages', 'additionalResearchImages',
@@ -1462,34 +1491,35 @@ function ReportEditorPage({
 
           const normalized = { ...raw };
 
-          for (const key of SECTION_IMAGE_KEYS) {
+          // Tüm image key'leri için paralel Blob URL üret — token URL'de yok
+          await Promise.all(SECTION_IMAGE_KEYS.map(async key => {
             const arr = raw[key];
-            if (!Array.isArray(arr)) continue;
-            normalized[key] = arr.map(item => {
+            if (!Array.isArray(arr)) return;
+            normalized[key] = await Promise.all(arr.map(async item => {
               if (typeof item === 'string') {
                 // Yeni format: sadece UUID saklanmış
-                return {
-                  id: item,
-                  previewUrl: `${API_URL}/reports/images/${item}?token=${encodeURIComponent(token)}`,
-                  caption: '',
-                  name: '',
-                };
+                const blobUrl = await fetchSecureImageUrl(
+                  `${API_URL}/reports/images/${item}`, token
+                );
+                return { id: item, previewUrl: blobUrl, caption: '', name: '' };
               }
               if (item && typeof item === 'object' && item.id && !item.dataUrl) {
-                // {id, previewUrl, caption, name} formatı — previewUrl'i token ile yenile
-                return {
-                  ...item,
-                  previewUrl: `${API_URL}/reports/images/${item.id}?token=${encodeURIComponent(token)}`,
-                };
+                // {id, caption, name} formatı — Blob URL üret
+                const blobUrl = await fetchSecureImageUrl(
+                  `${API_URL}/reports/images/${item.id}`, token
+                );
+                return { ...item, previewUrl: blobUrl };
               }
               // Eski {id, dataUrl, ...} formatı — olduğu gibi bırak
               return item;
-            });
-          }
+            }));
+          }));
 
-          // coverLogoId varsa previewUrl yenile
+          // coverLogoId varsa Blob URL olarak yükle
           if (normalized.coverLogoId) {
-            normalized.coverLogoPreviewUrl = `${API_URL}/reports/images/${normalized.coverLogoId}?token=${encodeURIComponent(token)}`;
+            normalized.coverLogoPreviewUrl = await fetchSecureImageUrl(
+              `${API_URL}/reports/images/${normalized.coverLogoId}`, token
+            );
           }
 
           setSections(normalized);
@@ -1846,11 +1876,14 @@ function ReportEditorPage({
                       }
                       try {
                         const uploaded = await uploadImageFile(file, projectId, token, 'coverLogo');
-                        // Hem ID'yi hem preview URL'yi sections'ta sakla
+                        // Blob URL üret — token URL'de olmayacak
+                        const blobUrl = await fetchSecureImageUrl(
+                          `${API_URL}/reports/images/${uploaded.id}`, token
+                        );
                         setSections(prev => ({
                           ...prev,
                           coverLogoId: uploaded.id,
-                          coverLogoPreviewUrl: uploaded.previewUrl,
+                          coverLogoPreviewUrl: blobUrl,
                           // Eski format temizle
                           coverLogo: null,
                         }));

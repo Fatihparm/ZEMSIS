@@ -18,6 +18,7 @@ export const useWorkspaceStore = create((set, get) => ({
   layerResults: null,
   currentProjectId: null,
   currentProjectName: '',
+  improvementMethod: 'jet_grout',
   showSaveModal: false,
   drawingData: null,
 
@@ -45,6 +46,7 @@ export const useWorkspaceStore = create((set, get) => ({
   setResults: (results) => set({ results }),
   setLayerResults: (layerResults) => set({ layerResults }),
   setShowSaveModal: (showSaveModal) => set({ showSaveModal }),
+  setImprovementMethod: (improvementMethod) => set({ improvementMethod }),
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   handleInputChange: (e) => {
@@ -64,11 +66,12 @@ export const useWorkspaceStore = create((set, get) => ({
     set({ drawingData: data });
   },
 
-  resetWorkspace: () => {
+  resetWorkspace: (method = 'jet_grout') => {
     clearAutosave();
     set({
       currentProjectId: null,
       currentProjectName: '',
+      improvementMethod: method,
       parameters: { ...defaultParameters },
       soilLayers: [...defaultSoilLayers],
       units: { ...defaultUnits },
@@ -83,6 +86,7 @@ export const useWorkspaceStore = create((set, get) => ({
     set({
       currentProjectId: project.id,
       currentProjectName: project.name,
+      improvementMethod: project.improvementMethod || 'jet_grout',
       parameters: project.parameters || { ...defaultParameters },
       soilLayers: project.soilLayers?.length > 0 ? project.soilLayers : [...defaultSoilLayers],
       units: project.units || { ...defaultUnits },
@@ -111,6 +115,7 @@ export const useWorkspaceStore = create((set, get) => ({
       drawingData: state.drawingData,
       units: state.units,
       extraParams: state.extraParams,
+      improvementMethod: state.improvementMethod,
     };
   },
 }));

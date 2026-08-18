@@ -13,7 +13,7 @@ router.use(authMiddleware);
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, description, created_at, updated_at
+      `SELECT id, name, description, improvement_method, created_at, updated_at
        FROM projects
        WHERE user_id = $1
        ORDER BY updated_at DESC`,
@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
         id: row.id,
         name: row.name,
         description: row.description,
+        improvementMethod: row.improvement_method,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       }))
@@ -41,7 +42,7 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, description, parameters, soil_layers, results,
-              drawing_data, extra_params, units, created_at, updated_at
+              drawing_data, extra_params, units, improvement_method, created_at, updated_at
        FROM projects
        WHERE id = $1 AND user_id = $2`,
       [req.params.id, req.userId]
@@ -64,6 +65,7 @@ router.get('/:id', async (req, res) => {
         drawingData: row.drawing_data,
         extraParams: row.extra_params,
         units: row.units,
+        improvementMethod: row.improvement_method,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       }
@@ -77,7 +79,7 @@ router.get('/:id', async (req, res) => {
 // ── POST /api/projects — Create new project ─────────────────
 router.post('/', validateBody(projectSchema), async (req, res, next) => {
   try {
-    const { name, description, parameters, soilLayers, results, drawingData, extraParams, units } = req.body;
+    const { name, description, parameters, soilLayers, results, drawingData, extraParams, units, improvementMethod } = req.body;
 
 
     if (!name || !parameters) {
@@ -88,9 +90,9 @@ router.post('/', validateBody(projectSchema), async (req, res, next) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO projects (user_id, name, description, parameters, soil_layers, results, drawing_data, extra_params, units)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, name, description, created_at, updated_at`,
+      `INSERT INTO projects (user_id, name, description, parameters, soil_layers, results, drawing_data, extra_params, units, improvement_method)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, name, description, improvement_method, created_at, updated_at`,
       [
         req.userId,
         name,
@@ -100,7 +102,8 @@ router.post('/', validateBody(projectSchema), async (req, res, next) => {
         results ? JSON.stringify(results) : null,
         drawingData ? JSON.stringify(drawingData) : null,
         JSON.stringify(extraParams || {}),
-        JSON.stringify(units || {})
+        JSON.stringify(units || {}),
+        improvementMethod || 'jet_grout'
       ]
     );
 
@@ -111,6 +114,7 @@ router.post('/', validateBody(projectSchema), async (req, res, next) => {
         id: row.id,
         name: row.name,
         description: row.description,
+        improvementMethod: row.improvement_method,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       }
@@ -122,20 +126,12 @@ router.post('/', validateBody(projectSchema), async (req, res, next) => {
 });
 
 // ── PUT /api/projects/:id — Update existing project ─────────
-router.put('/:id', async (req, res) => {
+// validateBody(projectSchema) — gelen veriyi Zod ile doğrula (POST gibi)
+router.put('/:id', validateBody(projectSchema), async (req, res) => {
   try {
-    const { name, description, parameters, soilLayers, results, drawingData, extraParams, units } = req.body;
+    const { name, description, parameters, soilLayers, results, drawingData, extraParams, units, improvementMethod } = req.body;
 
-    // Verify ownership
-    const check = await pool.query(
-      'SELECT id FROM projects WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.userId]
-    );
-
-    if (check.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Project not found' });
-    }
-
+    // Sahiplik kontrolü + güncelleme tek sorguda — ayrı SELECT gereksiz
     const result = await pool.query(
       `UPDATE projects SET
         name = COALESCE($1, name),
@@ -146,9 +142,10 @@ router.put('/:id', async (req, res) => {
         drawing_data = COALESCE($6, drawing_data),
         extra_params = COALESCE($7, extra_params),
         units = COALESCE($8, units),
+        improvement_method = COALESCE($9, improvement_method),
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9 AND user_id = $10
-       RETURNING id, name, description, updated_at`,
+       WHERE id = $10 AND user_id = $11
+       RETURNING id, name, description, improvement_method, updated_at`,
       [
         name || null,
         description !== undefined ? description : null,
@@ -158,10 +155,15 @@ router.put('/:id', async (req, res) => {
         drawingData ? JSON.stringify(drawingData) : null,
         extraParams ? JSON.stringify(extraParams) : null,
         units ? JSON.stringify(units) : null,
+        improvementMethod || null,
         req.params.id,
         req.userId
       ]
     );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
 
     const row = result.rows[0];
     res.json({
@@ -170,6 +172,7 @@ router.put('/:id', async (req, res) => {
         id: row.id,
         name: row.name,
         description: row.description,
+        improvementMethod: row.improvement_method,
         updatedAt: row.updated_at
       }
     });

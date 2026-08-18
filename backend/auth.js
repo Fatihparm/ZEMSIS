@@ -18,16 +18,14 @@ const userCache = new Map();
 
 // ── JWT middleware ──────────────────────────────────────────
 function authMiddleware(req, res, next) {
-  // Header'dan veya query param'dan token al
-  // Not: query param sadece görsel serve (?token=...) gibi browser-native
-  //      istekler için kullanılır; diğer tüm istekler header kullanır.
+  // Yalnızca Authorization: Bearer header kabul edilir.
+  // Güvenlik: token'ı URL query param'a koymak sunucu loglarına ve
+  // tarayıcı geçmişine sızdırır — bu yüzden desteklenmez.
   const header = req.headers.authorization;
   let token = null;
 
   if (header && header.startsWith('Bearer ')) {
     token = header.split(' ')[1];
-  } else if (req.query.token && typeof req.query.token === 'string') {
-    token = req.query.token;
   }
 
   if (!token) {

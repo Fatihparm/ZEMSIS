@@ -25,7 +25,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 1. users tablosu (ilk kez oluşturma + kolon eklemeleri)
     // ────────────────────────────────────────────────────────────
-    console.log('\n[1/7] users tablosu...');
+    console.log('\n[1/8] users tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,7 +51,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 2. projects tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[2/7] projects tablosu...');
+    console.log('\n[2/8] projects tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
         id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,14 +73,18 @@ async function runMigration() {
         ADD COLUMN IF NOT EXISTS extra_params JSONB DEFAULT '{}';
     `);
     await client.query(`
+      ALTER TABLE projects
+        ADD COLUMN IF NOT EXISTS improvement_method VARCHAR(50) NOT NULL DEFAULT 'jet_grout';
+    `);
+    await client.query(`
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
     `);
-    console.log('   ✓ projects tablosu hazır');
+    console.log('   ✓ projects tablosu hazır (improvement_method kolonu dahil)');
 
     // ────────────────────────────────────────────────────────────
     // 3. report_drafts tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[3/7] report_drafts tablosu...');
+    console.log('\n[3/8] report_drafts tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS report_drafts (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -100,7 +104,7 @@ async function runMigration() {
     // ────────────────────────────────────────────────────────────
     // 4. report_images tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[4/7] report_images tablosu...');
+    console.log('\n[4/8] report_images tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS report_images (
         id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -132,9 +136,9 @@ async function runMigration() {
     console.log('   ✓ report_images tablosu hazır');
 
     // ────────────────────────────────────────────────────────────
-    // 4. project_applications tablosu (YENİ)
+    // 5. project_applications tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[5/7] project_applications tablosu...');
+    console.log('\n[5/8] project_applications tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS project_applications (
         id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -161,9 +165,9 @@ async function runMigration() {
     console.log('   ✓ project_applications tablosu hazır');
 
     // ────────────────────────────────────────────────────────────
-    // 5. report_verifications tablosu
+    // 6. report_verifications tablosu
     // ────────────────────────────────────────────────────────────
-    console.log('\n[6/7] report_verifications tablosu...');
+    console.log('\n[6/8] report_verifications tablosu...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS report_verifications (
         id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -185,9 +189,19 @@ async function runMigration() {
     console.log('   ✓ report_verifications tablosu hazır');
 
     // ────────────────────────────────────────────────────────────
-    // 6. Mevcut schema doğrulama (bilgi amaçlı)
     // ────────────────────────────────────────────────────────────
-    console.log('\n[7/7] Schema doğrulama...');
+    // 7. improvement_method index
+    // ────────────────────────────────────────────────────────────
+    console.log('\n[7/8] improvement_method index...');
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_projects_method ON projects(improvement_method);
+    `);
+    console.log('   ✓ idx_projects_method hazır');
+
+    // ────────────────────────────────────────────────────────────
+    // 8. Mevcut schema doğrulama (bilgi amaçlı)
+    // ────────────────────────────────────────────────────────────
+    console.log('\n[8/8] Schema doğrulama...');
     const tables = await client.query(`
       SELECT table_name
       FROM information_schema.tables

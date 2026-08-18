@@ -74,7 +74,8 @@ const projectSchema = z.object({
     results: z.any().optional().nullable(),
     drawingData: z.any().optional().nullable(),
     extraParams: z.record(z.any()).optional().default({}),
-    units: z.record(z.any()).optional().default({})
+    units: z.record(z.any()).optional().default({}),
+    improvementMethod: z.enum(['jet_grout', 'stone_column', 'pile', 'dsm']).optional().default('jet_grout'),
 });
 
 // ── Kurşun Geçirmez Validation Middleware (Direct HTTP 400 Response) ──

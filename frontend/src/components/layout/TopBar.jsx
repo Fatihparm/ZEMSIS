@@ -2,7 +2,7 @@
  * TopBar — Üst başlık çubuğu
  *
  * Sayfa başlığını, açıklamasını, logo ve tarihi gösterir.
- * Daha önce App.jsx içindeydi, ayrı bileşene taşındı.
+ * methodBadge prop'u verildiğinde aktif iyileştirme yöntemini badge olarak gösterir.
  */
 
 /**
@@ -12,9 +12,10 @@
  *   todayLabel: string,
  *   isCompact: boolean,
  *   onMenuOpen: () => void,
+ *   methodBadge?: { label: string, icon: string, color: string, bgColor: string, borderColor: string } | null,
  * }} props
  */
-export default function TopBar({ title, description, todayLabel, isCompact, onMenuOpen }) {
+export default function TopBar({ title, description, todayLabel, isCompact, onMenuOpen, methodBadge }) {
   return (
     <div className={`top-bar ${isCompact ? 'top-bar-compact' : ''}`}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -26,8 +27,23 @@ export default function TopBar({ title, description, todayLabel, isCompact, onMe
           </svg>
         </button>
         <div>
-          <h2>{title}</h2>
-          <p>{description}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0 }}>{title}</h2>
+            {methodBadge && (
+              <span
+                className="topbar-method-badge"
+                style={{
+                  color:        methodBadge.color,
+                  background:   methodBadge.bgColor,
+                  borderColor:  methodBadge.borderColor,
+                }}
+              >
+                <span className="topbar-method-badge__icon">{methodBadge.icon}</span>
+                {methodBadge.label}
+              </span>
+            )}
+          </div>
+          <p style={{ margin: 0 }}>{description}</p>
         </div>
       </div>
       <div className="top-bar-actions">

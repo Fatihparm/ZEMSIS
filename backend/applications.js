@@ -102,19 +102,11 @@ router.get('/my', async (req, res) => {
 
 // ── GET /api/applications/municipality ────────────────────────
 // Sadece municipal_officer — kendi belediyesine gelen başvurular.
-// Officer'ın municipality bilgisi DB'den alınır.
+// Officer'ın municipality bilgisi JWT payload'ından (req.userMunicipality) alınır.
 router.get('/municipality', officerMiddleware, async (req, res) => {
   try {
-    // Officer'ın hangi belediyeye ait olduğunu öğren
-    const officerResult = await pool.query(
-      'SELECT municipality FROM users WHERE id = $1',
-      [req.userId]
-    );
-    if (officerResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Kullanıcı bulunamadı' });
-    }
-
-    const officerMunicipality = officerResult.rows[0].municipality;
+    // JWT'den al — ayrı DB sorgusu gereksiz
+    const officerMunicipality = req.userMunicipality;
     if (!officerMunicipality) {
       return res.status(400).json({ success: false, error: 'Bu hesabın belediye bilgisi yok' });
     }
@@ -189,13 +181,9 @@ router.get('/:id', async (req, res) => {
       return res.status(403).json({ success: false, error: 'Bu başvuruya erişim izniniz yok' });
     }
 
-    // Officer ise kendi belediyesine ait mi kontrol et
+    // Officer ise kendi belediyesine ait mi kontrol et — JWT'den al
     if (isOfficer && !isOwner) {
-      const officerResult = await pool.query(
-        'SELECT municipality FROM users WHERE id = $1',
-        [req.userId]
-      );
-      const officerMunicipality = officerResult.rows[0]?.municipality;
+      const officerMunicipality = req.userMunicipality;
       if (officerMunicipality && officerMunicipality !== row.municipality) {
         return res.status(403).json({ success: false, error: 'Bu başvuru kendi belediyenize ait değil' });
       }
@@ -244,12 +232,8 @@ router.patch('/:id/review', officerMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Red gerekçesi en az 5 karakter olmalı' });
     }
 
-    // Officer'ın belediyesini al
-    const officerResult = await pool.query(
-      'SELECT municipality FROM users WHERE id = $1',
-      [req.userId]
-    );
-    const officerMunicipality = officerResult.rows[0]?.municipality;
+    // JWT'den al — ayrı DB sorgusu gereksiz
+    const officerMunicipality = req.userMunicipality;
 
     // Başvuruyu bul ve belediye kontrolü yap
     const appResult = await pool.query(

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_URL } from '../config';
+import { getMethodByKey } from '../constants/improvementMethods';
 import './ProjectsPage.css';
 
 /* ── SVG Icon Components ─────────────────────────────────── */
@@ -170,7 +171,21 @@ function ProjectsPage({ lang, token, onLoadProject, onNewProject, onDeleteProjec
             {projects.map(project => (
               <div key={project.id} className="project-card">
                 <div className="project-card-header">
-                  <h3>{project.name}</h3>
+                  <div className="project-card-title-group">
+                    <h3>{project.name}</h3>
+                    {(() => {
+                      const m = getMethodByKey(project.improvementMethod || 'jet_grout');
+                      return (
+                        <span
+                          className="project-method-badge"
+                          style={{ color: m.color, background: m.bgColor, borderColor: m.borderColor }}
+                        >
+                          <span className="project-method-badge__icon">{m.icon}</span>
+                          {tr ? m.labelTR : m.labelEN}
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <span className="project-date">{formatDate(project.updatedAt)}</span>
                 </div>
 

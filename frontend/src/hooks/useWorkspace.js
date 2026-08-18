@@ -25,6 +25,8 @@ export function useWorkspace() {
     setLayerResults: store.setLayerResults,
     currentProjectId: store.currentProjectId,
     currentProjectName: store.currentProjectName,
+    improvementMethod: store.improvementMethod,
+    setImprovementMethod: store.setImprovementMethod,
     showSaveModal: store.showSaveModal,
     setShowSaveModal: store.setShowSaveModal,
 
