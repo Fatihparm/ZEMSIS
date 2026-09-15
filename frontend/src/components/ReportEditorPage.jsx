@@ -157,6 +157,7 @@ function buildReportFieldDefaults(sections = {}, projectName = '', soilLayers = 
     || '[Parsel sahibi]';
   const preparedBy = sections.preparedBy?.trim() || 'Bursa Teknik Üniversitesi';
   const engineer = sections.engineer?.trim() || 'Prof. Dr. Eyübhan AVCI';
+  const location = sections.location?.trim() || '[Proje yeri / İl]';
   const soilProfile = buildAutoSoilProfileText(soilLayers, extraParams);
   const dateStr = new Date().toLocaleDateString('tr-TR', {
     year: 'numeric',
@@ -166,24 +167,52 @@ function buildReportFieldDefaults(sections = {}, projectName = '', soilLayers = 
 
   return {
     projectName: sections.projectName?.trim() || projectName || 'Zemin İyileştirme Projesi',
-    parcelName: sections.parcelName?.trim() || '',
-    parcelOwner: sections.parcelOwner?.trim() || '',
-    employer: sections.employer?.trim() || '',
-    location: sections.location?.trim() || '',
+    parcelName: sections.parcelName?.trim() || '[Parsel adı]',
+    parcelOwner: sections.parcelOwner?.trim() || '[Parsel sahibi]',
+    employer: sections.employer?.trim() || '[İşveren / İdare adı]',
+    location: sections.location?.trim() || '[Şehir, İlçe]',
     preparedBy,
     engineer,
-    docNumber: sections.docNumber?.trim() || '',
-    revision: sections.revision?.trim() || '',
-    intro: `Söz konusu rapor, ${parcelName} parselde, inşası düşünülen, ${parcelOwner} ait taşınmazın Zemin İyileştirme Projesi Hesap Raporunu içermektedir.\n\nYukarıda bilgileri verilen yapının Zemin İyileştirme Projesinin tarafımdan hazırlanması talebinde bulunulmuştur. İlgili yapının Zemin İyileştirme Projesi ve Hesap Raporu ${dateStr} tarihinde tarafımdan hazırlanmıştır.\n\nZemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019’da yürürlüğe giren Türkiye Bina Deprem Yönetmeliği (TBDY-2018), 9 Mart 2019’da yürürlüğe giren Çevre ve Şehircilik Bakanlığı Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı ve 2018’de yürürlüğe giren Çevre ve Şehircilik Bakanlığı Kazı Çukurlarının Desteklenmesi ile İlgili Uyulacak Esaslar Genelgesine (2018) uyulmuştur.`,
-    areaInfo: `İnceleme alanı ${parcelName} parsel üzerinde yer almaktadır. İnceleme alanı koordinatları: E= 40.4285°, B= 29.1767°'dir (Şekil 2.1).`,
-    structureInfo: `${parcelName} parselde, ${parcelOwner} ait parselde 3 bloklu konut amaçlı betonarme yapı yapılması planlanmaktadır. Parsel toplam alanı 562,32 m² alana sahip arsa içerisinde; bodrum, zemin ve iki normal kattan oluşan 3 bloklu betonarme yapı yapılacaktır.\n\nYapılması planlanan yapıya ait (TBDY-2018) Bina kullanım sınıfı (BKS), Bina önem katsayısı (I) ve Bina yükseklik sınıfı (BYS) belirlenmiştir. Tablo 3.1.'den BKS değeri 3, I değeri 1 olarak alınmıştır. Tablo 3.2'den BYS ise 6 olarak belirlenmiştir. Yapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
-    existingResearch: `İnşaat yapılacak alanda, ABM MÜHENDİSLİK tarafından 1 adet 24,50 metre ve 3 adet 20 metre derinliğinde sondaj yapılmıştır. Ayrıca arazide 4 adet temel sondaj kuyusu açılmış ve 17 adet örselenmiş (SPT), 2 adet örselenmemiş (UD) numune alınmıştır. Alınan numuneler üzerinde PUSULA LAB. HİZ. LTD. ŞTİ. laboratuvarlarında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla örselenmiş ve örselenmemiş numuneler üzerinde laboratuvar deneyleri yapılmıştır.`,
-    additionalResearch: 'İlave bir zemin araştırması yapılmamıştır.',
+    docNumber: sections.docNumber?.trim() || `${new Date().getFullYear()}-001`,
+    revision: sections.revision?.trim() || '0',
+
+    intro: sections.introBlocks
+      ? undefined
+      : `Söz konusu rapor, ${parcelName} parselde, inşası düşünülen, ${parcelOwner} ait taşınmazın Zemin İyileştirme Projesi Hesap Raporunu içermektedir.\n\nYukarıda bilgileri verilen yapının Zemin İyileştirme Projesinin tarafımdan hazırlanması talebinde bulunulmuştur. İlgili yapının Zemin İyileştirme Projesi ve Hesap Raporu ${dateStr} tarihinde ${preparedBy} tarafından hazırlanmıştır.\n\nZemin İyileştirme Projesi ve Hesap Raporu hazırlanırken 1 Ocak 2019'da yürürlüğe giren Türkiye Bina Deprem Yönetmeliği (TBDY-2018), 9 Mart 2019'da yürürlüğe giren Çevre ve Şehircilik Bakanlığı Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı ve 2018'de yürürlüğe giren Çevre ve Şehircilik Bakanlığı Kazı Çukurlarının Desteklenmesi ile İlgili Uyulacak Esaslar Genelgesine (2018) uyulmuştur.`,
+
+    areaInfo: sections.areaInfoBlocks
+      ? undefined
+      : `İnceleme alanı, ${location} sınırları içerisinde yer alan ${parcelName} parseli üzerindedir.\n\nSöz konusu parselin genel uydu görüntüsü Şekil 2.1'de sunulmuştur. İnceleme alanına ait koordinat bilgileri zemin etüt raporunda belirtildiği şekilde alınmıştır.\n\nÇalışma alanı genel olarak düz topografyaya sahip olup, arazide yapıya engel teşkil edecek herhangi bir yapılaşma bulunmamaktadır.`,
+
+    structureInfo: sections.structureInfoBlocks
+      ? undefined
+      : `${parcelName} parselde, ${parcelOwner} ait arsa üzerinde betonarme yapı yapılması planlanmaktadır.\n\nYapılması planlanan yapıya ait (TBDY-2018) Bina Kullanım Sınıfı (BKS), Bina Önem Katsayısı (I) ve Bina Yükseklik Sınıfı (BYS) belirlenmiştir. Tablo 3.1'den BKS ve I değerleri, Tablo 3.2'den BYS değeri tespit edilmiştir.\n\nYapılara ait vaziyet planı Şekil 3.1'de verilmiştir.`,
+
+    existingResearch: sections.existingResearchBlocks
+      ? undefined
+      : `İnşaat yapılacak alanda zemin koşullarını belirlemek amacıyla zemin etüt çalışmaları gerçekleştirilmiştir. Bu kapsamda saha çalışmaları ile örselenmiş (SPT) ve örselenmemiş (UD) numuneler alınmıştır.\n\nAlınan numuneler üzerinde akredite laboratuvar ortamında zeminlerin fiziksel ve mekanik özelliklerinin belirlenmesi amacıyla gerekli deneyler yapılmıştır. Laboratuvar deney sonuçları Tablo 4.1 ve Tablo 4.2'de özetlenmiştir.\n\nYürütülen saha ve laboratuvar çalışmalarına ilişkin detaylı bilgiler zemin etüt raporunda yer almaktadır.`,
+
+    additionalResearch: sections.additionalResearchBlocks
+      ? undefined
+      : `${parcelName} parseline ait proje kapsamında mevcut zemin etüt çalışmalarına ek olarak ilave bir zemin araştırması yapılmamıştır.\n\nMevcut zemin etüt raporu verileri, zemin iyileştirme projesi hesapları için yeterli düzeyde bilgi sunmaktadır.`,
+
     soilProfile,
-    seismicity: `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken, zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.\n\nİnceleme alanı için deprem parametreleri olarak DD-2 deprem yer hareketi düzeyi, ZE yerel zemin sınıfı ve koordinatlar E=40.4285°, B=29.1767° dikkate alınmıştır.\n\nElde edilen spektral ivme katsayıları ışığında kısa periyot ve 1.0 saniye periyot için Yerel Zemin Etki Katsayıları TBDY-2018 Tablo 2.1 ve Tablo 2.2'den seçilmiş; tasarım spektrumları buna göre değerlendirilmiştir.`,
-    foundationSystem: 'Yapılan değerlendirmeler sonucunda temel sistemi olarak radye temel sisteminin uygun olduğu görülmüştür.',
-    conclusions: 'İnceleme alanı kapsamında yapılan analiz ve değerlendirmeler sonucunda, zemin iyileştirme ihtiyacı ve uygulanacak yöntem belirlenmiştir.',
-    references: `TBDY-2018, Türkiye Bina Deprem Yönetmeliği, 2018.\nÇevre ve Şehircilik Bakanlığı, Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı, Mart 2019.`,
+
+    seismicity: sections.seismicityBlocks
+      ? undefined
+      : `Geoteknik analizler kapsamında kullanılacak olan zemin parametreleri belirlenirken zemin etüt raporu, güncel literatür bilgileri ve TBDY-2018 esas alınmıştır.\n\nTürkiye Deprem Tehlike Haritası (AFAD, 2018) kullanılarak inceleme alanına ait spektral ivme katsayıları (Ss ve S1) elde edilmiştir. Deprem hesapları DD-2 deprem yer hareketi düzeyi esas alınarak gerçekleştirilmiştir.\n\nTBDY-2018 Tablo 16.1'e göre belirlenen yerel zemin sınıfı ve buna karşılık gelen yerel zemin etki katsayıları (Fs ve F1) Tablo 8.1 ve Tablo 8.3'te sunulmuştur. Elde edilen yatay ve düşey elastik tasarım spektrumları Şekil 8.9 ve Şekil 8.10'da gösterilmiştir.`,
+
+    foundationSystem: sections.foundationSystemBlocks
+      ? undefined
+      : `${parcelName} parselinde yapılacak yapı için gerçekleştirilen zemin iyileştirme hesapları ve zemin parametreleri doğrultusunda temel sistemi değerlendirmesi yapılmıştır.\n\nYapılan analizler sonucunda, sahaya ve yapıya uygun temel tipi belirlenmiş olup, zemin iyileştirme sonrası taşıma gücü ve oturma koşulları sağlandığında önerilen temel sistemi uygulanabilir bulunmuştur.\n\nTemel tasarımında ${engineer} tarafından önerilen değerler ve TBDY-2018 hükümleri esas alınacaktır.`,
+
+    conclusions: sections.conclusionsBlocks
+      ? undefined
+      : `${parcelName} parseli üzerinde gerçekleştirilen zemin iyileştirme projesi kapsamında yapılan analiz ve değerlendirmeler aşağıda özetlenmiştir:\n\n1. Zemin etüt raporu verileri incelenmiş, mevcut zemin profili ve yer altı suyu koşulları belirlenmiştir.\n2. Zemin iyileştirme yöntemi seçilmiş; geometri, malzeme ve taşıma kapasitesi hesapları TBDY-2018 ve ilgili mevzuat çerçevesinde gerçekleştirilmiştir.\n3. Hesaplama sonuçları, raporun ilgili bölümlerinde tablo ve şekil olarak sunulmuştur.\n\nRapor, ${preparedBy} adına ${engineer} tarafından ${dateStr} tarihinde hazırlanmış olup, inceleme alanında uygulanacak zemin iyileştirme projesini kapsamaktadır.`,
+
+    references: sections.referencesBlocks
+      ? undefined
+      : `1. TBDY-2018, Türkiye Bina Deprem Yönetmeliği, Afet ve Acil Durum Yönetimi Başkanlığı, 2018.\n2. Çevre ve Şehircilik Bakanlığı, Zemin ve Temel Etüdü Uygulama Esasları ve Rapor Formatı, Mart 2019.\n3. Çevre ve Şehircilik Bakanlığı, Kazı Çukurlarının Desteklenmesi ile İlgili Uyulacak Esaslar Genelgesi, 2018.\n4. AFAD, Türkiye Deprem Tehlike Haritası, 2018.\n5. TS EN 1997-1, Eurocode 7: Geoteknik Tasarım – Bölüm 1: Genel Kurallar.`,
   };
 }
 
@@ -1048,7 +1077,7 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
 }
 
 // ── BlockEditor bileşeni ──────────────────────────────────────
-function BlockEditor({ blocks, onChange, collapsed }) {
+function BlockEditor({ blocks, onChange, collapsed, sectionPlaceholder }) {
   const [hoveredId, setHoveredId] = useState(null);
   const [collapsedSubheadings, setCollapsedSubheadings] = useState(new Set());
 
@@ -1116,7 +1145,9 @@ function BlockEditor({ blocks, onChange, collapsed }) {
       <div className={`block-editor__list${collapsed ? ' block-editor__list--collapsed' : ''}`}>
         {blocks.length === 0 && !collapsed && (
           <p className="block-editor__empty">
-            Henüz içerik eklenmedi. Yukarıdaki butonlarla paragraf veya başlık ekleyin.
+            {sectionPlaceholder
+              ? `İpucu: ${sectionPlaceholder}`
+              : 'Henüz içerik eklenmedi. Yukarıdaki butonlarla paragraf veya başlık ekleyin.'}
           </p>
         )}
         {collapsed && (
@@ -1172,7 +1203,7 @@ function BlockEditor({ blocks, onChange, collapsed }) {
                     className="block-item__textarea"
                     value={block.text}
                     onChange={e => updateBlock(block.id, e.target.value)}
-                    placeholder="Paragraf metni girin..."
+                    placeholder={sectionPlaceholder || 'Paragraf metni girin...'}
                     rows={3}
                   />
                 ) : (
@@ -1838,7 +1869,7 @@ function ReportEditorPage({
                   type="text"
                   className="cover-input"
                   placeholder={f.placeholder}
-                  value={sections[f.key] ?? sectionDefaults[f.key] ?? ''}
+                  value={sections[f.key] || sectionDefaults[f.key] || ''}
                   onChange={e => updateSection(f.key, e.target.value)}
                 />
               </div>
@@ -1946,6 +1977,7 @@ function ReportEditorPage({
             blocks={blocks}
             onChange={(updater) => updateSectionBlocks(sec.key, updater)}
             collapsed={isSectionCollapsed}
+            sectionPlaceholder={sec.placeholder}
           />
           {sec.allowImages && (
             <div className="section-image-tools">
