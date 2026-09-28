@@ -62,8 +62,36 @@ async function migrate() {
       ALTER TABLE projects
         ADD COLUMN IF NOT EXISTS extra_params JSONB DEFAULT '{}';
 
+      ALTER TABLE projects
+        ADD COLUMN IF NOT EXISTS improvement_method VARCHAR(50) NOT NULL DEFAULT 'jet_grout';
+
+      CREATE INDEX IF NOT EXISTS idx_projects_method ON projects(improvement_method);
+
       -- Index for fast user-based lookups
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+
+      -- ── Report images (görseller) ──────────────────────────
+      CREATE TABLE IF NOT EXISTS report_images (
+        id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id   UUID REFERENCES projects(id) ON DELETE CASCADE,
+        user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+        section_key  VARCHAR(100) NOT NULL DEFAULT 'unknown',
+        data         BYTEA NOT NULL,
+        mime_type    VARCHAR(50) NOT NULL DEFAULT 'image/jpeg',
+        width        INT NOT NULL DEFAULT 0,
+        height       INT NOT NULL DEFAULT 0,
+        file_size    INT NOT NULL DEFAULT 0,
+        original_name VARCHAR(255) DEFAULT NULL,
+        caption      TEXT DEFAULT '',
+        created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_report_images_project
+        ON report_images(project_id);
+      CREATE INDEX IF NOT EXISTS idx_report_images_project_section
+        ON report_images(project_id, section_key);
+      CREATE INDEX IF NOT EXISTS idx_report_images_user
+        ON report_images(user_id);
 
       -- ── Report drafts (kullanıcı metin taslakları) ──────────
       CREATE TABLE IF NOT EXISTS report_drafts (

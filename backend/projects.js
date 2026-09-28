@@ -121,7 +121,7 @@ router.post('/', validateBody(projectSchema), async (req, res, next) => {
     });
   } catch (err) {
     console.error('Create project error:', err);
-    res.status(500).json({ success: false, error: 'Failed to create project' });
+    res.status(500).json({ success: false, error: err.message || 'Failed to create project' });
   }
 });
 
