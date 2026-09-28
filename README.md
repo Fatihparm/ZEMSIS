@@ -1,8 +1,8 @@
-# 🏗️ ZEMSIS — Zemin Sistemleri Tasarım, Analiz ve Denetim Platformu
+# ZEMSIS — Zemin Sistemleri Tasarım, Analiz ve Denetim Platformu
 
-> **🌐 Canlı Web Sitesi:** [zemsis.com.tr](https://zemsis.com.tr) &mdash; ZEMSIS artık web üzerinde canlıda ve kullanıma hazırdır!
+> **Canlı Web Sitesi:** [zemsis.com.tr](https://zemsis.com.tr) &mdash; ZEMSIS web üzerinde canlıda ve kullanıma hazırdır.
 
-ZEMSIS, modern geoteknik mühendisliği hesaplamaları, çoklu zemin iyileştirme yöntemleri, CAD tabanlı etkileşimli çizim modülü, zemin profil analizi, kriptografik doğrulamalı dinamik rapor hazırlama editörü ve belediye onay/başvuru portalını tek bir çatı altında birleştiren, React 19 ve Node.js/PostgreSQL mimarisi üzerine kurulu tam donanımlı bir mühendislik ve denetim platformudur.
+ZEMSIS; modern geoteknik mühendisliği hesaplamaları, çoklu zemin iyileştirme yöntemleri, CAD tabanlı etkileşimli çizim modülü, zemin profil analizi, kriptografik doğrulamalı dinamik rapor hazırlama editörü ve belediye onay/başvuru portalını tek bir çatı altında birleştiren, React 19 ve Node.js/PostgreSQL mimarisi üzerine kurulu tam donanımlı bir mühendislik ve denetim platformudur.
 
 ![Website](https://img.shields.io/badge/website-zemsis.com.tr-blue?style=flat&logo=googlechrome&logoColor=white)
 ![Status](https://img.shields.io/badge/status-canlıda%20(live)-success)
@@ -15,62 +15,62 @@ ZEMSIS, modern geoteknik mühendisliği hesaplamaları, çoklu zemin iyileştirm
 
 ---
 
-## 🌟 Canlı Erişim ve Dağıtım
+## Canlı Erişim ve Dağıtım
 
 Platform bulut ortamında yayına alınmış olup doğrudan web tarayıcısı üzerinden kullanılabilir:
 
-* 🔗 **Web Sitesi:** [https://zemsis.com.tr](https://zemsis.com.tr)
-* ☁️ **Frontend Barındırma:** Vercel SPA altyapısı (otomatik yönlendirme ve CDN önbellekleme)
-* 🛡️ **Backend & DB:** Bulut SSL destekli PostgreSQL bağlantı havuzu ve güvenli REST API
+* **Web Sitesi:** [https://zemsis.com.tr](https://zemsis.com.tr)
+* **Frontend Barındırma:** Vercel SPA altyapısı (otomatik yönlendirme ve CDN önbellekleme)
+* **Backend & DB:** Bulut SSL destekli PostgreSQL bağlantı havuzu ve güvenli REST API
 
 ---
 
-## 📋 Öne Çıkan Özellikler
+## Öne Çıkan Özellikler
 
-### 1. 🧬 Çoklu Zemin İyileştirme Yöntemleri
-ZEMSIS artık yalnızca Jet Grout değil, geoteknik mühendisliğinde yaygın olarak kullanılan 4 farklı iyileştirme yöntemini destekler:
-* 💉 **Jet Grout (Jet Grouting):** Yüksek basınçlı enjeksiyon kolon geometrisi, alan değiştirme oranı, tekil ve grup taşıma gücü, oturma analizleri.
-* 🪨 **Taş Kolon (Stone Column):** Kohezyonlu ve gevşek zeminlerde drenaj hızlandırma, sıvılaşma önleme ve taşıma kapasitesi artırımı.
-* 🏗️ **Kazık (Pile):** Derin temel ve kazıklı zemin güçlendirme tasarımları ve yük dağılım hesapları.
-* 🧱 **DSM (Deep Soil Mixing - Derin Zemin Karıştırma):** Zemin ile çimento harcının yerinde mekanik olarak karıştırılmasıyla oluşturulan kolon analizleri.
+### 1. Çoklu Zemin İyileştirme Yöntemleri
+ZEMSIS; Jet Grout ile birlikte geoteknik mühendisliğinde yaygın olarak kullanılan 4 farklı iyileştirme yöntemini destekler:
+* **Jet Grout (Jet Grouting):** Yüksek basınçlı enjeksiyon kolon geometrisi, alan değiştirme oranı, tekil ve grup taşıma gücü, oturma analizleri.
+* **Taş Kolon (Stone Column):** Kohezyonlu ve gevşek zeminlerde drenaj hızlandırma, sıvılaşma önleme ve taşıma kapasitesi artırımı.
+* **Kazık (Pile):** Derin temel ve kazıklı zemin güçlendirme tasarımları ve yük dağılım hesapları.
+* **DSM (Deep Soil Mixing - Derin Zemin Karıştırma):** Zemin ile çimento harcının yerinde mekanik olarak karıştırılmasıyla oluşturulan kolon analizleri.
 
-### 2. 📊 Geoteknik Hesaplama & Gerilme Analizleri
+### 2. Geoteknik Hesaplama & Gerilme Analizleri
 * **Kolon Geometrisi & Alan Dağılımı**: Kolon çapı ($D$), yerleşim aralığı ($s$) ve zemin iyileştirme derinliğine ($H$) bağlı kolon alanı ($A_{kolon}$) ve alan değiştirme oranları ($a$).
 * **Taşıma Kapasitesi & Oturma Analizi**: Tekil ve grup bazında taşıma kapasitesi, uç dirençleri ve çevre sürtünmeleri ($Q_s$, $Q_u$, $Q_{emn}$). Mohr-Coulomb parametreleri ile eşdeğer zemin modülü ($E_{iyileştirilmiş}$) ve tabaka oturma ($\delta$) analizleri.
 * **Derinliğe Göre Gerilme Grafiği**: Zemin katmanları boyunca derinlikle değişen net gerilme ve taşıma kapasitesi sınırlarını gösteren interaktif grafikler (`StressChart`).
 
-### 3. ✏️ Etkileşimli Çizim Modülü (`PlanView`)
+### 3. Etkileşimli Çizim Modülü (`PlanView`)
 * **Tasarım Paneli**: Zoom, pan, dinamik ızgara (grid), hassas koordinat takibi ve kolon yerleşim araçları.
 * **Undo/Redo Sistemi**: Çizimler üzerinde tam denetim sağlayan geri alma (`Ctrl+Z`) ve ileri alma (`Ctrl+Y`) mekanizması.
 * **Kesit Hattı Belirleme**: Zemin profil kesitini anlık çıkarmak için çizim alanı üzerinde etkileşimli kesit çizgisi oluşturma.
 
-### 4. 📐 Çok Katmanlı Zemin & Kesit Görünümü (`SoilSectionPanel` & `CrossSectionView`)
+### 4. Çok Katmanlı Zemin & Kesit Görünümü (`SoilSectionPanel` & `CrossSectionView`)
 * **Katman Yönetimi**: Kum, kil, silt ve kaya tabakalarının kalınlık, birim hacim ağırlık ($\gamma$), içsel sürtünme açısı ($\phi$), kohezyon ($c$), elastisite modülü ($E_s$) ve Poisson oranı ($\nu$) parametreleriyle eklenip yönetilmesi.
 * **Yeraltı Suyu Seviyesi (YASS)**: Yeraltı su seviyesinin derinliğe bağlı olarak belirlenmesi ve efektif gerilme hesaplarının otomatik güncellenmesi.
 * **Dinamik Kesit Çizimi**: Belirlenen hat boyunca zemin tabakalarını ve iyileştirme kolonlarını ölçekli görselleştiren interaktif enkesit görünümü.
 
-### 5. 📂 CAD Desteği (`DxfParser`)
+### 5. CAD Desteği (`DxfParser`)
 * **AutoCAD DXF Import**: Gerçek dünya CAD projelerinden (`.dxf` formatında) poligon, çember ve noktaları parse ederek aplikasyon koordinatlarını doğrudan ZEMSIS platformuna aktarma.
 
-### 6. ✍️ Modüler Rapor Editörü & DOCX Üretici (`backend/reports/`)
+### 6. Modüler Rapor Editörü & DOCX Üretici (`backend/reports/`)
 * **12 Bölümlü Kapsamlı Rapor Taslağı**: Giriş, Mevcut Zemin Araştırmaları, Depremsellik (TBDY-2018 ve AFAD verileri uyumlu), Hesaplama Sonuçları ve Önerilen İyileştirme Sistemi gibi standart mühendislik rapor şablonu.
 * **Görsel Yükleme & Yönetimi (`report_images`)**: Rapor bölümlerine özel saha fotoğrafları, laboratuvar deney föyleri ve çizim görselleri ekleme, veritabanında güvenli saklama.
 * **Resmi Doğrulama Kodu (`ZMS-YYYY-XXXX-XXXX`)**: Her üretilen rapora kriptografik güvenlikle benzersiz bir doğrulama kodu atanır (`report_verifications`).
 * **Kurumsal Word (.docx) Çıktısı**: Tüm hesaplamaları, zemin parametrelerini, şekilleri ve tabloları antetli ve imzaya hazır formatta dışa aktarma.
 
-### 7. 🏛️ Belediye Başvuru & Onay Portalı (`OfficerPortal` & `applications.js`)
+### 7. Belediye Başvuru & Onay Portalı (`OfficerPortal` & `applications.js`)
 * **Dijital Ruhsat Başvurusu**: Mühendislerin hazırladıkları projeleri doğrudan ilgili belediyeye (örn. Bursa Büyükşehir, Osmangazi, Nilüfer, Kestel vb.) dijital ortamda onaya gönderebilmesi.
 * **Yetkili Denetim Paneli**: Belediye teknik personelleri (`municipal_officer` rolü) için kilitli/salt-okunur proje inceleme ve onay/ret/açıklama süreci.
 * **Belediye Rapor Çıktısı**: Onaylanan veya inceleme aşamasındaki projelerin resmi hesap raporunu belediye panelinden anında indirebilme.
 
-### 8. 🔐 Güvenlik, Kimlik Doğrulama & Veri Bütünlüğü
+### 8. Güvenlik, Kimlik Doğrulama & Veri Bütünlüğü
 * **Google OAuth & JWT**: Google ile tek tıkla giriş/kayıt ve geleneksel e-posta/şifre (bcrypt) kimlik doğrulama.
 * **Tip Güvenli Veri Doğrulama (Zod)**: Backend API isteklerinde şema doğrulaması (`schemas.js`) ile hatalı veri girişlerinin engellenmesi.
 * **Güvenlik Katmanları**: Rate limiting (`express-rate-limit`), HTTP güvenlik başlıkları (`helmet`) ve CORS koruması.
 
 ---
 
-## 🛠️ Teknolojik Altyapı
+## Teknolojik Altyapı
 
 | Alan | Teknolojiler |
 | :--- | :--- |
@@ -82,7 +82,7 @@ ZEMSIS artık yalnızca Jet Grout değil, geoteknik mühendisliğinde yaygın ol
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## Kurulum ve Çalıştırma
 
 Platformu bulut ortamında kullanabileceğiniz gibi ([zemsis.com.tr](https://zemsis.com.tr)), yerel geliştirme ortamınızda da çalıştırabilirsiniz.
 
@@ -142,7 +142,7 @@ Sisteminizde Docker ve Docker Compose yüklü ise:
 
 ---
 
-## 📊 Örnek Geoteknik Formüller
+## Örnek Geoteknik Formüller
 
 ### Kolon Geometrisi & Alan Oranı
 | Formül | Açıklama |
@@ -167,7 +167,7 @@ Sisteminizde Docker ve Docker Compose yüklü ise:
 
 ---
 
-## 📁 Proje Klasör Yapısı
+## Proje Klasör Yapısı
 
 ```text
 Jet-Grout/
@@ -225,15 +225,12 @@ Jet-Grout/
 
 ---
 
-## 📜 Lisans
+## Lisans
 
 Bu proje **MIT Lisansı** ile lisanslanmıştır.
 
-## 👨‍💻 Geliştirici & İletişim
+## Geliştirici & İletişim
 
 * **Geliştirici:** Fatih Parmaksız
 * **Web:** [zemsis.com.tr](https://zemsis.com.tr)
 * **Yıl:** 2026
-
----
-⭐ Projeyi beğendiyseniz GitHub üzerinde yıldız vermeyi unutmayın!
