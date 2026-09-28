@@ -1,7 +1,14 @@
 const { Pool } = require('pg');
 
+const isCloud = Boolean(
+  process.env.DATABASE_URL &&
+  !process.env.DATABASE_URL.includes('localhost') &&
+  !process.env.DATABASE_URL.includes('@db:')
+);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: isCloud ? { rejectUnauthorized: false } : false,
 });
 
 // Test connection

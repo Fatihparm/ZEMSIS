@@ -21,16 +21,16 @@ app.use(helmet());
 
 // ── CORS — sadece izin verilen originlere ───────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
   : ['http://localhost:3000', 'http://localhost:5173'];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Postman / curl gibi origin'siz isteklere izin ver (development)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Postman / curl veya izinli originler
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
-      callback(new Error('CORS policy violation'));
+      callback(new Error('CORS policy violation: ' + origin));
     }
   },
   credentials: true
