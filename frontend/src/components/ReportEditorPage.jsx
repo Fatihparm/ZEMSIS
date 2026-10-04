@@ -156,7 +156,7 @@ function buildReportFieldDefaults(sections = {}, projectName = '', soilLayers = 
     || sections.employer?.trim()
     || '[Parsel sahibi]';
   const preparedBy = sections.preparedBy?.trim() || 'Bursa Teknik Üniversitesi';
-  const engineer = sections.engineer?.trim() || 'Prof. Dr. Eyübhan AVCI';
+  const engineer = sections.engineer?.trim() || '[Proje Mühendisi Adı Soyadı, Unvanı]';
   const location = sections.location?.trim() || '[Proje yeri / İl]';
   const soilProfile = buildAutoSoilProfileText(soilLayers, extraParams);
   const dateStr = new Date().toLocaleDateString('tr-TR', {
@@ -488,10 +488,10 @@ function normalizeCell(cell) {
     colspan: cell.colspan ?? 1,
     rowspan: cell.rowspan ?? 1,
     borders: {
-      top:    cell.borders?.top    ?? true,
+      top: cell.borders?.top ?? true,
       bottom: cell.borders?.bottom ?? true,
-      left:   cell.borders?.left   ?? true,
-      right:  cell.borders?.right  ?? true,
+      left: cell.borders?.left ?? true,
+      right: cell.borders?.right ?? true,
     },
     _hidden: cell._hidden ?? false,
   };
@@ -841,7 +841,7 @@ function getSelectionRect(anchor, drag) {
 // ── TableCardEditor bileşeni ──────────────────────────────────
 function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemove, onUpdateCell, onBulkUpdateCells, onMergeCells }) {
   const [anchorCell, setAnchorCell] = useState(null);  // drag başlangıcı {r,c}
-  const [dragCell, setDragCell]     = useState(null);  // drag sonu {r,c}
+  const [dragCell, setDragCell] = useState(null);  // drag sonu {r,c}
   const [isDragging, setIsDragging] = useState(false);
   const [editingCell, setEditingCell] = useState(null); // {r,c} — çift tıkla düzenleme modu
   const textareaRefs = useRef({});  // key: "r,c" → textarea DOM node
@@ -850,9 +850,9 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
 
   // Seçili hücre kümesi (anchor → drag dikdörtgeni)
   const selRect = getSelectionRect(anchorCell, dragCell);
-  const selSet  = selRect.set || new Set();
+  const selSet = selRect.set || new Set();
   const isInSelection = (r, c) => selSet.has(`${r},${c}`);
-  const selectedCount  = selSet.size;
+  const selectedCount = selSet.size;
 
   // Toolbar için anchor hücre datası
   const anchorCellData = anchorCell ? cells[anchorCell.r * tbl.cols + anchorCell.c] : null;
@@ -959,10 +959,10 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
   const borderStyle = (borders) => {
     const b = borders || { top: true, bottom: true, left: true, right: true };
     return {
-      borderTop:    b.top    ? undefined : '1px solid transparent',
+      borderTop: b.top ? undefined : '1px solid transparent',
       borderBottom: b.bottom ? undefined : '1px solid transparent',
-      borderLeft:   b.left   ? undefined : '1px solid transparent',
-      borderRight:  b.right  ? undefined : '1px solid transparent',
+      borderLeft: b.left ? undefined : '1px solid transparent',
+      borderRight: b.right ? undefined : '1px solid transparent',
     };
   };
 
@@ -1022,11 +1022,11 @@ function TableCardEditor({ tbl, idx, sectionKey, onUpdateName, onResize, onRemov
                       ? (cell.bg ? cell.bg : (cr === 0 ? '#dde4ff' : '#eef2ff'))
                       : (cell.bg || (cr === 0 ? '#eef2ff' : '#fff')),
                     ...borderStyle(cell.borders),
-                    outline:       inSel ? '2px solid #6366f1' : undefined,
+                    outline: inSel ? '2px solid #6366f1' : undefined,
                     outlineOffset: inSel ? '-2px' : undefined,
                     cursor: 'cell',
                   };
-                   return (
+                  return (
                     <td
                       key={c}
                       colSpan={colspan > 1 ? colspan : undefined}
@@ -1556,7 +1556,7 @@ function ReportEditorPage({
           setSections(normalized);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [projectId, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Bir alan güncelle ─────────────────────────────────────────
@@ -1853,11 +1853,11 @@ function ReportEditorPage({
 
     if (sec.type === 'cover') {
       const coverLogoSrc = sections.coverLogoPreviewUrl || sections.coverLogo?.dataUrl || null;
-      const coverLogoId  = sections.coverLogoId || null;
+      const coverLogoId = sections.coverLogoId || null;
       return (
         <div className="cover-form">
           <p className="section-desc">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             Bu bilgiler raporun kapak sayfasında görünecektir.
           </p>
           <div className="cover-grid">
@@ -1873,7 +1873,7 @@ function ReportEditorPage({
                   onChange={e => updateSection(f.key, e.target.value)}
                 />
               </div>
-              ))}
+            ))}
           </div>
 
           <div className="cover-logo-box">
@@ -1990,7 +1990,7 @@ function ReportEditorPage({
                 </div>
                 <div className="media-actions-group">
                   <label className="image-upload-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
                     Görsel Ekle
                     <input
                       type="file"
@@ -2092,7 +2092,7 @@ function ReportEditorPage({
                 </div>
                 <div className="media-actions-group">
                   <label className="image-upload-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
                     Görsel Ekle
                     <input
                       type="file"
@@ -2185,13 +2185,13 @@ function ReportEditorPage({
   const saveStatusIcon = {
     idle: null,
     saving: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
     ),
     saved: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
     ),
     error: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
     ),
   }[saveStatus];
 
@@ -2201,7 +2201,7 @@ function ReportEditorPage({
       <div className="report-top-bar">
         <div className="report-title-group">
           <h2>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
             Rapor Editörü
           </h2>
           {projectName && <span className="report-project-tag">{projectName}</span>}
@@ -2219,7 +2219,7 @@ function ReportEditorPage({
             onClick={handleManualSave}
             disabled={!projectId || saveStatus === 'saving'}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
             Taslak Kaydet
           </button>
           <button
@@ -2227,7 +2227,7 @@ function ReportEditorPage({
             type="button"
             onClick={() => setPreviewOpen(v => !v)}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
             Önizleme
           </button>
           <button
@@ -2240,7 +2240,7 @@ function ReportEditorPage({
               <><span className="spinner" /> Oluşturuluyor...</>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                 Word Raporu İndir
               </>
             )}
@@ -2334,14 +2334,14 @@ function ReportEditorPage({
       {/* ── Uyarılar ── */}
       {noProject && (
         <div className="report-alert report-alert--warn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
           Projeyi kaydetmeden taslak kaydedilemez ve rapor oluşturulamaz.
           Lütfen önce projeyi kaydedin.
         </div>
       )}
       {noResults && (
         <div className="report-alert report-alert--warn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
           Hesaplama sonuçları bulunamadı. Kilitli veriler raporda boş görünecek.
           Lütfen "Parametreler" sekmesinde hesaplama yapın.
         </div>
@@ -2364,26 +2364,26 @@ function ReportEditorPage({
             >
               <span className="nav-num">
                 {sec.icon === 'cover' ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                 ) : sec.icon}
               </span>
               <div className="nav-text">
                 <span className="nav-label">{sec.label}</span>
                 {sec.type === 'locked' && (
                   <span className="nav-badge locked">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                     Kilitli
                   </span>
                 )}
                 {sec.type === 'wysiwyg' && (
                   <span className="nav-badge editable">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                     Düzenle
                   </span>
                 )}
                 {sec.type === 'cover' && (
                   <span className="nav-badge cover">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                     Form
                   </span>
                 )}
@@ -2399,13 +2399,13 @@ function ReportEditorPage({
                 className="completion-fill"
                 style={{
                   width: `${Math.round(
-                      (SECTIONS.filter(s => s.type === 'wysiwyg' || s.type === 'cover')
+                    (SECTIONS.filter(s => s.type === 'wysiwyg' || s.type === 'cover')
                       .filter(s => {
                         if (s.type === 'cover') return COVER_FIELDS.some(f => (sections[f.key] ?? sectionDefaults[f.key] ?? '').toString().length > 0);
                         const secBlocks = getBlocksForSection(sections, s.key, sectionDefaults[s.key]);
                         return secBlocks.some(b => b?.text?.trim()?.length > 0);
                       }).length /
-                    SECTIONS.filter(s => s.type !== 'locked').length) * 100
+                      SECTIONS.filter(s => s.type !== 'locked').length) * 100
                   )}%`,
                 }}
               />
@@ -2448,19 +2448,19 @@ function ReportEditorPage({
                   <h3>{sec.label}</h3>
                   {sec.type === 'wysiwyg' && (
                     <div className="section-type-badge editable">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                       Kullanıcı Girişi
                     </div>
                   )}
                   {sec.type === 'locked' && (
                     <div className="section-type-badge locked">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                       Sistem Verisi — Salt Okunur
                     </div>
                   )}
                   {sec.type === 'cover' && (
                     <div className="section-type-badge cover">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                       Kapak Formu
                     </div>
                   )}
@@ -2479,7 +2479,7 @@ function ReportEditorPage({
           <aside className="report-preview-panel">
             <div className="report-preview-panel__header">
               <div className="report-preview-panel__header-left">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                 <span>Aktif Bölüm Önizleme</span>
               </div>
               <button
@@ -2488,7 +2488,7 @@ function ReportEditorPage({
                 onClick={() => setPreviewOpen(false)}
                 title="Önizlemeyi kapat"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
 

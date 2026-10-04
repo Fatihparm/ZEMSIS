@@ -27,7 +27,6 @@ const {
   PageBreak,
   VerticalAlign,
   Footer,
-  TableOfContents,
 } = require('docx');
 
 // ── Girinti sabitleri (twips: 1 inch = 1440 twips, 2.54 cm = 1440 twips) ────
@@ -1083,7 +1082,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
   const projectLocation = parcelName;
   const reportNumber = (sections && sections.docNumber) || '';
   const preparedBy = (sections && sections.preparedBy) || 'Bursa Teknik Üniversitesi';
-  const engineer = (sections && sections.engineer) || 'Prof. Dr. Eyübhan AVCI';
+  const engineer = (sections && sections.engineer) || '';
   const employer = (sections && sections.employer) || '';
   const reportDefaults = buildReportSectionDefaults({ parcelName, parcelOwner, dateStr });
 
@@ -1131,6 +1130,7 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
 
   const tableRows = buildTableRows({ sections, pRows, resCategories });
   const figureRows = buildFigureRows({ sections, dbImages });
+  const tocRows = buildTocRows({ sections, pRows, resCategories, reportDefaults });
 
   const doc = new Document({
     styles: {
@@ -1214,25 +1214,15 @@ function buildReportDOCX({ project, lockedParams, lockedResults, sections, verif
           page: { margin: PAGE_MARGINS }
         },
         children: [
-          // ── Dinamik İçindekiler (Word TOC field) ─────────────────
-          // Word belgesi açılınca sayfa numaraları otomatik hesaplanır.
-          // Kullanıcı "Alanları güncelle" onayını verdiğinde veya
-          // Ctrl+A → F9 ile manuel güncelleyebilir.
+          // ── Statik İçindekiler (buildTocRows ile oluşturulan) ─────────────────
+          // buildTocRows() hangi bölümlerin içerik barındırdığını kontrol ederek
+          // listeyi dinamik olarak üretir; sayfa numaraları tahmini değerlerdir.
           new Paragraph({
             children: [new TextRun({ text: "İÇİNDEKİLER", bold: true, size: 28, font: "Times New Roman" })],
             alignment: AlignmentType.CENTER,
-            spacing: { before: 0, after: 200 },
+            spacing: { before: 0, after: 320 },
           }),
-          new TableOfContents("İÇİNDEKİLER", {
-            // Sadece Heading 1 (bölüm başlıkları) göster
-            headingStyleRange: "1-1",
-            // Sayfa numarasını sağa yasla ve noktalı satır çiz
-            tabLeader: "dot",
-            // Tıklanabilir köprüler oluştur
-            hyperlink: true,
-            // TOC başlığını içindeki paragraf olarak değil ayrı yönetiyoruz
-            // (yukarıdaki Paragraph zaten başlığı koydu)
-          }),
+          ...createListParagraphs(tocRows),
           new Paragraph({ children: [new PageBreak()] }),
 
           // ── Tablolar Listesi (statik — Word'de otomatik field yok) ──
