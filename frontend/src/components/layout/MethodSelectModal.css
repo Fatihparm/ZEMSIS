@@ -138,6 +138,19 @@
   letter-spacing: -0.01em;
 }
 
+.msm-method-meta {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-align: center;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.msm-method-card--active .msm-method-meta {
+  color: var(--card-color, #1565c0);
+  opacity: 0.75;
+}
+
 .msm-method-card--active .msm-method-name {
   color: var(--card-color, #1565c0);
 }

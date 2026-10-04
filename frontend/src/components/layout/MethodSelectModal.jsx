@@ -37,6 +37,7 @@ export default function MethodSelectModal({ lang, onSelect, onClose }) {
         <div className="msm-grid">
           {IMPROVEMENT_METHODS.map((method) => {
             const isActive = selected === method.key;
+            const p = method.defaultParams;
             return (
               <button
                 key={method.key}
@@ -52,6 +53,12 @@ export default function MethodSelectModal({ lang, onSelect, onClose }) {
                 <span className="msm-method-name">
                   {tr ? method.labelTR : method.labelEN}
                 </span>
+                {/* Yöntem bazlı temel parametre özeti */}
+                {p && (
+                  <span className="msm-method-meta">
+                    Nc={p.Nc} · α={p.alpha} · Fs={p.Fs}
+                  </span>
+                )}
                 {isActive && (
                   <span className="msm-checkmark">
                     <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

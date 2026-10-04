@@ -4,6 +4,7 @@ import {
   defaultUnits,
   defaultSoilLayers,
   defaultExtraParams,
+  getDefaultParameters,
 } from '../constants/defaults';
 import { loadAutosave, clearAutosave } from '../hooks/useAutoSave';
 
@@ -68,11 +69,13 @@ export const useWorkspaceStore = create((set, get) => ({
 
   resetWorkspace: (method = 'jet_grout') => {
     clearAutosave();
+    // Seçilen yönteme özgü varsayılan parametreleri yükle
+    const methodParams = getDefaultParameters(method);
     set({
       currentProjectId: null,
       currentProjectName: '',
       improvementMethod: method,
-      parameters: { ...defaultParameters },
+      parameters: methodParams,
       soilLayers: [...defaultSoilLayers],
       units: { ...defaultUnits },
       extraParams: { ...defaultExtraParams },
@@ -83,11 +86,14 @@ export const useWorkspaceStore = create((set, get) => ({
   },
 
   handleLoadProject: (project) => {
+    const method = project.improvementMethod || 'jet_grout';
+    // Proje parametresi yoksa yönteme özgü varsayılanları kullan
+    const fallbackParams = getDefaultParameters(method);
     set({
       currentProjectId: project.id,
       currentProjectName: project.name,
-      improvementMethod: project.improvementMethod || 'jet_grout',
-      parameters: project.parameters || { ...defaultParameters },
+      improvementMethod: method,
+      parameters: project.parameters || fallbackParams,
       soilLayers: project.soilLayers?.length > 0 ? project.soilLayers : [...defaultSoilLayers],
       units: project.units || { ...defaultUnits },
       results: project.results || null,
