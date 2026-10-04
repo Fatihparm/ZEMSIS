@@ -244,6 +244,14 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
           </button>
         </div>
 
+        {/* Test Modu Bilgilendirmesi */}
+        <div className="auth-test-notice">
+          <svg className="auth-test-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <span>{tr ? '(Test modundadır, sahte mail girebilirsiniz)' : '(In test mode, you can enter a fake email)'}</span>
+        </div>
+
         {/* Form */}
         <form className="auth-form" onSubmit={handleSubmit}>
           {mode === 'register' && (
@@ -261,7 +269,10 @@ function AuthPage({ onLogin, lang, initialError = '' }) {
           )}
 
           <div className="auth-field">
-            <label>Email</label>
+            <div className="auth-label-row">
+              <label>Email</label>
+              <span className="auth-field-hint">{tr ? '(test modundadır sahte mail girebilirsiniz)' : '(test mode: fake email allowed)'}</span>
+            </div>
             <input
               type="email"
               value={email}

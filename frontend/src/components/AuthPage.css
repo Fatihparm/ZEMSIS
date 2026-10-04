@@ -98,6 +98,46 @@
   letter-spacing: 0.06em;
 }
 
+.auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+
+.auth-label-row label {
+  margin-bottom: 0;
+}
+
+.auth-field-hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #0284c7;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.auth-test-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px dashed rgba(14, 165, 233, 0.4);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #0369a1;
+  text-align: center;
+}
+
+.auth-test-icon {
+  flex-shrink: 0;
+  color: #0284c7;
+}
+
 .auth-field input {
   width: 100%;
   padding: 13px 14px;
